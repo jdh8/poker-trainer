@@ -1,0 +1,9618 @@
+{
+  "label": "SRP BTN vs BB, Kh7c2d (dry) — you're BTN, BB checks: c-bet?",
+  "board": [
+    "2d",
+    "7c",
+    "Kh"
+  ],
+  "pot_bb": 6.0,
+  "hero_oop": false,
+  "villain_action": "Villain (BB) checks to you",
+  "strategies": [
+    {
+      "hand": "2h2c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          11.64353,
+          11.699427
+        ]
+      }
+    },
+    {
+      "hand": "2s2c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.000016141905,
+          0.99998385
+        ],
+        "action_ev": [
+          11.634266,
+          11.689236
+        ]
+      }
+    },
+    {
+      "hand": "Kc2c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          10.001259,
+          10.090205
+        ]
+      }
+    },
+    {
+      "hand": "Ac2c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          4.0636525,
+          4.0985003
+        ]
+      }
+    },
+    {
+      "hand": "Ad2c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          3.605096,
+          3.611025
+        ]
+      }
+    },
+    {
+      "hand": "Ah2c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          3.6035948,
+          3.6049097
+        ]
+      }
+    },
+    {
+      "hand": "As2c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          3.5553744,
+          3.5706005
+        ]
+      }
+    },
+    {
+      "hand": "2s2h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          11.647239,
+          11.723194
+        ]
+      }
+    },
+    {
+      "hand": "Ac2h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.013105736,
+          0.98689425
+        ],
+        "action_ev": [
+          3.5739613,
+          3.5717676
+        ]
+      }
+    },
+    {
+      "hand": "Ad2h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0013049707,
+          0.998695
+        ],
+        "action_ev": [
+          3.576904,
+          3.575354
+        ]
+      }
+    },
+    {
+      "hand": "Ah2h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          4.050688,
+          4.0746903
+        ]
+      }
+    },
+    {
+      "hand": "As2h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          3.5281172,
+          3.5355752
+        ]
+      }
+    },
+    {
+      "hand": "Ks2s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          9.895499,
+          9.994309
+        ]
+      }
+    },
+    {
+      "hand": "Ac2s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          3.5702343,
+          3.5779514
+        ]
+      }
+    },
+    {
+      "hand": "Ad2s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          3.572121,
+          3.581666
+        ]
+      }
+    },
+    {
+      "hand": "Ah2s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          3.5708792,
+          3.5758533
+        ]
+      }
+    },
+    {
+      "hand": "As2s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          3.5227304,
+          3.5426157
+        ]
+      }
+    },
+    {
+      "hand": "3d3c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.44280183,
+          0.5571982
+        ],
+        "action_ev": [
+          2.9215143,
+          2.9138043
+        ]
+      }
+    },
+    {
+      "hand": "3h3c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5049316,
+          0.49506843
+        ],
+        "action_ev": [
+          2.903524,
+          2.896962
+        ]
+      }
+    },
+    {
+      "hand": "3s3c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.37558022,
+          0.6244198
+        ],
+        "action_ev": [
+          2.9018972,
+          2.896709
+        ]
+      }
+    },
+    {
+      "hand": "4c3c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.38587362,
+          0.6141264
+        ],
+        "action_ev": [
+          1.3632615,
+          1.3592443
+        ]
+      }
+    },
+    {
+      "hand": "5c3c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.52332944,
+          0.4766705
+        ],
+        "action_ev": [
+          1.3947502,
+          1.382944
+        ]
+      }
+    },
+    {
+      "hand": "Kc3c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.39527705,
+          0.604723
+        ],
+        "action_ev": [
+          7.6803756,
+          7.664608
+        ]
+      }
+    },
+    {
+      "hand": "Ac3c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.00063162966,
+          0.99936837
+        ],
+        "action_ev": [
+          1.7932135,
+          1.7919643
+        ]
+      }
+    },
+    {
+      "hand": "Ad3c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.26136178,
+          0.7386383
+        ],
+        "action_ev": [
+          1.2936006,
+          1.2892019
+        ]
+      }
+    },
+    {
+      "hand": "Ah3c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.2866004,
+          0.7133996
+        ],
+        "action_ev": [
+          1.2922593,
+          1.2863601
+        ]
+      }
+    },
+    {
+      "hand": "As3c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.45849663,
+          0.5415034
+        ],
+        "action_ev": [
+          1.2600805,
+          1.2528262
+        ]
+      }
+    },
+    {
+      "hand": "3h3d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.47717685,
+          0.52282315
+        ],
+        "action_ev": [
+          2.905996,
+          2.9007733
+        ]
+      }
+    },
+    {
+      "hand": "3s3d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.33511868,
+          0.6648813
+        ],
+        "action_ev": [
+          2.9042814,
+          2.9005053
+        ]
+      }
+    },
+    {
+      "hand": "4d3d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.4540076,
+          0.5459924
+        ],
+        "action_ev": [
+          1.3480412,
+          1.3415049
+        ]
+      }
+    },
+    {
+      "hand": "5d3d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5019987,
+          0.49800125
+        ],
+        "action_ev": [
+          1.3887862,
+          1.3772931
+        ]
+      }
+    },
+    {
+      "hand": "Kd3d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.3598994,
+          0.6401006
+        ],
+        "action_ev": [
+          7.7328386,
+          7.720724
+        ]
+      }
+    },
+    {
+      "hand": "Ac3d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.27148104,
+          0.7285189
+        ],
+        "action_ev": [
+          1.2916478,
+          1.2861513
+        ]
+      }
+    },
+    {
+      "hand": "Ad3d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.049126733,
+          0.9508733
+        ],
+        "action_ev": [
+          1.796824,
+          1.7954712
+        ]
+      }
+    },
+    {
+      "hand": "Ah3d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.2821078,
+          0.71789217
+        ],
+        "action_ev": [
+          1.2922845,
+          1.2870451
+        ]
+      }
+    },
+    {
+      "hand": "As3d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.45427305,
+          0.54572695
+        ],
+        "action_ev": [
+          1.2602,
+          1.2535788
+        ]
+      }
+    },
+    {
+      "hand": "3s3h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.41281942,
+          0.58718055
+        ],
+        "action_ev": [
+          2.8862603,
+          2.883101
+        ]
+      }
+    },
+    {
+      "hand": "4h3h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6076711,
+          0.39232892
+        ],
+        "action_ev": [
+          1.3376677,
+          1.3299655
+        ]
+      }
+    },
+    {
+      "hand": "5h3h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6532952,
+          0.34670478
+        ],
+        "action_ev": [
+          1.3782463,
+          1.3697634
+        ]
+      }
+    },
+    {
+      "hand": "Ac3h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.37543854,
+          0.6245615
+        ],
+        "action_ev": [
+          1.284712,
+          1.2746148
+        ]
+      }
+    },
+    {
+      "hand": "Ad3h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.36608973,
+          0.63391024
+        ],
+        "action_ev": [
+          1.2866156,
+          1.2779417
+        ]
+      }
+    },
+    {
+      "hand": "Ah3h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.038023263,
+          0.96197677
+        ],
+        "action_ev": [
+          1.7950805,
+          1.7930746
+        ]
+      }
+    },
+    {
+      "hand": "As3h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5630189,
+          0.43698108
+        ],
+        "action_ev": [
+          1.2541176,
+          1.239985
+        ]
+      }
+    },
+    {
+      "hand": "4s3s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.9507433,
+          0.04925668
+        ],
+        "action_ev": [
+          0.95466906,
+          0.9505298
+        ]
+      }
+    },
+    {
+      "hand": "5s3s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.9146661,
+          0.08533387
+        ],
+        "action_ev": [
+          0.98357344,
+          0.9828731
+        ]
+      }
+    },
+    {
+      "hand": "Ks3s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.59164923,
+          0.40835077
+        ],
+        "action_ev": [
+          7.486666,
+          7.455629
+        ]
+      }
+    },
+    {
+      "hand": "Ac3s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.36409432,
+          0.6359056
+        ],
+        "action_ev": [
+          1.2740393,
+          1.2629721
+        ]
+      }
+    },
+    {
+      "hand": "Ad3s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.34988347,
+          0.6501165
+        ],
+        "action_ev": [
+          1.2761959,
+          1.2670236
+        ]
+      }
+    },
+    {
+      "hand": "Ah3s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.37109372,
+          0.62890625
+        ],
+        "action_ev": [
+          1.2747327,
+          1.2643266
+        ]
+      }
+    },
+    {
+      "hand": "As3s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5224061,
+          0.47759393
+        ],
+        "action_ev": [
+          1.2438809,
+          1.2343653
+        ]
+      }
+    },
+    {
+      "hand": "4d4c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5297644,
+          0.4702356
+        ],
+        "action_ev": [
+          3.102964,
+          3.096038
+        ]
+      }
+    },
+    {
+      "hand": "4h4c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.56862295,
+          0.43137705
+        ],
+        "action_ev": [
+          3.0860212,
+          3.0804365
+        ]
+      }
+    },
+    {
+      "hand": "4s4c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.47518945,
+          0.5248105
+        ],
+        "action_ev": [
+          3.077543,
+          3.0731208
+        ]
+      }
+    },
+    {
+      "hand": "5c4c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.25095108,
+          0.7490489
+        ],
+        "action_ev": [
+          1.5628177,
+          1.5533931
+        ]
+      }
+    },
+    {
+      "hand": "6c4c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.4500667,
+          0.54993325
+        ],
+        "action_ev": [
+          1.4168342,
+          1.4097425
+        ]
+      }
+    },
+    {
+      "hand": "Qc4c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.32256627,
+          0.6774337
+        ],
+        "action_ev": [
+          1.2476227,
+          1.237213
+        ]
+      }
+    },
+    {
+      "hand": "Kc4c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.3497608,
+          0.65023917
+        ],
+        "action_ev": [
+          7.6764736,
+          7.667875
+        ]
+      }
+    },
+    {
+      "hand": "Ac4c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.000010232169,
+          0.99998975
+        ],
+        "action_ev": [
+          1.8162347,
+          1.8175507
+        ]
+      }
+    },
+    {
+      "hand": "Ad4c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.24380329,
+          0.75619674
+        ],
+        "action_ev": [
+          1.3184755,
+          1.3199879
+        ]
+      }
+    },
+    {
+      "hand": "Ah4c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.2755216,
+          0.7244784
+        ],
+        "action_ev": [
+          1.31711,
+          1.3172936
+        ]
+      }
+    },
+    {
+      "hand": "As4c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.45294482,
+          0.5470551
+        ],
+        "action_ev": [
+          1.284934,
+          1.2835343
+        ]
+      }
+    },
+    {
+      "hand": "4h4d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.54614633,
+          0.45385364
+        ],
+        "action_ev": [
+          3.090654,
+          3.084255
+        ]
+      }
+    },
+    {
+      "hand": "4s4d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.4550144,
+          0.5449856
+        ],
+        "action_ev": [
+          3.0821846,
+          3.0772429
+        ]
+      }
+    },
+    {
+      "hand": "5d4d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.27084094,
+          0.72915906
+        ],
+        "action_ev": [
+          1.5519421,
+          1.5436538
+        ]
+      }
+    },
+    {
+      "hand": "6d4d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.48147452,
+          0.5185254
+        ],
+        "action_ev": [
+          1.4020289,
+          1.3961521
+        ]
+      }
+    },
+    {
+      "hand": "Qd4d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.33495346,
+          0.6650466
+        ],
+        "action_ev": [
+          1.2524579,
+          1.2431313
+        ]
+      }
+    },
+    {
+      "hand": "Kd4d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.32733247,
+          0.67266756
+        ],
+        "action_ev": [
+          7.7309465,
+          7.7234826
+        ]
+      }
+    },
+    {
+      "hand": "Ac4d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.26358426,
+          0.7364157
+        ],
+        "action_ev": [
+          1.3170162,
+          1.3165088
+        ]
+      }
+    },
+    {
+      "hand": "Ad4d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0035927652,
+          0.9964072
+        ],
+        "action_ev": [
+          1.8204745,
+          1.8200281
+        ]
+      }
+    },
+    {
+      "hand": "Ah4d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.28065044,
+          0.71934956
+        ],
+        "action_ev": [
+          1.3175925,
+          1.3172554
+        ]
+      }
+    },
+    {
+      "hand": "As4d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.4561987,
+          0.54380125
+        ],
+        "action_ev": [
+          1.2856009,
+          1.2836903
+        ]
+      }
+    },
+    {
+      "hand": "4s4h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.50087696,
+          0.499123
+        ],
+        "action_ev": [
+          3.0654275,
+          3.0609396
+        ]
+      }
+    },
+    {
+      "hand": "5h4h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.21640965,
+          0.7835903
+        ],
+        "action_ev": [
+          1.5460842,
+          1.5398359
+        ]
+      }
+    },
+    {
+      "hand": "6h4h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.527803,
+          0.47219697
+        ],
+        "action_ev": [
+          1.4035629,
+          1.3958272
+        ]
+      }
+    },
+    {
+      "hand": "Qh4h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.39784878,
+          0.6021513
+        ],
+        "action_ev": [
+          1.2718396,
+          1.2590996
+        ]
+      }
+    },
+    {
+      "hand": "Ac4h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.34798077,
+          0.65201926
+        ],
+        "action_ev": [
+          1.3104001,
+          1.3081882
+        ]
+      }
+    },
+    {
+      "hand": "Ad4h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.3359899,
+          0.66401005
+        ],
+        "action_ev": [
+          1.3123628,
+          1.3113694
+        ]
+      }
+    },
+    {
+      "hand": "Ah4h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0000011785431,
+          0.9999988
+        ],
+        "action_ev": [
+          1.818093,
+          1.81918
+        ]
+      }
+    },
+    {
+      "hand": "As4h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.54470074,
+          0.45529923
+        ],
+        "action_ev": [
+          1.2795863,
+          1.2724259
+        ]
+      }
+    },
+    {
+      "hand": "5s4s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.67091477,
+          0.32908526
+        ],
+        "action_ev": [
+          1.1281233,
+          1.1361197
+        ]
+      }
+    },
+    {
+      "hand": "6s4s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.9952913,
+          0.0047086976
+        ],
+        "action_ev": [
+          0.98025054,
+          0.9797548
+        ]
+      }
+    },
+    {
+      "hand": "Qs4s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.67692554,
+          0.3230745
+        ],
+        "action_ev": [
+          0.79836243,
+          0.7940991
+        ]
+      }
+    },
+    {
+      "hand": "Ks4s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5017616,
+          0.4982384
+        ],
+        "action_ev": [
+          7.48786,
+          7.4622874
+        ]
+      }
+    },
+    {
+      "hand": "Ac4s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.43650708,
+          0.56349295
+        ],
+        "action_ev": [
+          1.2947133,
+          1.2844689
+        ]
+      }
+    },
+    {
+      "hand": "Ad4s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.4214666,
+          0.57853335
+        ],
+        "action_ev": [
+          1.296651,
+          1.2885191
+        ]
+      }
+    },
+    {
+      "hand": "Ah4s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.4460034,
+          0.55399656
+        ],
+        "action_ev": [
+          1.2950642,
+          1.2857492
+        ]
+      }
+    },
+    {
+      "hand": "As4s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5839776,
+          0.4160224
+        ],
+        "action_ev": [
+          1.2641819,
+          1.2592965
+        ]
+      }
+    },
+    {
+      "hand": "5d5c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.62770706,
+          0.37229294
+        ],
+        "action_ev": [
+          3.3185112,
+          3.317536
+        ]
+      }
+    },
+    {
+      "hand": "5h5c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.70062673,
+          0.2993733
+        ],
+        "action_ev": [
+          3.301361,
+          3.3013244
+        ]
+      }
+    },
+    {
+      "hand": "5s5c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5775441,
+          0.4224559
+        ],
+        "action_ev": [
+          3.2833,
+          3.2798405
+        ]
+      }
+    },
+    {
+      "hand": "6c5c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.059619118,
+          0.9403809
+        ],
+        "action_ev": [
+          1.5975686,
+          1.5931705
+        ]
+      }
+    },
+    {
+      "hand": "8c5c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.41539276,
+          0.58460724
+        ],
+        "action_ev": [
+          1.4767033,
+          1.4736439
+        ]
+      }
+    },
+    {
+      "hand": "Qc5c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.2708449,
+          0.72915506
+        ],
+        "action_ev": [
+          1.2707658,
+          1.2605821
+        ]
+      }
+    },
+    {
+      "hand": "Kc5c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.25714353,
+          0.74285644
+        ],
+        "action_ev": [
+          7.715424,
+          7.711552
+        ]
+      }
+    },
+    {
+      "hand": "Ac5c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.05573169,
+          0.9442683
+        ],
+        "action_ev": [
+          1.8667145,
+          1.8742245
+        ]
+      }
+    },
+    {
+      "hand": "Ad5c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.40707883,
+          0.5929212
+        ],
+        "action_ev": [
+          1.3770914,
+          1.3782234
+        ]
+      }
+    },
+    {
+      "hand": "Ah5c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.43156603,
+          0.56843394
+        ],
+        "action_ev": [
+          1.3756033,
+          1.3749688
+        ]
+      }
+    },
+    {
+      "hand": "As5c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5651539,
+          0.4348461
+        ],
+        "action_ev": [
+          1.3431985,
+          1.3426056
+        ]
+      }
+    },
+    {
+      "hand": "5h5d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.663227,
+          0.33677304
+        ],
+        "action_ev": [
+          3.316905,
+          3.316867
+        ]
+      }
+    },
+    {
+      "hand": "5s5d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5522665,
+          0.44773355
+        ],
+        "action_ev": [
+          3.2989037,
+          3.2957559
+        ]
+      }
+    },
+    {
+      "hand": "6d5d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.056405216,
+          0.9435948
+        ],
+        "action_ev": [
+          1.5906513,
+          1.5876129
+        ]
+      }
+    },
+    {
+      "hand": "7d5d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0010541184,
+          0.9989459
+        ],
+        "action_ev": [
+          4.869419,
+          4.8710628
+        ]
+      }
+    },
+    {
+      "hand": "8d5d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.39390272,
+          0.6060973
+        ],
+        "action_ev": [
+          1.4719728,
+          1.4687676
+        ]
+      }
+    },
+    {
+      "hand": "Qd5d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.20308684,
+          0.7969131
+        ],
+        "action_ev": [
+          1.2805033,
+          1.2746396
+        ]
+      }
+    },
+    {
+      "hand": "Kd5d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.28638694,
+          0.7136131
+        ],
+        "action_ev": [
+          7.7590575,
+          7.752684
+        ]
+      }
+    },
+    {
+      "hand": "Ac5d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.37279558,
+          0.62720436
+        ],
+        "action_ev": [
+          1.3821526,
+          1.3837439
+        ]
+      }
+    },
+    {
+      "hand": "Ad5d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0547085,
+          0.9452915
+        ],
+        "action_ev": [
+          1.8759848,
+          1.8819336
+        ]
+      }
+    },
+    {
+      "hand": "Ah5d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.38488442,
+          0.6151156
+        ],
+        "action_ev": [
+          1.382508,
+          1.3845458
+        ]
+      }
+    },
+    {
+      "hand": "As5d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5138709,
+          0.4861291
+        ],
+        "action_ev": [
+          1.3499867,
+          1.3524394
+        ]
+      }
+    },
+    {
+      "hand": "5s5h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.62587494,
+          0.3741251
+        ],
+        "action_ev": [
+          3.2817078,
+          3.2781744
+        ]
+      }
+    },
+    {
+      "hand": "6h5h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.018990925,
+          0.9810091
+        ],
+        "action_ev": [
+          1.5922931,
+          1.5894699
+        ]
+      }
+    },
+    {
+      "hand": "7h5h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.023087347,
+          0.9769126
+        ],
+        "action_ev": [
+          4.839619,
+          4.8374133
+        ]
+      }
+    },
+    {
+      "hand": "8h5h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.39454764,
+          0.60545236
+        ],
+        "action_ev": [
+          1.4831601,
+          1.4790428
+        ]
+      }
+    },
+    {
+      "hand": "Qh5h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.2756755,
+          0.72432446
+        ],
+        "action_ev": [
+          1.2981732,
+          1.2903978
+        ]
+      }
+    },
+    {
+      "hand": "Ac5h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.42858708,
+          0.571413
+        ],
+        "action_ev": [
+          1.3761528,
+          1.3772781
+        ]
+      }
+    },
+    {
+      "hand": "Ad5h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.41693458,
+          0.58306545
+        ],
+        "action_ev": [
+          1.3781177,
+          1.3810327
+        ]
+      }
+    },
+    {
+      "hand": "Ah5h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.025903199,
+          0.97409683
+        ],
+        "action_ev": [
+          1.8766608,
+          1.8810935
+        ]
+      }
+    },
+    {
+      "hand": "As5h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5860732,
+          0.4139268
+        ],
+        "action_ev": [
+          1.3443142,
+          1.343272
+        ]
+      }
+    },
+    {
+      "hand": "6s5s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6349559,
+          0.36504415
+        ],
+        "action_ev": [
+          1.127963,
+          1.1433688
+        ]
+      }
+    },
+    {
+      "hand": "7s5s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.082865275,
+          0.9171347
+        ],
+        "action_ev": [
+          4.502308,
+          4.5002055
+        ]
+      }
+    },
+    {
+      "hand": "8s5s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.9204451,
+          0.07955492
+        ],
+        "action_ev": [
+          1.0036485,
+          1.0083472
+        ]
+      }
+    },
+    {
+      "hand": "Qs5s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.55140835,
+          0.44859162
+        ],
+        "action_ev": [
+          0.8166679,
+          0.82359815
+        ]
+      }
+    },
+    {
+      "hand": "Ks5s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.42358,
+          0.57642
+        ],
+        "action_ev": [
+          7.5202317,
+          7.5013804
+        ]
+      }
+    },
+    {
+      "hand": "Ac5s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6087146,
+          0.3912854
+        ],
+        "action_ev": [
+          1.3451126,
+          1.3350329
+        ]
+      }
+    },
+    {
+      "hand": "Ad5s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.59171546,
+          0.40828452
+        ],
+        "action_ev": [
+          1.3471974,
+          1.3400192
+        ]
+      }
+    },
+    {
+      "hand": "Ah5s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6189491,
+          0.38105088
+        ],
+        "action_ev": [
+          1.3455701,
+          1.3361948
+        ]
+      }
+    },
+    {
+      "hand": "As5s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.73104906,
+          0.26895097
+        ],
+        "action_ev": [
+          1.3134058,
+          1.3130974
+        ]
+      }
+    },
+    {
+      "hand": "6d6c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.7686144,
+          0.23138559
+        ],
+        "action_ev": [
+          3.5458694,
+          3.549132
+        ]
+      }
+    },
+    {
+      "hand": "6h6c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.8385081,
+          0.16149187
+        ],
+        "action_ev": [
+          3.5323763,
+          3.5340981
+        ]
+      }
+    },
+    {
+      "hand": "6s6c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.9522988,
+          0.04770124
+        ],
+        "action_ev": [
+          3.5154657,
+          3.5144396
+        ]
+      }
+    },
+    {
+      "hand": "8c6c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.00016567396,
+          0.9998343
+        ],
+        "action_ev": [
+          1.6562071,
+          1.6582046
+        ]
+      }
+    },
+    {
+      "hand": "9c6c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.29181746,
+          0.7081825
+        ],
+        "action_ev": [
+          1.428738,
+          1.433471
+        ]
+      }
+    },
+    {
+      "hand": "Tc6c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.41418016,
+          0.5858198
+        ],
+        "action_ev": [
+          1.3391235,
+          1.3308046
+        ]
+      }
+    },
+    {
+      "hand": "Jc6c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.71690214,
+          0.28309786
+        ],
+        "action_ev": [
+          1.255957,
+          1.2393744
+        ]
+      }
+    },
+    {
+      "hand": "Qc6c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.1533255,
+          0.8466745
+        ],
+        "action_ev": [
+          1.266494,
+          1.2683543
+        ]
+      }
+    },
+    {
+      "hand": "Kc6c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.06705452,
+          0.9329455
+        ],
+        "action_ev": [
+          7.7566686,
+          7.765475
+        ]
+      }
+    },
+    {
+      "hand": "Ac6c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.49218056,
+          0.5078195
+        ],
+        "action_ev": [
+          1.7849191,
+          1.7818651
+        ]
+      }
+    },
+    {
+      "hand": "Ad6c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.57204074,
+          0.4279592
+        ],
+        "action_ev": [
+          1.2985972,
+          1.2986007
+        ]
+      }
+    },
+    {
+      "hand": "Ah6c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5943195,
+          0.40568048
+        ],
+        "action_ev": [
+          1.2968147,
+          1.2959397
+        ]
+      }
+    },
+    {
+      "hand": "As6c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.8213641,
+          0.1786359
+        ],
+        "action_ev": [
+          1.2647862,
+          1.2559053
+        ]
+      }
+    },
+    {
+      "hand": "6h6d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.83632505,
+          0.16367494
+        ],
+        "action_ev": [
+          3.5463178,
+          3.5477853
+        ]
+      }
+    },
+    {
+      "hand": "6s6d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.9444399,
+          0.055560175
+        ],
+        "action_ev": [
+          3.5294464,
+          3.5284588
+        ]
+      }
+    },
+    {
+      "hand": "7d6d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          4.858341,
+          4.896425
+        ]
+      }
+    },
+    {
+      "hand": "8d6d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0027528817,
+          0.9972471
+        ],
+        "action_ev": [
+          1.6473426,
+          1.6465082
+        ]
+      }
+    },
+    {
+      "hand": "9d6d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.29441643,
+          0.7055836
+        ],
+        "action_ev": [
+          1.4233222,
+          1.4275825
+        ]
+      }
+    },
+    {
+      "hand": "Td6d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.36264622,
+          0.6373538
+        ],
+        "action_ev": [
+          1.3415058,
+          1.3360461
+        ]
+      }
+    },
+    {
+      "hand": "Jd6d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6522875,
+          0.34771255
+        ],
+        "action_ev": [
+          1.2635607,
+          1.2479852
+        ]
+      }
+    },
+    {
+      "hand": "Qd6d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.11192805,
+          0.88807195
+        ],
+        "action_ev": [
+          1.2767639,
+          1.2779481
+        ]
+      }
+    },
+    {
+      "hand": "Kd6d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.1098953,
+          0.8901047
+        ],
+        "action_ev": [
+          7.8008614,
+          7.808413
+        ]
+      }
+    },
+    {
+      "hand": "Ac6d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.55784416,
+          0.4421558
+        ],
+        "action_ev": [
+          1.3028114,
+          1.3024385
+        ]
+      }
+    },
+    {
+      "hand": "Ad6d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.4898097,
+          0.5101903
+        ],
+        "action_ev": [
+          1.7917026,
+          1.7883682
+        ]
+      }
+    },
+    {
+      "hand": "Ah6d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5688387,
+          0.4311613
+        ],
+        "action_ev": [
+          1.3033377,
+          1.3029321
+        ]
+      }
+    },
+    {
+      "hand": "As6d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.7634526,
+          0.23654741
+        ],
+        "action_ev": [
+          1.2711191,
+          1.2645583
+        ]
+      }
+    },
+    {
+      "hand": "6s6h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.999761,
+          0.00023905246
+        ],
+        "action_ev": [
+          3.5162313,
+          3.5129006
+        ]
+      }
+    },
+    {
+      "hand": "7h6h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          4.8409495,
+          4.8718276
+        ]
+      }
+    },
+    {
+      "hand": "8h6h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          1.6619471,
+          1.664606
+        ]
+      }
+    },
+    {
+      "hand": "9h6h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.22702822,
+          0.77297175
+        ],
+        "action_ev": [
+          1.4508644,
+          1.4566671
+        ]
+      }
+    },
+    {
+      "hand": "Th6h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.42730695,
+          0.572693
+        ],
+        "action_ev": [
+          1.3598032,
+          1.3531746
+        ]
+      }
+    },
+    {
+      "hand": "Jh6h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.7205266,
+          0.27947345
+        ],
+        "action_ev": [
+          1.2812783,
+          1.2663584
+        ]
+      }
+    },
+    {
+      "hand": "Qh6h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.13932642,
+          0.8606736
+        ],
+        "action_ev": [
+          1.2979959,
+          1.3004959
+        ]
+      }
+    },
+    {
+      "hand": "Ac6h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5891045,
+          0.41089553
+        ],
+        "action_ev": [
+          1.2975242,
+          1.2977148
+        ]
+      }
+    },
+    {
+      "hand": "Ad6h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5782371,
+          0.42176285
+        ],
+        "action_ev": [
+          1.2999021,
+          1.3009762
+        ]
+      }
+    },
+    {
+      "hand": "Ah6h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.44591066,
+          0.55408937
+        ],
+        "action_ev": [
+          1.7912958,
+          1.7927567
+        ]
+      }
+    },
+    {
+      "hand": "As6h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.8253946,
+          0.17460543
+        ],
+        "action_ev": [
+          1.2660134,
+          1.2589258
+        ]
+      }
+    },
+    {
+      "hand": "7s6s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          4.496855,
+          4.521985
+        ]
+      }
+    },
+    {
+      "hand": "8s6s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.82953256,
+          0.17046747
+        ],
+        "action_ev": [
+          1.1507692,
+          1.1496774
+        ]
+      }
+    },
+    {
+      "hand": "9s6s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.8769287,
+          0.123071276
+        ],
+        "action_ev": [
+          0.9413513,
+          0.94750506
+        ]
+      }
+    },
+    {
+      "hand": "Ts6s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5733198,
+          0.42668024
+        ],
+        "action_ev": [
+          0.8640776,
+          0.8714099
+        ]
+      }
+    },
+    {
+      "hand": "Js6s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.81328857,
+          0.79115355
+        ]
+      }
+    },
+    {
+      "hand": "Qs6s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.64602256,
+          0.35397747
+        ],
+        "action_ev": [
+          0.8021346,
+          0.8144684
+        ]
+      }
+    },
+    {
+      "hand": "Ks6s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.21847105,
+          0.78152895
+        ],
+        "action_ev": [
+          7.557495,
+          7.5567055
+        ]
+      }
+    },
+    {
+      "hand": "Ac6s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.99745876,
+          0.002541265
+        ],
+        "action_ev": [
+          1.2656664,
+          1.2427527
+        ]
+      }
+    },
+    {
+      "hand": "Ad6s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.9973891,
+          0.002610945
+        ],
+        "action_ev": [
+          1.2676175,
+          1.2465538
+        ]
+      }
+    },
+    {
+      "hand": "Ah6s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.9988823,
+          0.0011176626
+        ],
+        "action_ev": [
+          1.2658764,
+          1.2434349
+        ]
+      }
+    },
+    {
+      "hand": "As6s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          1.2338585,
+          1.2088147
+        ]
+      }
+    },
+    {
+      "hand": "7h7d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          12.444976,
+          12.543406
+        ]
+      }
+    },
+    {
+      "hand": "7s7d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0088188145,
+          0.99118114
+        ],
+        "action_ev": [
+          12.386653,
+          12.390572
+        ]
+      }
+    },
+    {
+      "hand": "8d7d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.22616754,
+          0.7738325
+        ],
+        "action_ev": [
+          5.046597,
+          5.0550146
+        ]
+      }
+    },
+    {
+      "hand": "9d7d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.583089,
+          0.41691098
+        ],
+        "action_ev": [
+          5.0931287,
+          5.081765
+        ]
+      }
+    },
+    {
+      "hand": "Td7d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          5.130868,
+          5.1385593
+        ]
+      }
+    },
+    {
+      "hand": "Jd7d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.049902335,
+          0.9500977
+        ],
+        "action_ev": [
+          5.2131305,
+          5.208043
+        ]
+      }
+    },
+    {
+      "hand": "Qd7d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.24805017,
+          0.75194985
+        ],
+        "action_ev": [
+          5.287528,
+          5.2838154
+        ]
+      }
+    },
+    {
+      "hand": "Kc7d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          10.485818,
+          10.541516
+        ]
+      }
+    },
+    {
+      "hand": "Kd7d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          10.628936,
+          10.690097
+        ]
+      }
+    },
+    {
+      "hand": "Ks7d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          10.459507,
+          10.5284
+        ]
+      }
+    },
+    {
+      "hand": "Ac7d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          5.155246,
+          5.2182264
+        ]
+      }
+    },
+    {
+      "hand": "Ad7d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          5.54979,
+          5.6292443
+        ]
+      }
+    },
+    {
+      "hand": "Ah7d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          5.153247,
+          5.215955
+        ]
+      }
+    },
+    {
+      "hand": "As7d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          5.1114974,
+          5.2022614
+        ]
+      }
+    },
+    {
+      "hand": "7s7h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          12.4149,
+          12.503578
+        ]
+      }
+    },
+    {
+      "hand": "8h7h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0599813,
+          0.9400187
+        ],
+        "action_ev": [
+          5.0354266,
+          5.033726
+        ]
+      }
+    },
+    {
+      "hand": "9h7h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.63549644,
+          0.36450353
+        ],
+        "action_ev": [
+          5.0955257,
+          5.0861363
+        ]
+      }
+    },
+    {
+      "hand": "Th7h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          2.23574e-7,
+          0.99999976
+        ],
+        "action_ev": [
+          5.1312804,
+          5.1383095
+        ]
+      }
+    },
+    {
+      "hand": "Jh7h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.11214616,
+          0.88785386
+        ],
+        "action_ev": [
+          5.2066884,
+          5.2053347
+        ]
+      }
+    },
+    {
+      "hand": "Qh7h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.34457603,
+          0.65542394
+        ],
+        "action_ev": [
+          5.282089,
+          5.277283
+        ]
+      }
+    },
+    {
+      "hand": "Kc7h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          10.489663,
+          10.544309
+        ]
+      }
+    },
+    {
+      "hand": "Kd7h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          10.499975,
+          10.567805
+        ]
+      }
+    },
+    {
+      "hand": "Ks7h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          10.463581,
+          10.532224
+        ]
+      }
+    },
+    {
+      "hand": "Ac7h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          5.134628,
+          5.1835866
+        ]
+      }
+    },
+    {
+      "hand": "Ad7h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          5.1354733,
+          5.1889606
+        ]
+      }
+    },
+    {
+      "hand": "Ah7h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          5.537245,
+          5.6076565
+        ]
+      }
+    },
+    {
+      "hand": "As7h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          5.0901465,
+          5.16636
+        ]
+      }
+    },
+    {
+      "hand": "8s7s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.67723644,
+          0.3227636
+        ],
+        "action_ev": [
+          4.6978765,
+          4.6963787
+        ]
+      }
+    },
+    {
+      "hand": "9s7s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          4.74638,
+          4.715241
+        ]
+      }
+    },
+    {
+      "hand": "Ts7s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.43686596,
+          0.563134
+        ],
+        "action_ev": [
+          4.7619295,
+          4.758262
+        ]
+      }
+    },
+    {
+      "hand": "Js7s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.7789604,
+          0.22103958
+        ],
+        "action_ev": [
+          4.819498,
+          4.818449
+        ]
+      }
+    },
+    {
+      "hand": "Qs7s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.7579515,
+          0.24204856
+        ],
+        "action_ev": [
+          4.8814917,
+          4.882172
+        ]
+      }
+    },
+    {
+      "hand": "Kc7s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          10.427983,
+          10.497625
+        ]
+      }
+    },
+    {
+      "hand": "Kd7s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          10.438847,
+          10.5196705
+        ]
+      }
+    },
+    {
+      "hand": "Ks7s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          10.387259,
+          10.466866
+        ]
+      }
+    },
+    {
+      "hand": "Ac7s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          5.088886,
+          5.1679473
+        ]
+      }
+    },
+    {
+      "hand": "Ad7s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          5.0897527,
+          5.173516
+        ]
+      }
+    },
+    {
+      "hand": "Ah7s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          5.0870185,
+          5.165433
+        ]
+      }
+    },
+    {
+      "hand": "As7s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          5.043967,
+          5.151939
+        ]
+      }
+    },
+    {
+      "hand": "8d8c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.53181183,
+          0.46818817
+        ],
+        "action_ev": [
+          4.5468707,
+          4.5443974
+        ]
+      }
+    },
+    {
+      "hand": "8h8c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.54558706,
+          0.45441297
+        ],
+        "action_ev": [
+          4.5297194,
+          4.5281672
+        ]
+      }
+    },
+    {
+      "hand": "8s8c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.3381173,
+          0.6618827
+        ],
+        "action_ev": [
+          4.5216093,
+          4.5189104
+        ]
+      }
+    },
+    {
+      "hand": "9c8c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          1.620544,
+          1.652746
+        ]
+      }
+    },
+    {
+      "hand": "9d8c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.31574652,
+          0.6842535
+        ],
+        "action_ev": [
+          1.2015238,
+          1.2002151
+        ]
+      }
+    },
+    {
+      "hand": "9h8c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.333864,
+          0.666136
+        ],
+        "action_ev": [
+          1.2054434,
+          1.2019784
+        ]
+      }
+    },
+    {
+      "hand": "9s8c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.33929387,
+          0.6607061
+        ],
+        "action_ev": [
+          1.1413227,
+          1.1448597
+        ]
+      }
+    },
+    {
+      "hand": "Tc8c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.10834309,
+          0.89165694
+        ],
+        "action_ev": [
+          1.5503366,
+          1.5540332
+        ]
+      }
+    },
+    {
+      "hand": "Td8c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.002127577,
+          0.9978725
+        ],
+        "action_ev": [
+          1.1355661,
+          1.136188
+        ]
+      }
+    },
+    {
+      "hand": "Th8c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0011272128,
+          0.9988728
+        ],
+        "action_ev": [
+          1.1377838,
+          1.1388535
+        ]
+      }
+    },
+    {
+      "hand": "Ts8c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.28707382,
+          0.71292615
+        ],
+        "action_ev": [
+          1.0893929,
+          1.0893703
+        ]
+      }
+    },
+    {
+      "hand": "Jc8c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.23189092,
+          0.7681091
+        ],
+        "action_ev": [
+          1.4026941,
+          1.3963754
+        ]
+      }
+    },
+    {
+      "hand": "Jd8c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          0.99219954,
+          0.99861985
+        ]
+      }
+    },
+    {
+      "hand": "Jh8c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          0.9910336,
+          1.0008478
+        ]
+      }
+    },
+    {
+      "hand": "Js8c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.15835358,
+          0.8416464
+        ],
+        "action_ev": [
+          0.95525175,
+          0.95767057
+        ]
+      }
+    },
+    {
+      "hand": "Qc8c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.50920796,
+          0.49079204
+        ],
+        "action_ev": [
+          1.3247437,
+          1.3177867
+        ]
+      }
+    },
+    {
+      "hand": "Qd8c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.28067106,
+          0.71932894
+        ],
+        "action_ev": [
+          0.91665375,
+          0.91791534
+        ]
+      }
+    },
+    {
+      "hand": "Qh8c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.25241995,
+          0.74758005
+        ],
+        "action_ev": [
+          0.9195503,
+          0.9189488
+        ]
+      }
+    },
+    {
+      "hand": "Qs8c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6830099,
+          0.31699002
+        ],
+        "action_ev": [
+          0.87181413,
+          0.8730457
+        ]
+      }
+    },
+    {
+      "hand": "Kc8c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.00043554947,
+          0.99956447
+        ],
+        "action_ev": [
+          7.9051986,
+          7.9220095
+        ]
+      }
+    },
+    {
+      "hand": "Kd8c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.3312946,
+          0.6687054
+        ],
+        "action_ev": [
+          7.7069106,
+          7.6951637
+        ]
+      }
+    },
+    {
+      "hand": "Ks8c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.31372306,
+          0.6862769
+        ],
+        "action_ev": [
+          7.6881657,
+          7.6816454
+        ]
+      }
+    },
+    {
+      "hand": "Ac8c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.73052543,
+          0.26947454
+        ],
+        "action_ev": [
+          2.130001,
+          2.1169088
+        ]
+      }
+    },
+    {
+      "hand": "Ad8c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          1.654315,
+          1.6207701
+        ]
+      }
+    },
+    {
+      "hand": "Ah8c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          1.6518462,
+          1.618267
+        ]
+      }
+    },
+    {
+      "hand": "As8c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          1.6196992,
+          1.5997529
+        ]
+      }
+    },
+    {
+      "hand": "8h8d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5619794,
+          0.43802053
+        ],
+        "action_ev": [
+          4.5165825,
+          4.514164
+        ]
+      }
+    },
+    {
+      "hand": "8s8d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.388953,
+          0.61104697
+        ],
+        "action_ev": [
+          4.5075316,
+          4.5042152
+        ]
+      }
+    },
+    {
+      "hand": "9c8d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.28085607,
+          0.7191439
+        ],
+        "action_ev": [
+          1.2010897,
+          1.2006282
+        ]
+      }
+    },
+    {
+      "hand": "9d8d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          1.6064792,
+          1.6375992
+        ]
+      }
+    },
+    {
+      "hand": "9h8d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.32231572,
+          0.6776843
+        ],
+        "action_ev": [
+          1.2118292,
+          1.208738
+        ]
+      }
+    },
+    {
+      "hand": "9s8d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.30492434,
+          0.6950757
+        ],
+        "action_ev": [
+          1.1477594,
+          1.1514472
+        ]
+      }
+    },
+    {
+      "hand": "Tc8d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.017784398,
+          0.9822156
+        ],
+        "action_ev": [
+          1.1347514,
+          1.1357253
+        ]
+      }
+    },
+    {
+      "hand": "Td8d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.1694993,
+          0.83050066
+        ],
+        "action_ev": [
+          1.5458759,
+          1.5450243
+        ]
+      }
+    },
+    {
+      "hand": "Th8d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0002857851,
+          0.9997142
+        ],
+        "action_ev": [
+          1.1445556,
+          1.1467285
+        ]
+      }
+    },
+    {
+      "hand": "Ts8d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.25382036,
+          0.74617964
+        ],
+        "action_ev": [
+          1.0961968,
+          1.0968796
+        ]
+      }
+    },
+    {
+      "hand": "Jc8d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          0.99143827,
+          0.9987584
+        ]
+      }
+    },
+    {
+      "hand": "Jd8d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.22526379,
+          0.77473617
+        ],
+        "action_ev": [
+          1.4041895,
+          1.3972847
+        ]
+      }
+    },
+    {
+      "hand": "Jh8d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          0.99765944,
+          1.0087832
+        ]
+      }
+    },
+    {
+      "hand": "Js8d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.08848733,
+          0.9115127
+        ],
+        "action_ev": [
+          0.9618506,
+          0.96554124
+        ]
+      }
+    },
+    {
+      "hand": "Qc8d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.292841,
+          0.70715904
+        ],
+        "action_ev": [
+          0.9171297,
+          0.9163922
+        ]
+      }
+    },
+    {
+      "hand": "Qd8d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.46887964,
+          0.53112036
+        ],
+        "action_ev": [
+          1.3304889,
+          1.3255643
+        ]
+      }
+    },
+    {
+      "hand": "Qh8d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.18180968,
+          0.81819034
+        ],
+        "action_ev": [
+          0.92565554,
+          0.9277515
+        ]
+      }
+    },
+    {
+      "hand": "Qs8d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6040636,
+          0.39593646
+        ],
+        "action_ev": [
+          0.87743896,
+          0.88269454
+        ]
+      }
+    },
+    {
+      "hand": "Kc8d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.31513637,
+          0.68486357
+        ],
+        "action_ev": [
+          7.6693287,
+          7.6583643
+        ]
+      }
+    },
+    {
+      "hand": "Kd8d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          7.930708,
+          7.9512744
+        ]
+      }
+    },
+    {
+      "hand": "Ks8d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.27395803,
+          0.726042
+        ],
+        "action_ev": [
+          7.6776195,
+          7.674104
+        ]
+      }
+    },
+    {
+      "hand": "Ac8d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          1.6646168,
+          1.6316141
+        ]
+      }
+    },
+    {
+      "hand": "Ad8d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6980714,
+          0.3019286
+        ],
+        "action_ev": [
+          2.1397839,
+          2.1273713
+        ]
+      }
+    },
+    {
+      "hand": "Ah8d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          1.6650876,
+          1.6333404
+        ]
+      }
+    },
+    {
+      "hand": "As8d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          1.6327617,
+          1.6149806
+        ]
+      }
+    },
+    {
+      "hand": "8s8h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.43209347,
+          0.5679065
+        ],
+        "action_ev": [
+          4.489894,
+          4.4875655
+        ]
+      }
+    },
+    {
+      "hand": "9c8h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.3414549,
+          0.65854514
+        ],
+        "action_ev": [
+          1.196606,
+          1.1952726
+        ]
+      }
+    },
+    {
+      "hand": "9d8h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.33580524,
+          0.66419476
+        ],
+        "action_ev": [
+          1.2034172,
+          1.2016875
+        ]
+      }
+    },
+    {
+      "hand": "9h8h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          1.6403095,
+          1.6696011
+        ]
+      }
+    },
+    {
+      "hand": "9s8h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.35612768,
+          0.6438723
+        ],
+        "action_ev": [
+          1.1435338,
+          1.1449488
+        ]
+      }
+    },
+    {
+      "hand": "Tc8h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.049004953,
+          0.9509951
+        ],
+        "action_ev": [
+          1.1312808,
+          1.1311759
+        ]
+      }
+    },
+    {
+      "hand": "Td8h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0009298383,
+          0.99907017
+        ],
+        "action_ev": [
+          1.1388621,
+          1.1395099
+        ]
+      }
+    },
+    {
+      "hand": "Th8h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.087850705,
+          0.9121493
+        ],
+        "action_ev": [
+          1.5746754,
+          1.576913
+        ]
+      }
+    },
+    {
+      "hand": "Ts8h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.27074772,
+          0.7292523
+        ],
+        "action_ev": [
+          1.0927238,
+          1.092939
+        ]
+      }
+    },
+    {
+      "hand": "Jc8h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          0.98683107,
+          0.9939409
+        ]
+      }
+    },
+    {
+      "hand": "Jd8h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          0.9939044,
+          1.0017449
+        ]
+      }
+    },
+    {
+      "hand": "Jh8h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.26396978,
+          0.7360302
+        ],
+        "action_ev": [
+          1.4291272,
+          1.4216412
+        ]
+      }
+    },
+    {
+      "hand": "Js8h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.10933776,
+          0.89066225
+        ],
+        "action_ev": [
+          0.9574492,
+          0.9607022
+        ]
+      }
+    },
+    {
+      "hand": "Qc8h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.31610274,
+          0.68389726
+        ],
+        "action_ev": [
+          0.91250336,
+          0.91090274
+        ]
+      }
+    },
+    {
+      "hand": "Qd8h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.24771653,
+          0.75228345
+        ],
+        "action_ev": [
+          0.91803193,
+          0.9210075
+        ]
+      }
+    },
+    {
+      "hand": "Qh8h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.4249916,
+          0.5750084
+        ],
+        "action_ev": [
+          1.3586987,
+          1.3536109
+        ]
+      }
+    },
+    {
+      "hand": "Qs8h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6341811,
+          0.36581895
+        ],
+        "action_ev": [
+          0.87341934,
+          0.8769314
+        ]
+      }
+    },
+    {
+      "hand": "Kc8h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.32613298,
+          0.67386705
+        ],
+        "action_ev": [
+          7.655409,
+          7.6475368
+        ]
+      }
+    },
+    {
+      "hand": "Kd8h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.30385634,
+          0.6961436
+        ],
+        "action_ev": [
+          7.6828904,
+          7.676898
+        ]
+      }
+    },
+    {
+      "hand": "Ks8h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.27952397,
+          0.72047603
+        ],
+        "action_ev": [
+          7.6640186,
+          7.663186
+        ]
+      }
+    },
+    {
+      "hand": "Ac8h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          1.6570787,
+          1.6245263
+        ]
+      }
+    },
+    {
+      "hand": "Ad8h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          1.6600276,
+          1.6285037
+        ]
+      }
+    },
+    {
+      "hand": "Ah8h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.7098128,
+          0.29018718
+        ],
+        "action_ev": [
+          2.140834,
+          2.1301222
+        ]
+      }
+    },
+    {
+      "hand": "As8h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          1.6253835,
+          1.6067209
+        ]
+      }
+    },
+    {
+      "hand": "9c8s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.3887051,
+          0.61129487
+        ],
+        "action_ev": [
+          1.1405647,
+          1.1450502
+        ]
+      }
+    },
+    {
+      "hand": "9d8s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.34394702,
+          0.65605295
+        ],
+        "action_ev": [
+          1.1473439,
+          1.151649
+        ]
+      }
+    },
+    {
+      "hand": "9h8s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.37335777,
+          0.6266422
+        ],
+        "action_ev": [
+          1.150639,
+          1.1516654
+        ]
+      }
+    },
+    {
+      "hand": "9s8s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5560362,
+          0.44396386
+        ],
+        "action_ev": [
+          1.0961254,
+          1.0983131
+        ]
+      }
+    },
+    {
+      "hand": "Tc8s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.33858815,
+          0.6614118
+        ],
+        "action_ev": [
+          1.0739763,
+          1.0720133
+        ]
+      }
+    },
+    {
+      "hand": "Td8s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.28423524,
+          0.71576476
+        ],
+        "action_ev": [
+          1.0819517,
+          1.0799502
+        ]
+      }
+    },
+    {
+      "hand": "Th8s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.27171966,
+          0.7282803
+        ],
+        "action_ev": [
+          1.0839771,
+          1.0824512
+        ]
+      }
+    },
+    {
+      "hand": "Ts8s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.21221685,
+          0.78778315
+        ],
+        "action_ev": [
+          1.039201,
+          1.0489632
+        ]
+      }
+    },
+    {
+      "hand": "Jc8s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.20470724,
+          0.7952928
+        ],
+        "action_ev": [
+          0.9387265,
+          0.93500704
+        ]
+      }
+    },
+    {
+      "hand": "Jd8s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.11711897,
+          0.88288105
+        ],
+        "action_ev": [
+          0.9462526,
+          0.942744
+        ]
+      }
+    },
+    {
+      "hand": "Jh8s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0759744,
+          0.9240256
+        ],
+        "action_ev": [
+          0.94588,
+          0.94466966
+        ]
+      }
+    },
+    {
+      "hand": "Js8s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.24953121,
+          0.75046873
+        ],
+        "action_ev": [
+          0.91089994,
+          0.91723174
+        ]
+      }
+    },
+    {
+      "hand": "Qc8s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6996153,
+          0.30038467
+        ],
+        "action_ev": [
+          0.8753386,
+          0.8611615
+        ]
+      }
+    },
+    {
+      "hand": "Qd8s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6171558,
+          0.38284424
+        ],
+        "action_ev": [
+          0.8812854,
+          0.8713013
+        ]
+      }
+    },
+    {
+      "hand": "Qh8s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.57805234,
+          0.42194766
+        ],
+        "action_ev": [
+          0.8843196,
+          0.8728893
+        ]
+      }
+    },
+    {
+      "hand": "Qs8s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.9981796,
+          0.001820349
+        ],
+        "action_ev": [
+          0.84447116,
+          0.8444847
+        ]
+      }
+    },
+    {
+      "hand": "Kc8s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.17775843,
+          0.82224154
+        ],
+        "action_ev": [
+          7.657373,
+          7.661348
+        ]
+      }
+    },
+    {
+      "hand": "Kd8s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.14370427,
+          0.85629576
+        ],
+        "action_ev": [
+          7.68478,
+          7.690519
+        ]
+      }
+    },
+    {
+      "hand": "Ks8s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.13238409,
+          0.8676159
+        ],
+        "action_ev": [
+          7.6557965,
+          7.667035
+        ]
+      }
+    },
+    {
+      "hand": "Ac8s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          1.6319671,
+          1.597161
+        ]
+      }
+    },
+    {
+      "hand": "Ad8s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          1.6348938,
+          1.6009902
+        ]
+      }
+    },
+    {
+      "hand": "Ah8s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          1.6324475,
+          1.5993009
+        ]
+      }
+    },
+    {
+      "hand": "As8s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          1.5996333,
+          1.5799443
+        ]
+      }
+    },
+    {
+      "hand": "9d9c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.7412149,
+          0.25878513
+        ],
+        "action_ev": [
+          4.9803205,
+          4.979819
+        ]
+      }
+    },
+    {
+      "hand": "9h9c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.75167865,
+          0.24832138
+        ],
+        "action_ev": [
+          4.9845014,
+          4.9843273
+        ]
+      }
+    },
+    {
+      "hand": "9s9c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6419882,
+          0.35801178
+        ],
+        "action_ev": [
+          4.957303,
+          4.9549866
+        ]
+      }
+    },
+    {
+      "hand": "Tc9c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          1.6685915,
+          1.6957211
+        ]
+      }
+    },
+    {
+      "hand": "Td9c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.2918123,
+          0.7081877
+        ],
+        "action_ev": [
+          1.2487552,
+          1.2470121
+        ]
+      }
+    },
+    {
+      "hand": "Th9c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.30249125,
+          0.69750875
+        ],
+        "action_ev": [
+          1.2496573,
+          1.2489384
+        ]
+      }
+    },
+    {
+      "hand": "Ts9c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.27522913,
+          0.72477084
+        ],
+        "action_ev": [
+          1.2019794,
+          1.2089201
+        ]
+      }
+    },
+    {
+      "hand": "Jc9c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.09851567,
+          0.9014844
+        ],
+        "action_ev": [
+          1.5401329,
+          1.5456456
+        ]
+      }
+    },
+    {
+      "hand": "Jd9c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.2671317,
+          0.7328683
+        ],
+        "action_ev": [
+          1.1243144,
+          1.1224394
+        ]
+      }
+    },
+    {
+      "hand": "Jh9c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.25560904,
+          0.74439096
+        ],
+        "action_ev": [
+          1.1241382,
+          1.1247772
+        ]
+      }
+    },
+    {
+      "hand": "Js9c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.40384254,
+          0.5961575
+        ],
+        "action_ev": [
+          1.0794889,
+          1.0839581
+        ]
+      }
+    },
+    {
+      "hand": "Qc9c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6222341,
+          0.37776592
+        ],
+        "action_ev": [
+          1.4421154,
+          1.4324759
+        ]
+      }
+    },
+    {
+      "hand": "Qd9c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.22805443,
+          0.77194554
+        ],
+        "action_ev": [
+          1.019952,
+          1.0250183
+        ]
+      }
+    },
+    {
+      "hand": "Qh9c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.16693828,
+          0.83306175
+        ],
+        "action_ev": [
+          1.0232314,
+          1.0282246
+        ]
+      }
+    },
+    {
+      "hand": "Qs9c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5518783,
+          0.44812173
+        ],
+        "action_ev": [
+          0.970472,
+          0.98003983
+        ]
+      }
+    },
+    {
+      "hand": "Kc9c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          8.089794,
+          8.118656
+        ]
+      }
+    },
+    {
+      "hand": "Kd9c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0706469,
+          0.9293531
+        ],
+        "action_ev": [
+          7.8772106,
+          7.8767242
+        ]
+      }
+    },
+    {
+      "hand": "Ks9c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.09853666,
+          0.9014633
+        ],
+        "action_ev": [
+          7.844104,
+          7.8436403
+        ]
+      }
+    },
+    {
+      "hand": "Ac9c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.99381924,
+          0.0061807074
+        ],
+        "action_ev": [
+          2.39943,
+          2.373266
+        ]
+      }
+    },
+    {
+      "hand": "Ad9c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          1.9345816,
+          1.8809108
+        ]
+      }
+    },
+    {
+      "hand": "Ah9c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          1.9323627,
+          1.8780932
+        ]
+      }
+    },
+    {
+      "hand": "As9c",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          1.9023888,
+          1.8546665
+        ]
+      }
+    },
+    {
+      "hand": "9h9d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.71596146,
+          0.2840385
+        ],
+        "action_ev": [
+          4.970403,
+          4.9705234
+        ]
+      }
+    },
+    {
+      "hand": "9s9d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6229135,
+          0.37708652
+        ],
+        "action_ev": [
+          4.9429164,
+          4.9409366
+        ]
+      }
+    },
+    {
+      "hand": "Tc9d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.31343028,
+          0.68656975
+        ],
+        "action_ev": [
+          1.2477994,
+          1.2458845
+        ]
+      }
+    },
+    {
+      "hand": "Td9d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          1.66222,
+          1.6880194
+        ]
+      }
+    },
+    {
+      "hand": "Th9d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.30278215,
+          0.6972179
+        ],
+        "action_ev": [
+          1.2559361,
+          1.2551961
+        ]
+      }
+    },
+    {
+      "hand": "Ts9d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.25804526,
+          0.7419547
+        ],
+        "action_ev": [
+          1.2079986,
+          1.2152508
+        ]
+      }
+    },
+    {
+      "hand": "Jc9d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.2727306,
+          0.72726935
+        ],
+        "action_ev": [
+          1.1236928,
+          1.1226223
+        ]
+      }
+    },
+    {
+      "hand": "Jd9d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.14640725,
+          0.85359275
+        ],
+        "action_ev": [
+          1.5398276,
+          1.5449258
+        ]
+      }
+    },
+    {
+      "hand": "Jh9d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.18993814,
+          0.8100618
+        ],
+        "action_ev": [
+          1.131285,
+          1.1338192
+        ]
+      }
+    },
+    {
+      "hand": "Js9d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.38914162,
+          0.61085844
+        ],
+        "action_ev": [
+          1.0852722,
+          1.0895305
+        ]
+      }
+    },
+    {
+      "hand": "Qc9d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.23426753,
+          0.76573247
+        ],
+        "action_ev": [
+          1.0197469,
+          1.0239902
+        ]
+      }
+    },
+    {
+      "hand": "Qd9d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6019765,
+          0.39802346
+        ],
+        "action_ev": [
+          1.4468602,
+          1.4347823
+        ]
+      }
+    },
+    {
+      "hand": "Qh9d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.10658342,
+          0.8934166
+        ],
+        "action_ev": [
+          1.0289105,
+          1.0353161
+        ]
+      }
+    },
+    {
+      "hand": "Qs9d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.50423765,
+          0.49576235
+        ],
+        "action_ev": [
+          0.9752777,
+          0.9872453
+        ]
+      }
+    },
+    {
+      "hand": "Kc9d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.045511577,
+          0.9544884
+        ],
+        "action_ev": [
+          7.8466687,
+          7.845333
+        ]
+      }
+    },
+    {
+      "hand": "Kd9d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          8.114509,
+          8.148053
+        ]
+      }
+    },
+    {
+      "hand": "Ks9d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.02436716,
+          0.9756328
+        ],
+        "action_ev": [
+          7.8354554,
+          7.837544
+        ]
+      }
+    },
+    {
+      "hand": "Ac9d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          1.9447049,
+          1.8903519
+        ]
+      }
+    },
+    {
+      "hand": "Ad9d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.99199694,
+          0.008003065
+        ],
+        "action_ev": [
+          2.407239,
+          2.3853617
+        ]
+      }
+    },
+    {
+      "hand": "Ah9d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          1.9451236,
+          1.8920451
+        ]
+      }
+    },
+    {
+      "hand": "As9d",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          1.9150919,
+          1.8683157
+        ]
+      }
+    },
+    {
+      "hand": "9s9h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.622183,
+          0.377817
+        ],
+        "action_ev": [
+          4.9475217,
+          4.945626
+        ]
+      }
+    },
+    {
+      "hand": "Tc9h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.32338232,
+          0.6766176
+        ],
+        "action_ev": [
+          1.2516594,
+          1.248501
+        ]
+      }
+    },
+    {
+      "hand": "Td9h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.29836044,
+          0.7016396
+        ],
+        "action_ev": [
+          1.2589996,
+          1.2560852
+        ]
+      }
+    },
+    {
+      "hand": "Th9h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          1.7051673,
+          1.7301217
+        ]
+      }
+    },
+    {
+      "hand": "Ts9h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.2885417,
+          0.71145827
+        ],
+        "action_ev": [
+          1.2118033,
+          1.2158246
+        ]
+      }
+    },
+    {
+      "hand": "Jc9h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.2621327,
+          0.7378673
+        ],
+        "action_ev": [
+          1.1291356,
+          1.1266327
+        ]
+      }
+    },
+    {
+      "hand": "Jd9h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.18333979,
+          0.81666017
+        ],
+        "action_ev": [
+          1.1371858,
+          1.1357406
+        ]
+      }
+    },
+    {
+      "hand": "Jh9h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.08496115,
+          0.9150388
+        ],
+        "action_ev": [
+          1.5829293,
+          1.5826977
+        ]
+      }
+    },
+    {
+      "hand": "Js9h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.38702118,
+          0.6129789
+        ],
+        "action_ev": [
+          1.0903755,
+          1.0937365
+        ]
+      }
+    },
+    {
+      "hand": "Qc9h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.18175311,
+          0.8182469
+        ],
+        "action_ev": [
+          1.0242099,
+          1.0282052
+        ]
+      }
+    },
+    {
+      "hand": "Qd9h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.112772904,
+          0.8872271
+        ],
+        "action_ev": [
+          1.0301875,
+          1.0361733
+        ]
+      }
+    },
+    {
+      "hand": "Qh9h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.48082918,
+          0.5191708
+        ],
+        "action_ev": [
+          1.4904119,
+          1.4801345
+        ]
+      }
+    },
+    {
+      "hand": "Qs9h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.46691784,
+          0.5330822
+        ],
+        "action_ev": [
+          0.9791449,
+          0.99132764
+        ]
+      }
+    },
+    {
+      "hand": "Kc9h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.03994975,
+          0.9600502
+        ],
+        "action_ev": [
+          7.854686,
+          7.8527703
+        ]
+      }
+    },
+    {
+      "hand": "Kd9h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.00055243896,
+          0.9994476
+        ],
+        "action_ev": [
+          7.8774586,
+          7.8787055
+        ]
+      }
+    },
+    {
+      "hand": "Ks9h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.018053407,
+          0.98194665
+        ],
+        "action_ev": [
+          7.8428187,
+          7.8451023
+        ]
+      }
+    },
+    {
+      "hand": "Ac9h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          1.9439877,
+          1.8908343
+        ]
+      }
+    },
+    {
+      "hand": "Ad9h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          1.9466615,
+          1.8955176
+        ]
+      }
+    },
+    {
+      "hand": "Ah9h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.9893565,
+          0.010643495
+        ],
+        "action_ev": [
+          2.416965,
+          2.398504
+        ]
+      }
+    },
+    {
+      "hand": "As9h",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          1.9142785,
+          1.8696879
+        ]
+      }
+    },
+    {
+      "hand": "Tc9s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.29771706,
+          0.70228297
+        ],
+        "action_ev": [
+          1.1877174,
+          1.1896957
+        ]
+      }
+    },
+    {
+      "hand": "Td9s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.254995,
+          0.745005
+        ],
+        "action_ev": [
+          1.1949185,
+          1.1972309
+        ]
+      }
+    },
+    {
+      "hand": "Th9s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.2824437,
+          0.71755636
+        ],
+        "action_ev": [
+          1.1955975,
+          1.19744
+        ]
+      }
+    },
+    {
+      "hand": "Ts9s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.37239432,
+          0.62760574
+        ],
+        "action_ev": [
+          1.1556667,
+          1.1616031
+        ]
+      }
+    },
+    {
+      "hand": "Jc9s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.39800766,
+          0.60199237
+        ],
+        "action_ev": [
+          1.0630983,
+          1.0619915
+        ]
+      }
+    },
+    {
+      "hand": "Jd9s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.3723194,
+          0.62768054
+        ],
+        "action_ev": [
+          1.0694057,
+          1.0674996
+        ]
+      }
+    },
+    {
+      "hand": "Jh9s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.38601878,
+          0.6139812
+        ],
+        "action_ev": [
+          1.0692472,
+          1.0686072
+        ]
+      }
+    },
+    {
+      "hand": "Js9s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6245992,
+          0.37540075
+        ],
+        "action_ev": [
+          1.0328522,
+          1.0313867
+        ]
+      }
+    },
+    {
+      "hand": "Qc9s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.59170395,
+          0.40829608
+        ],
+        "action_ev": [
+          0.97375214,
+          0.96779203
+        ]
+      }
+    },
+    {
+      "hand": "Qd9s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5438003,
+          0.45619965
+        ],
+        "action_ev": [
+          0.9789943,
+          0.975824
+        ]
+      }
+    },
+    {
+      "hand": "Qh9s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5022689,
+          0.49773103
+        ],
+        "action_ev": [
+          0.9819685,
+          0.9792546
+        ]
+      }
+    },
+    {
+      "hand": "Qs9s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.9701087,
+          0.029891344
+        ],
+        "action_ev": [
+          0.9298204,
+          0.9312056
+        ]
+      }
+    },
+    {
+      "hand": "Kc9s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          7.845106,
+          7.853871
+        ]
+      }
+    },
+    {
+      "hand": "Kd9s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          7.8680663,
+          7.8799596
+        ]
+      }
+    },
+    {
+      "hand": "Ks9s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          7.909499e-8,
+          0.99999994
+        ],
+        "action_ev": [
+          7.832759,
+          7.8457823
+        ]
+      }
+    },
+    {
+      "hand": "Ac9s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          1.9126698,
+          1.8465723
+        ]
+      }
+    },
+    {
+      "hand": "Ad9s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          1.9154581,
+          1.8510604
+        ]
+      }
+    },
+    {
+      "hand": "Ah9s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          1.9132472,
+          1.8479937
+        ]
+      }
+    },
+    {
+      "hand": "As9s",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          1.8827008,
+          1.8220737
+        ]
+      }
+    },
+    {
+      "hand": "TdTc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.8130263,
+          0.18697365
+        ],
+        "action_ev": [
+          5.436344,
+          5.436969
+        ]
+      }
+    },
+    {
+      "hand": "ThTc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.84972274,
+          0.15027721
+        ],
+        "action_ev": [
+          5.4368153,
+          5.437471
+        ]
+      }
+    },
+    {
+      "hand": "TsTc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.8097875,
+          0.19021246
+        ],
+        "action_ev": [
+          5.4098682,
+          5.412061
+        ]
+      }
+    },
+    {
+      "hand": "JcTc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          1.4352024e-7,
+          0.9999998
+        ],
+        "action_ev": [
+          1.8092898,
+          1.8225646
+        ]
+      }
+    },
+    {
+      "hand": "JdTc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.34793308,
+          0.6520669
+        ],
+        "action_ev": [
+          1.3817165,
+          1.3720222
+        ]
+      }
+    },
+    {
+      "hand": "JhTc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.37115794,
+          0.62884206
+        ],
+        "action_ev": [
+          1.3807938,
+          1.3730284
+        ]
+      }
+    },
+    {
+      "hand": "JsTc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.32675606,
+          0.67324394
+        ],
+        "action_ev": [
+          1.3386797,
+          1.3389109
+        ]
+      }
+    },
+    {
+      "hand": "QcTc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.342196,
+          0.65780395
+        ],
+        "action_ev": [
+          1.742813,
+          1.7533826
+        ]
+      }
+    },
+    {
+      "hand": "QdTc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.37732536,
+          0.62267464
+        ],
+        "action_ev": [
+          1.311573,
+          1.3060156
+        ]
+      }
+    },
+    {
+      "hand": "QhTc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.370952,
+          0.629048
+        ],
+        "action_ev": [
+          1.3152175,
+          1.3090118
+        ]
+      }
+    },
+    {
+      "hand": "QsTc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.51898646,
+          0.48101354
+        ],
+        "action_ev": [
+          1.2609204,
+          1.2655654
+        ]
+      }
+    },
+    {
+      "hand": "KcTc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          8.27275,
+          8.299618
+        ]
+      }
+    },
+    {
+      "hand": "KdTc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.16523278,
+          0.8347672
+        ],
+        "action_ev": [
+          8.08033,
+          8.078548
+        ]
+      }
+    },
+    {
+      "hand": "KsTc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.19225545,
+          0.80774456
+        ],
+        "action_ev": [
+          8.031295,
+          8.028841
+        ]
+      }
+    },
+    {
+      "hand": "AcTc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.4078571,
+          0.59214294
+        ],
+        "action_ev": [
+          2.837981,
+          2.833039
+        ]
+      }
+    },
+    {
+      "hand": "AdTc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.8020985,
+          0.19790146
+        ],
+        "action_ev": [
+          2.3806942,
+          2.3699343
+        ]
+      }
+    },
+    {
+      "hand": "AhTc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.8379378,
+          0.16206226
+        ],
+        "action_ev": [
+          2.3781273,
+          2.3676176
+        ]
+      }
+    },
+    {
+      "hand": "AsTc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.7174243,
+          0.28257573
+        ],
+        "action_ev": [
+          2.348798,
+          2.3417957
+        ]
+      }
+    },
+    {
+      "hand": "ThTd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.8791943,
+          0.12080573
+        ],
+        "action_ev": [
+          5.4251275,
+          5.4250264
+        ]
+      }
+    },
+    {
+      "hand": "TsTd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.8352692,
+          0.1647308
+        ],
+        "action_ev": [
+          5.398339,
+          5.39936
+        ]
+      }
+    },
+    {
+      "hand": "JcTd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.34540418,
+          0.6545958
+        ],
+        "action_ev": [
+          1.3813887,
+          1.3724561
+        ]
+      }
+    },
+    {
+      "hand": "JdTd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.00018638844,
+          0.9998136
+        ],
+        "action_ev": [
+          1.8117658,
+          1.8221784
+        ]
+      }
+    },
+    {
+      "hand": "JhTd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.35022098,
+          0.649779
+        ],
+        "action_ev": [
+          1.3880484,
+          1.3808249
+        ]
+      }
+    },
+    {
+      "hand": "JsTd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.29585075,
+          0.70414925
+        ],
+        "action_ev": [
+          1.3456401,
+          1.3465942
+        ]
+      }
+    },
+    {
+      "hand": "QcTd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.36967015,
+          0.6303298
+        ],
+        "action_ev": [
+          1.3123113,
+          1.3062297
+        ]
+      }
+    },
+    {
+      "hand": "QdTd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.3488889,
+          0.65111107
+        ],
+        "action_ev": [
+          1.7499772,
+          1.7565085
+        ]
+      }
+    },
+    {
+      "hand": "QhTd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.33962512,
+          0.6603748
+        ],
+        "action_ev": [
+          1.321827,
+          1.3167927
+        ]
+      }
+    },
+    {
+      "hand": "QsTd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.49149093,
+          0.5085091
+        ],
+        "action_ev": [
+          1.2674775,
+          1.2734119
+        ]
+      }
+    },
+    {
+      "hand": "KcTd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.14519131,
+          0.8548087
+        ],
+        "action_ev": [
+          8.054342,
+          8.05242
+        ]
+      }
+    },
+    {
+      "hand": "KdTd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          8.296172,
+          8.321488
+        ]
+      }
+    },
+    {
+      "hand": "KsTd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.15014216,
+          0.8498578
+        ],
+        "action_ev": [
+          8.023536,
+          8.022099
+        ]
+      }
+    },
+    {
+      "hand": "AcTd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.8048913,
+          0.19510871
+        ],
+        "action_ev": [
+          2.3896048,
+          2.3781898
+        ]
+      }
+    },
+    {
+      "hand": "AdTd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.40338406,
+          0.5966159
+        ],
+        "action_ev": [
+          2.8486338,
+          2.841338
+        ]
+      }
+    },
+    {
+      "hand": "AhTd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.82495743,
+          0.17504264
+        ],
+        "action_ev": [
+          2.3900611,
+          2.3801222
+        ]
+      }
+    },
+    {
+      "hand": "AsTd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.707246,
+          0.292754
+        ],
+        "action_ev": [
+          2.3607492,
+          2.3539894
+        ]
+      }
+    },
+    {
+      "hand": "TsTh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.89150953,
+          0.10849045
+        ],
+        "action_ev": [
+          5.3986225,
+          5.39912
+        ]
+      }
+    },
+    {
+      "hand": "JcTh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.36049214,
+          0.6395079
+        ],
+        "action_ev": [
+          1.3825148,
+          1.3751663
+        ]
+      }
+    },
+    {
+      "hand": "JdTh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.34618625,
+          0.6538138
+        ],
+        "action_ev": [
+          1.3900542,
+          1.3822895
+        ]
+      }
+    },
+    {
+      "hand": "JhTh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.000016147951,
+          0.99998385
+        ],
+        "action_ev": [
+          1.8479309,
+          1.8608751
+        ]
+      }
+    },
+    {
+      "hand": "JsTh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.32488587,
+          0.6751141
+        ],
+        "action_ev": [
+          1.3465642,
+          1.3482034
+        ]
+      }
+    },
+    {
+      "hand": "QcTh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.36293662,
+          0.6370634
+        ],
+        "action_ev": [
+          1.3155304,
+          1.3103645
+        ]
+      }
+    },
+    {
+      "hand": "QdTh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.34042236,
+          0.65957767
+        ],
+        "action_ev": [
+          1.321436,
+          1.3180197
+        ]
+      }
+    },
+    {
+      "hand": "QhTh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.24161847,
+          0.75838155
+        ],
+        "action_ev": [
+          1.7905838,
+          1.7961661
+        ]
+      }
+    },
+    {
+      "hand": "QsTh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.48682868,
+          0.5131713
+        ],
+        "action_ev": [
+          1.2709607,
+          1.2774338
+        ]
+      }
+    },
+    {
+      "hand": "KcTh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.11886833,
+          0.8811317
+        ],
+        "action_ev": [
+          8.055184,
+          8.054651
+        ]
+      }
+    },
+    {
+      "hand": "KdTh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.09722203,
+          0.90277797
+        ],
+        "action_ev": [
+          8.073933,
+          8.073961
+        ]
+      }
+    },
+    {
+      "hand": "KsTh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.12501733,
+          0.8749827
+        ],
+        "action_ev": [
+          8.024444,
+          8.02437
+        ]
+      }
+    },
+    {
+      "hand": "AcTh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.8362615,
+          0.16373843
+        ],
+        "action_ev": [
+          2.391588,
+          2.3788412
+        ]
+      }
+    },
+    {
+      "hand": "AdTh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.8192085,
+          0.18079151
+        ],
+        "action_ev": [
+          2.3946638,
+          2.383192
+        ]
+      }
+    },
+    {
+      "hand": "AhTh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.40536195,
+          0.594638
+        ],
+        "action_ev": [
+          2.8598282,
+          2.8558412
+        ]
+      }
+    },
+    {
+      "hand": "AsTh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.7320885,
+          0.26791155
+        ],
+        "action_ev": [
+          2.362711,
+          2.3545
+        ]
+      }
+    },
+    {
+      "hand": "JcTs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.34026083,
+          0.6597392
+        ],
+        "action_ev": [
+          1.3373867,
+          1.3353053
+        ]
+      }
+    },
+    {
+      "hand": "JdTs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.31221485,
+          0.68778515
+        ],
+        "action_ev": [
+          1.3444624,
+          1.343266
+        ]
+      }
+    },
+    {
+      "hand": "JhTs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.35681972,
+          0.64318025
+        ],
+        "action_ev": [
+          1.3435003,
+          1.3424938
+        ]
+      }
+    },
+    {
+      "hand": "JsTs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.33136573,
+          0.66863424
+        ],
+        "action_ev": [
+          1.3033947,
+          1.3136189
+        ]
+      }
+    },
+    {
+      "hand": "QcTs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.56446606,
+          0.43553397
+        ],
+        "action_ev": [
+          1.2798337,
+          1.2672614
+        ]
+      }
+    },
+    {
+      "hand": "QdTs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5424894,
+          0.45751056
+        ],
+        "action_ev": [
+          1.285512,
+          1.2750409
+        ]
+      }
+    },
+    {
+      "hand": "QhTs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5443156,
+          0.45568445
+        ],
+        "action_ev": [
+          1.2888515,
+          1.2762403
+        ]
+      }
+    },
+    {
+      "hand": "QsTs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.70753497,
+          0.29246506
+        ],
+        "action_ev": [
+          1.2342266,
+          1.2329324
+        ]
+      }
+    },
+    {
+      "hand": "KcTs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.05038254,
+          0.9496175
+        ],
+        "action_ev": [
+          8.040925,
+          8.042539
+        ]
+      }
+    },
+    {
+      "hand": "KdTs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.025959799,
+          0.9740402
+        ],
+        "action_ev": [
+          8.060304,
+          8.061843
+        ]
+      }
+    },
+    {
+      "hand": "KsTs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.06319063,
+          0.93680936
+        ],
+        "action_ev": [
+          8.010047,
+          8.012052
+        ]
+      }
+    },
+    {
+      "hand": "AcTs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.8189106,
+          0.1810894
+        ],
+        "action_ev": [
+          2.3617828,
+          2.3502152
+        ]
+      }
+    },
+    {
+      "hand": "AdTs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.8045286,
+          0.19547139
+        ],
+        "action_ev": [
+          2.3648543,
+          2.3544369
+        ]
+      }
+    },
+    {
+      "hand": "AhTs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.8410707,
+          0.15892924
+        ],
+        "action_ev": [
+          2.3623006,
+          2.3521304
+        ]
+      }
+    },
+    {
+      "hand": "AsTs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.7225238,
+          0.27747613
+        ],
+        "action_ev": [
+          2.3325403,
+          2.3259783
+        ]
+      }
+    },
+    {
+      "hand": "JdJc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.7182747,
+          0.28172532
+        ],
+        "action_ev": [
+          5.869176,
+          5.8624806
+        ]
+      }
+    },
+    {
+      "hand": "JhJc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.78676623,
+          0.2132338
+        ],
+        "action_ev": [
+          5.8617578,
+          5.8554316
+        ]
+      }
+    },
+    {
+      "hand": "JsJc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.7144938,
+          0.28550625
+        ],
+        "action_ev": [
+          5.834143,
+          5.8295956
+        ]
+      }
+    },
+    {
+      "hand": "QcJc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.44292206,
+          0.55707794
+        ],
+        "action_ev": [
+          1.8707988,
+          1.8920969
+        ]
+      }
+    },
+    {
+      "hand": "QdJc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.630137,
+          0.36986294
+        ],
+        "action_ev": [
+          1.4376265,
+          1.4296948
+        ]
+      }
+    },
+    {
+      "hand": "QhJc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6361023,
+          0.36389765
+        ],
+        "action_ev": [
+          1.4412001,
+          1.4322534
+        ]
+      }
+    },
+    {
+      "hand": "QsJc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.738167,
+          0.26183298
+        ],
+        "action_ev": [
+          1.388754,
+          1.389685
+        ]
+      }
+    },
+    {
+      "hand": "KcJc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          8.482678,
+          8.507269
+        ]
+      }
+    },
+    {
+      "hand": "KdJc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.1054835,
+          0.89451647
+        ],
+        "action_ev": [
+          8.294352,
+          8.291306
+        ]
+      }
+    },
+    {
+      "hand": "KsJc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.1034626,
+          0.8965374
+        ],
+        "action_ev": [
+          8.24403,
+          8.240647
+        ]
+      }
+    },
+    {
+      "hand": "AcJc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.2227409,
+          0.77725905
+        ],
+        "action_ev": [
+          3.1697345,
+          3.162431
+        ]
+      }
+    },
+    {
+      "hand": "AdJc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6453142,
+          0.3546858
+        ],
+        "action_ev": [
+          2.7201726,
+          2.7060041
+        ]
+      }
+    },
+    {
+      "hand": "AhJc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6671074,
+          0.3328926
+        ],
+        "action_ev": [
+          2.716095,
+          2.7021344
+        ]
+      }
+    },
+    {
+      "hand": "AsJc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5718439,
+          0.42815605
+        ],
+        "action_ev": [
+          2.6822698,
+          2.6716287
+        ]
+      }
+    },
+    {
+      "hand": "JhJd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.7942305,
+          0.20576943
+        ],
+        "action_ev": [
+          5.8504624,
+          5.842265
+        ]
+      }
+    },
+    {
+      "hand": "JsJd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.7075881,
+          0.2924119
+        ],
+        "action_ev": [
+          5.8226185,
+          5.816177
+        ]
+      }
+    },
+    {
+      "hand": "QcJd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6215008,
+          0.37849924
+        ],
+        "action_ev": [
+          1.438229,
+          1.4299152
+        ]
+      }
+    },
+    {
+      "hand": "QdJd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.45251653,
+          0.54748344
+        ],
+        "action_ev": [
+          1.8780478,
+          1.8975209
+        ]
+      }
+    },
+    {
+      "hand": "QhJd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.621675,
+          0.378325
+        ],
+        "action_ev": [
+          1.4476237,
+          1.4395558
+        ]
+      }
+    },
+    {
+      "hand": "QsJd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.7191041,
+          0.28089583
+        ],
+        "action_ev": [
+          1.3950145,
+          1.3978288
+        ]
+      }
+    },
+    {
+      "hand": "KcJd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.100388266,
+          0.8996117
+        ],
+        "action_ev": [
+          8.275819,
+          8.272486
+        ]
+      }
+    },
+    {
+      "hand": "KdJd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          8.50033,
+          8.525712
+        ]
+      }
+    },
+    {
+      "hand": "KsJd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.051515464,
+          0.94848454
+        ],
+        "action_ev": [
+          8.236773,
+          8.234942
+        ]
+      }
+    },
+    {
+      "hand": "AcJd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6385791,
+          0.361421
+        ],
+        "action_ev": [
+          2.7301354,
+          2.7151492
+        ]
+      }
+    },
+    {
+      "hand": "AdJd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.20423685,
+          0.7957632
+        ],
+        "action_ev": [
+          3.1843824,
+          3.1765256
+        ]
+      }
+    },
+    {
+      "hand": "AhJd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.651726,
+          0.34827396
+        ],
+        "action_ev": [
+          2.73002,
+          2.7164795
+        ]
+      }
+    },
+    {
+      "hand": "AsJd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.559497,
+          0.44050303
+        ],
+        "action_ev": [
+          2.6963491,
+          2.6856234
+        ]
+      }
+    },
+    {
+      "hand": "JsJh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.7777532,
+          0.2222468
+        ],
+        "action_ev": [
+          5.815504,
+          5.8094597
+        ]
+      }
+    },
+    {
+      "hand": "QcJh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.63773495,
+          0.36226508
+        ],
+        "action_ev": [
+          1.4390215,
+          1.4302199
+        ]
+      }
+    },
+    {
+      "hand": "QdJh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.63161343,
+          0.36838657
+        ],
+        "action_ev": [
+          1.4448683,
+          1.4375659
+        ]
+      }
+    },
+    {
+      "hand": "QhJh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.38569298,
+          0.614307
+        ],
+        "action_ev": [
+          1.914151,
+          1.9327416
+        ]
+      }
+    },
+    {
+      "hand": "QsJh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.7384406,
+          0.26155943
+        ],
+        "action_ev": [
+          1.3958954,
+          1.3981576
+        ]
+      }
+    },
+    {
+      "hand": "KcJh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.08469857,
+          0.91530144
+        ],
+        "action_ev": [
+          8.272215,
+          8.269264
+        ]
+      }
+    },
+    {
+      "hand": "KdJh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.035041407,
+          0.96495855
+        ],
+        "action_ev": [
+          8.284026,
+          8.282567
+        ]
+      }
+    },
+    {
+      "hand": "KsJh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.037091635,
+          0.9629084
+        ],
+        "action_ev": [
+          8.233507,
+          8.231721
+        ]
+      }
+    },
+    {
+      "hand": "AcJh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6549367,
+          0.34506327
+        ],
+        "action_ev": [
+          2.7294858,
+          2.7130423
+        ]
+      }
+    },
+    {
+      "hand": "AdJh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6472026,
+          0.35279742
+        ],
+        "action_ev": [
+          2.7335675,
+          2.7182543
+        ]
+      }
+    },
+    {
+      "hand": "AhJh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.20546964,
+          0.79453033
+        ],
+        "action_ev": [
+          3.1911232,
+          3.186226
+        ]
+      }
+    },
+    {
+      "hand": "AsJh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.575355,
+          0.42464504
+        ],
+        "action_ev": [
+          2.695792,
+          2.6832678
+        ]
+      }
+    },
+    {
+      "hand": "QcJs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.7636044,
+          0.23639564
+        ],
+        "action_ev": [
+          1.4046333,
+          1.3985175
+        ]
+      }
+    },
+    {
+      "hand": "QdJs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.7539367,
+          0.24606323
+        ],
+        "action_ev": [
+          1.4103763,
+          1.4058644
+        ]
+      }
+    },
+    {
+      "hand": "QhJs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.77242154,
+          0.22757845
+        ],
+        "action_ev": [
+          1.4140761,
+          1.4062028
+        ]
+      }
+    },
+    {
+      "hand": "QsJs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.9074655,
+          0.09253455
+        ],
+        "action_ev": [
+          1.3605136,
+          1.3659258
+        ]
+      }
+    },
+    {
+      "hand": "KcJs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0111747915,
+          0.9888252
+        ],
+        "action_ev": [
+          8.258778,
+          8.257173
+        ]
+      }
+    },
+    {
+      "hand": "KdJs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0033122788,
+          0.9966877
+        ],
+        "action_ev": [
+          8.270603,
+          8.2704
+        ]
+      }
+    },
+    {
+      "hand": "KsJs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.002067706,
+          0.99793226
+        ],
+        "action_ev": [
+          8.219176,
+          8.219431
+        ]
+      }
+    },
+    {
+      "hand": "AcJs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6278428,
+          0.37215725
+        ],
+        "action_ev": [
+          2.7018425,
+          2.6861794
+        ]
+      }
+    },
+    {
+      "hand": "AdJs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.62134296,
+          0.37865707
+        ],
+        "action_ev": [
+          2.7060118,
+          2.691183
+        ]
+      }
+    },
+    {
+      "hand": "AhJs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6424558,
+          0.35754418
+        ],
+        "action_ev": [
+          2.7018642,
+          2.687376
+        ]
+      }
+    },
+    {
+      "hand": "AsJs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5546566,
+          0.44534338
+        ],
+        "action_ev": [
+          2.6678724,
+          2.6564736
+        ]
+      }
+    },
+    {
+      "hand": "QdQc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.9219981,
+          0.0780019
+        ],
+        "action_ev": [
+          6.4106407,
+          6.3957653
+        ]
+      }
+    },
+    {
+      "hand": "QhQc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.9897397,
+          0.010260311
+        ],
+        "action_ev": [
+          6.3985424,
+          6.3859715
+        ]
+      }
+    },
+    {
+      "hand": "QsQc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.8449339,
+          0.15506606
+        ],
+        "action_ev": [
+          6.386013,
+          6.371435
+        ]
+      }
+    },
+    {
+      "hand": "KcQc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          8.69887,
+          8.733881
+        ]
+      }
+    },
+    {
+      "hand": "KdQc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0000043489767,
+          0.99999565
+        ],
+        "action_ev": [
+          8.525122,
+          8.53233
+        ]
+      }
+    },
+    {
+      "hand": "KsQc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          8.47579,
+          8.4893875
+        ]
+      }
+    },
+    {
+      "hand": "AcQc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.053102776,
+          0.94689727
+        ],
+        "action_ev": [
+          3.5791314,
+          3.582854
+        ]
+      }
+    },
+    {
+      "hand": "AdQc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.60144526,
+          0.39855477
+        ],
+        "action_ev": [
+          3.1494794,
+          3.1377294
+        ]
+      }
+    },
+    {
+      "hand": "AhQc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6188339,
+          0.3811661
+        ],
+        "action_ev": [
+          3.143865,
+          3.1323123
+        ]
+      }
+    },
+    {
+      "hand": "AsQc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5124861,
+          0.48751384
+        ],
+        "action_ev": [
+          3.1025372,
+          3.0995517
+        ]
+      }
+    },
+    {
+      "hand": "QhQd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.91993594,
+          0.08006402
+        ],
+        "action_ev": [
+          6.387822,
+          6.371711
+        ]
+      }
+    },
+    {
+      "hand": "QsQd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.77795684,
+          0.22204313
+        ],
+        "action_ev": [
+          6.375033,
+          6.3581386
+        ]
+      }
+    },
+    {
+      "hand": "KcQd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          8.507378,
+          8.517468
+        ]
+      }
+    },
+    {
+      "hand": "KdQd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          8.709118,
+          8.750619
+        ]
+      }
+    },
+    {
+      "hand": "KsQd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          8.4655905,
+          8.484989
+        ]
+      }
+    },
+    {
+      "hand": "AcQd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.58719534,
+          0.41280463
+        ],
+        "action_ev": [
+          3.1610672,
+          3.1485314
+        ]
+      }
+    },
+    {
+      "hand": "AdQd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0032601058,
+          0.9967399
+        ],
+        "action_ev": [
+          3.5988684,
+          3.5997972
+        ]
+      }
+    },
+    {
+      "hand": "AhQd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.59998935,
+          0.40001062
+        ],
+        "action_ev": [
+          3.1595376,
+          3.1476324
+        ]
+      }
+    },
+    {
+      "hand": "AsQd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.49610505,
+          0.5038949
+        ],
+        "action_ev": [
+          3.118283,
+          3.1145263
+        ]
+      }
+    },
+    {
+      "hand": "QsQh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.8364678,
+          0.1635322
+        ],
+        "action_ev": [
+          6.363136,
+          6.347329
+        ]
+      }
+    },
+    {
+      "hand": "KcQh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          8.496932,
+          8.511821
+        ]
+      }
+    },
+    {
+      "hand": "KdQh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          8.505467,
+          8.522336
+        ]
+      }
+    },
+    {
+      "hand": "KsQh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          8.45588,
+          8.479348
+        ]
+      }
+    },
+    {
+      "hand": "AcQh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.6075254,
+          0.3924746
+        ],
+        "action_ev": [
+          3.1603122,
+          3.1454928
+        ]
+      }
+    },
+    {
+      "hand": "AdQh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.60200185,
+          0.39799812
+        ],
+        "action_ev": [
+          3.164385,
+          3.1502097
+        ]
+      }
+    },
+    {
+      "hand": "AhQh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.029264659,
+          0.9707354
+        ],
+        "action_ev": [
+          3.6018195,
+          3.605553
+        ]
+      }
+    },
+    {
+      "hand": "AsQh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.52068204,
+          0.47931796
+        ],
+        "action_ev": [
+          3.117654,
+          3.1103578
+        ]
+      }
+    },
+    {
+      "hand": "KcQs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          8.491524,
+          8.510836
+        ]
+      }
+    },
+    {
+      "hand": "KdQs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          8.500743,
+          8.5210905
+        ]
+      }
+    },
+    {
+      "hand": "KsQs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          8.45039,
+          8.477985
+        ]
+      }
+    },
+    {
+      "hand": "AcQs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5437865,
+          0.45621347
+        ],
+        "action_ev": [
+          3.1253893,
+          3.117931
+        ]
+      }
+    },
+    {
+      "hand": "AdQs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5391629,
+          0.4608371
+        ],
+        "action_ev": [
+          3.1295376,
+          3.122836
+        ]
+      }
+    },
+    {
+      "hand": "AhQs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.5565646,
+          0.44343537
+        ],
+        "action_ev": [
+          3.123877,
+          3.1168838
+        ]
+      }
+    },
+    {
+      "hand": "AsQs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.4649961,
+          0.5350039
+        ],
+        "action_ev": [
+          3.0818222,
+          3.0824258
+        ]
+      }
+    },
+    {
+      "hand": "KdKc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          13.346938,
+          13.37615
+        ]
+      }
+    },
+    {
+      "hand": "KsKc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.007823276,
+          0.9921767
+        ],
+        "action_ev": [
+          13.2856045,
+          13.288604
+        ]
+      }
+    },
+    {
+      "hand": "AcKc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          9.69944,
+          9.721371
+        ]
+      }
+    },
+    {
+      "hand": "AdKc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.00042615592,
+          0.9995738
+        ],
+        "action_ev": [
+          9.539517,
+          9.541302
+        ]
+      }
+    },
+    {
+      "hand": "AhKc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.00045882273,
+          0.99954116
+        ],
+        "action_ev": [
+          9.536745,
+          9.538198
+        ]
+      }
+    },
+    {
+      "hand": "AsKc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          9.521507,
+          9.530763
+        ]
+      }
+    },
+    {
+      "hand": "KsKd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.003071333,
+          0.99692863
+        ],
+        "action_ev": [
+          13.244852,
+          13.247845
+        ]
+      }
+    },
+    {
+      "hand": "AcKd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          9.539649,
+          9.55072
+        ]
+      }
+    },
+    {
+      "hand": "AdKd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          9.728983,
+          9.759398
+        ]
+      }
+    },
+    {
+      "hand": "AhKd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          9.541593,
+          9.550077
+        ]
+      }
+    },
+    {
+      "hand": "AsKd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          9.525859,
+          9.5430355
+        ]
+      }
+    },
+    {
+      "hand": "AcKs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          9.50568,
+          9.526066
+        ]
+      }
+    },
+    {
+      "hand": "AdKs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          9.5103,
+          9.529001
+        ]
+      }
+    },
+    {
+      "hand": "AhKs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          9.507779,
+          9.5254965
+        ]
+      }
+    },
+    {
+      "hand": "AsKs",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          9.4913645,
+          9.518245
+        ]
+      }
+    },
+    {
+      "hand": "AdAc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.04669657,
+          0.9533034
+        ],
+        "action_ev": [
+          9.534729,
+          9.532528
+        ]
+      }
+    },
+    {
+      "hand": "AhAc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.053034294,
+          0.9469657
+        ],
+        "action_ev": [
+          9.5323515,
+          9.528402
+        ]
+      }
+    },
+    {
+      "hand": "AsAc",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.025545275,
+          0.9744547
+        ],
+        "action_ev": [
+          9.509048,
+          9.50493
+        ]
+      }
+    },
+    {
+      "hand": "AhAd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.051024545,
+          0.94897544
+        ],
+        "action_ev": [
+          9.533204,
+          9.530203
+        ]
+      }
+    },
+    {
+      "hand": "AsAd",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.024185136,
+          0.9758149
+        ],
+        "action_ev": [
+          9.510282,
+          9.506905
+        ]
+      }
+    },
+    {
+      "hand": "AsAh",
+      "strategy": {
+        "actions": [
+          "Check",
+          "Bet 2.0bb"
+        ],
+        "frequencies": [
+          0.030199312,
+          0.9698007
+        ],
+        "action_ev": [
+          9.507838,
+          9.502519
+        ]
+      }
+    }
+  ]
+}

@@ -6,7 +6,8 @@ decision against a solver's equilibrium strategy — reporting EV loss and the f
 optimal frequency mix.
 
 > Status: Phase 0 done (equity + board-texture drills). Phase 1 (precomputed GTO
-> solutions) is in progress — see the phased plan below.
+> solutions) is live — `drill gto` covers 8 flop textures, each as both the BTN's
+> c-bet decision and the BB's defend. See the phased plan below.
 
 ## Build & run
 
@@ -42,11 +43,13 @@ goes through it, so a **file-backed** provider (precomputed sims) and, later, a
 
 0. **Equity & board-texture drills** — *done.* Pure `rs_poker`, no solver:
    `drill pot-odds` (call/fold vs. Monte-Carlo equity) and `drill texture`.
-1. **Precomputed-range comparison (the core product)** — *v1 done.* `solve-gen`
+1. **Precomputed-range comparison (the core product)** — *done.* `solve-gen`
    solves a curated library offline with `postflop-solver`, dumps per-hand
-   strategy tables to `data/solutions/*.json`, and `drill gto` loads them via
-   `FileSolutionProvider` and scores your action on EV loss vs. the equilibrium
-   mix. Expand by adding spots/decision-nodes in `crates/solve-gen`.
+   strategy tables to `data/solutions/<flop>-{ip,oop}.json`, and `drill gto`
+   loads them via `FileSolutionProvider` and scores your action on EV loss vs.
+   the equilibrium mix. Each solved flop yields two decision nodes — the BTN's
+   c-bet and the BB's defend — across 8 textures. Grow it by adding flops/lines
+   in `crates/solve-gen` (more positions, bet sizes, or turn/river nodes).
 2. **Range-builder mode + leak stats** — assign the action for a whole range and
    score the full strategy; track per-spot EV loss.
 3. **Live solving (optional)** — `postflop-solver` behind `SolutionProvider` for

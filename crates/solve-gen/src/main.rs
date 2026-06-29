@@ -25,9 +25,17 @@ fn main() {
     const OOP: &str = "22+,A2s+,K2s+,Q5s+,J7s+,T7s+,96s+,86s+,75s+,64s+,53s+,A2o+,K9o+,Q9o+,J9o+,T9o,98o";
     const IP: &str = "22+,A2s+,K2s+,Q4s+,J6s+,T6s+,96s+,85s+,75s+,64s+,53s+,43s,A2o+,K7o+,Q8o+,J8o+,T8o+,98o";
 
+    // Base label = position + board + texture tag; each solve appends the
+    // node-specific question (c-bet? / defend?). Aim for texture spread.
     let spots = [
-        Spot { label: "SRP BTN vs BB — c-bet on Td9d6h (wet)", flop: "Td9d6h", oop_range: OOP, ip_range: IP },
-        Spot { label: "SRP BTN vs BB — c-bet on Kh7c2d (dry)", flop: "Kh7c2d", oop_range: OOP, ip_range: IP },
+        Spot { label: "SRP BTN vs BB, Td9d6h (wet)",           flop: "Td9d6h", oop_range: OOP, ip_range: IP },
+        Spot { label: "SRP BTN vs BB, Kh7c2d (dry)",           flop: "Kh7c2d", oop_range: OOP, ip_range: IP },
+        Spot { label: "SRP BTN vs BB, Ah8h3h (monotone)",      flop: "Ah8h3h", oop_range: OOP, ip_range: IP },
+        Spot { label: "SRP BTN vs BB, 8h8c3d (paired)",        flop: "8h8c3d", oop_range: OOP, ip_range: IP },
+        Spot { label: "SRP BTN vs BB, QhJd9c (broadway)",      flop: "QhJd9c", oop_range: OOP, ip_range: IP },
+        Spot { label: "SRP BTN vs BB, As7d2c (ace-high dry)",  flop: "As7d2c", oop_range: OOP, ip_range: IP },
+        Spot { label: "SRP BTN vs BB, 6h5d4c (low connected)", flop: "6h5d4c", oop_range: OOP, ip_range: IP },
+        Spot { label: "SRP BTN vs BB, 9s8s4d (two-tone mid)",  flop: "9s8s4d", oop_range: OOP, ip_range: IP },
     ];
 
     let out_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/solutions");
@@ -35,14 +43,17 @@ fn main() {
 
     for spot in &spots {
         println!("Solving: {}", spot.label);
-        let solved = solve_spot(spot);
-        let file = out_dir.join(format!("{}.json", spot.flop.to_lowercase()));
-        fs::write(&file, serde_json::to_string_pretty(&solved).unwrap()).unwrap();
-        println!("  -> {} ({} hero hands)", file.display(), solved.strategies.len());
+        // One solved game yields two nodes (IP c-bet decision, OOP defend).
+        for solved in solve_spot(spot) {
+            let role = if solved.hero_oop { "oop" } else { "ip" };
+            let file = out_dir.join(format!("{}-{}.json", spot.flop.to_lowercase(), role));
+            fs::write(&file, serde_json::to_string_pretty(&solved).unwrap()).unwrap();
+            println!("  -> {} ({} hero hands)", file.display(), solved.strategies.len());
+        }
     }
 }
 
-fn solve_spot(spot: &Spot) -> SolvedSpot {
+fn solve_spot(spot: &Spot) -> Vec<SolvedSpot> {
     let starting_pot = (6.0 * CHIPS_PER_BB) as i32; // 6bb SRP pot
     let card_config = CardConfig {
         range: [spot.oop_range.parse().unwrap(), spot.ip_range.parse().unwrap()],
@@ -76,25 +87,66 @@ fn solve_spot(spot: &Spot) -> SolvedSpot {
     let exploitability = solve(&mut game, 1000, target, false);
     println!("  exploitability: {:.3} chips ({:.3}bb)", exploitability, exploitability / CHIPS_PER_BB);
 
-    // Line to the hero's decision: OOP checks, IP c-bets, OOP faces the bet.
+    let pot_bb = starting_pot as f32 / CHIPS_PER_BB;
+    let board: Vec<String> = flop_from_str(spot.flop)
+        .unwrap()
+        .iter()
+        .map(|&c| card_to_string(c).unwrap())
+        .collect();
+
+    // Both decision nodes come from this one solved game: OOP checks, then IP
+    // decides whether to c-bet (hero = BTN), then OOP faces the bet (hero = BB).
+    let mut out = Vec::with_capacity(2);
     game.back_to_root();
     assert_eq!(game.current_player(), 0, "root should be OOP");
     game.play(action_index(&game, |a| matches!(a, Action::Check)));
 
-    assert_eq!(game.current_player(), 1, "after check, IP acts");
+    // Node 1: hero is IP (BTN), villain (BB) has checked — c-bet or check back?
+    assert_eq!(game.current_player(), 1, "after check, IP (hero) decides whether to c-bet");
+    out.push(extract(
+        &mut game,
+        format!("{} — you're BTN, BB checks: c-bet?", spot.label),
+        board.clone(),
+        pot_bb,
+        false,
+        "Villain (BB) checks to you".to_string(),
+    ));
+
+    // Descend into the c-bet, then Node 2: hero is OOP (BB) facing the bet.
     let ip_bet = action_index(&game, |a| matches!(a, Action::Bet(_)));
     let bet_chips = match game.available_actions()[ip_bet] {
         Action::Bet(c) => c,
         _ => unreachable!(),
     };
     game.play(ip_bet);
-
     assert_eq!(game.current_player(), 0, "hero (OOP) faces the bet");
-    extract(&mut game, spot, starting_pot, bet_chips)
+    let bet_bb = bet_chips as f32 / CHIPS_PER_BB;
+    out.push(extract(
+        &mut game,
+        format!("{} — you're BB, facing BTN c-bet: defend?", spot.label),
+        board,
+        pot_bb,
+        true,
+        format!(
+            "You check, villain bets {bet_bb:.1}bb ({:.0}% pot)",
+            100.0 * bet_chips as f32 / starting_pot as f32
+        ),
+    ));
+
+    out
 }
 
 /// Build a [`SolvedSpot`] from the game positioned at the hero's decision node.
-fn extract(game: &mut PostFlopGame, spot: &Spot, starting_pot: i32, bet_chips: i32) -> SolvedSpot {
+/// Node-specific bits (`label`, `hero_oop`, `villain_action`) are passed in; the
+/// strategy/EV read off `current_player()` is the same for any node.
+fn extract(
+    game: &mut PostFlopGame,
+    label: String,
+    board: Vec<String>,
+    pot_bb: f32,
+    hero_oop: bool,
+    villain_action: String,
+) -> SolvedSpot {
     game.cache_normalized_weights();
     let hero = game.current_player();
     let actions = game.available_actions();
@@ -106,7 +158,7 @@ fn extract(game: &mut PostFlopGame, spot: &Spot, starting_pot: i32, bet_chips: i
     let strat = game.strategy(); // [action * n + hand]
     let evs = game.expected_values_detail(hero); // chips, [action * n + hand]
 
-    let strategies = (0..n)
+    let strategies: Vec<HandStrategy> = (0..n)
         .map(|j| HandStrategy {
             hand: hands[j].clone(),
             strategy: NodeStrategy {
@@ -116,22 +168,14 @@ fn extract(game: &mut PostFlopGame, spot: &Spot, starting_pot: i32, bet_chips: i
             },
         })
         .collect();
+    assert!(!strategies.is_empty(), "extracted node has no hero hands");
 
-    let pot_bb = starting_pot as f32 / CHIPS_PER_BB;
-    let bet_bb = bet_chips as f32 / CHIPS_PER_BB;
     SolvedSpot {
-        label: spot.label.to_string(),
-        board: flop_from_str(spot.flop)
-            .unwrap()
-            .iter()
-            .map(|&c| card_to_string(c).unwrap())
-            .collect(),
+        label,
+        board,
         pot_bb,
-        hero_oop: true,
-        villain_action: format!(
-            "You check, villain bets {bet_bb:.1}bb ({:.0}% pot)",
-            100.0 * bet_chips as f32 / starting_pot as f32
-        ),
+        hero_oop,
+        villain_action,
         strategies,
     }
 }
