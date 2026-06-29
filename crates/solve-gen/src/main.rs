@@ -22,20 +22,62 @@ struct Spot {
 
 fn main() {
     // Wide-ish SRP BTN-vs-BB ranges. Hero = BB (OOP).
-    const OOP: &str = "22+,A2s+,K2s+,Q5s+,J7s+,T7s+,96s+,86s+,75s+,64s+,53s+,A2o+,K9o+,Q9o+,J9o+,T9o,98o";
-    const IP: &str = "22+,A2s+,K2s+,Q4s+,J6s+,T6s+,96s+,85s+,75s+,64s+,53s+,43s,A2o+,K7o+,Q8o+,J8o+,T8o+,98o";
+    const OOP: &str =
+        "22+,A2s+,K2s+,Q5s+,J7s+,T7s+,96s+,86s+,75s+,64s+,53s+,A2o+,K9o+,Q9o+,J9o+,T9o,98o";
+    const IP: &str =
+        "22+,A2s+,K2s+,Q4s+,J6s+,T6s+,96s+,85s+,75s+,64s+,53s+,43s,A2o+,K7o+,Q8o+,J8o+,T8o+,98o";
 
     // Base label = position + board + texture tag; each solve appends the
     // node-specific question (c-bet? / defend?). Aim for texture spread.
     let spots = [
-        Spot { label: "SRP BTN vs BB, Td9d6h (wet)",           flop: "Td9d6h", oop_range: OOP, ip_range: IP },
-        Spot { label: "SRP BTN vs BB, Kh7c2d (dry)",           flop: "Kh7c2d", oop_range: OOP, ip_range: IP },
-        Spot { label: "SRP BTN vs BB, Ah8h3h (monotone)",      flop: "Ah8h3h", oop_range: OOP, ip_range: IP },
-        Spot { label: "SRP BTN vs BB, 8h8c3d (paired)",        flop: "8h8c3d", oop_range: OOP, ip_range: IP },
-        Spot { label: "SRP BTN vs BB, QhJd9c (broadway)",      flop: "QhJd9c", oop_range: OOP, ip_range: IP },
-        Spot { label: "SRP BTN vs BB, As7d2c (ace-high dry)",  flop: "As7d2c", oop_range: OOP, ip_range: IP },
-        Spot { label: "SRP BTN vs BB, 6h5d4c (low connected)", flop: "6h5d4c", oop_range: OOP, ip_range: IP },
-        Spot { label: "SRP BTN vs BB, 9s8s4d (two-tone mid)",  flop: "9s8s4d", oop_range: OOP, ip_range: IP },
+        Spot {
+            label: "SRP BTN vs BB, Td9d6h (wet)",
+            flop: "Td9d6h",
+            oop_range: OOP,
+            ip_range: IP,
+        },
+        Spot {
+            label: "SRP BTN vs BB, Kh7c2d (dry)",
+            flop: "Kh7c2d",
+            oop_range: OOP,
+            ip_range: IP,
+        },
+        Spot {
+            label: "SRP BTN vs BB, Ah8h3h (monotone)",
+            flop: "Ah8h3h",
+            oop_range: OOP,
+            ip_range: IP,
+        },
+        Spot {
+            label: "SRP BTN vs BB, 8h8c3d (paired)",
+            flop: "8h8c3d",
+            oop_range: OOP,
+            ip_range: IP,
+        },
+        Spot {
+            label: "SRP BTN vs BB, QhJd9c (broadway)",
+            flop: "QhJd9c",
+            oop_range: OOP,
+            ip_range: IP,
+        },
+        Spot {
+            label: "SRP BTN vs BB, As7d2c (ace-high dry)",
+            flop: "As7d2c",
+            oop_range: OOP,
+            ip_range: IP,
+        },
+        Spot {
+            label: "SRP BTN vs BB, 6h5d4c (low connected)",
+            flop: "6h5d4c",
+            oop_range: OOP,
+            ip_range: IP,
+        },
+        Spot {
+            label: "SRP BTN vs BB, 9s8s4d (two-tone mid)",
+            flop: "9s8s4d",
+            oop_range: OOP,
+            ip_range: IP,
+        },
     ];
 
     let out_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/solutions");
@@ -48,7 +90,11 @@ fn main() {
             let role = if solved.hero_oop { "oop" } else { "ip" };
             let file = out_dir.join(format!("{}-{}.json", spot.flop.to_lowercase(), role));
             fs::write(&file, serde_json::to_string_pretty(&solved).unwrap()).unwrap();
-            println!("  -> {} ({} hero hands)", file.display(), solved.strategies.len());
+            println!(
+                "  -> {} ({} hero hands)",
+                file.display(),
+                solved.strategies.len()
+            );
         }
     }
 }
@@ -56,23 +102,28 @@ fn main() {
 fn solve_spot(spot: &Spot) -> Vec<SolvedSpot> {
     let starting_pot = (6.0 * CHIPS_PER_BB) as i32; // 6bb SRP pot
     let card_config = CardConfig {
-        range: [spot.oop_range.parse().unwrap(), spot.ip_range.parse().unwrap()],
+        range: [
+            spot.oop_range.parse().unwrap(),
+            spot.ip_range.parse().unwrap(),
+        ],
         flop: flop_from_str(spot.flop).unwrap(),
         turn: NOT_DEALT,
         river: NOT_DEALT,
     };
-    // Single 33%-pot size everywhere keeps the tree small and the c-bet line
-    // deterministic. ponytail: more sizes/lines are config, not new code.
-    let bets = BetSizeOptions::try_from(("33%", "2.5x")).unwrap();
+    // Two flop c-bet sizes so the c-bet node is a real size-mix decision.
+    // ponytail: turn/river stay single-size to bound tree growth (one size was
+    // applied to every street before) — widen them too if you train later nodes.
+    let flop_bets = BetSizeOptions::try_from(("33%, 75%", "2.5x")).unwrap();
+    let later_bets = BetSizeOptions::try_from(("33%", "2.5x")).unwrap();
     let tree_config = TreeConfig {
         initial_state: BoardState::Flop,
         starting_pot,
         effective_stack: (97.0 * CHIPS_PER_BB) as i32,
         rake_rate: 0.0,
         rake_cap: 0.0,
-        flop_bet_sizes: [bets.clone(), bets.clone()],
-        turn_bet_sizes: [bets.clone(), bets.clone()],
-        river_bet_sizes: [bets.clone(), bets.clone()],
+        flop_bet_sizes: [flop_bets.clone(), flop_bets.clone()],
+        turn_bet_sizes: [later_bets.clone(), later_bets.clone()],
+        river_bet_sizes: [later_bets.clone(), later_bets.clone()],
         turn_donk_sizes: None,
         river_donk_sizes: None,
         add_allin_threshold: 1.5,
@@ -85,7 +136,11 @@ fn solve_spot(spot: &Spot) -> Vec<SolvedSpot> {
     game.allocate_memory(false);
     let target = starting_pot as f32 * 0.005; // 0.5% of pot
     let exploitability = solve(&mut game, 1000, target, false);
-    println!("  exploitability: {:.3} chips ({:.3}bb)", exploitability, exploitability / CHIPS_PER_BB);
+    println!(
+        "  exploitability: {:.3} chips ({:.3}bb)",
+        exploitability,
+        exploitability / CHIPS_PER_BB
+    );
 
     let pot_bb = starting_pot as f32 / CHIPS_PER_BB;
     let board: Vec<String> = flop_from_str(spot.flop)
@@ -102,7 +157,20 @@ fn solve_spot(spot: &Spot) -> Vec<SolvedSpot> {
     game.play(action_index(&game, |a| matches!(a, Action::Check)));
 
     // Node 1: hero is IP (BTN), villain (BB) has checked — c-bet or check back?
-    assert_eq!(game.current_player(), 1, "after check, IP (hero) decides whether to c-bet");
+    assert_eq!(
+        game.current_player(),
+        1,
+        "after check, IP (hero) decides whether to c-bet"
+    );
+    let bet_actions = game
+        .available_actions()
+        .iter()
+        .filter(|a| matches!(a, Action::Bet(_)))
+        .count();
+    assert!(
+        bet_actions >= 2,
+        "c-bet node should offer >=2 sizes, got {bet_actions} (bet-size config didn't widen?)"
+    );
     out.push(extract(
         &mut game,
         format!("{} — you're BTN, BB checks: c-bet?", spot.label),
@@ -164,7 +232,9 @@ fn extract(
             strategy: NodeStrategy {
                 actions: labels.clone(),
                 frequencies: (0..actions.len()).map(|i| strat[i * n + j]).collect(),
-                action_ev: (0..actions.len()).map(|i| evs[i * n + j] / CHIPS_PER_BB).collect(),
+                action_ev: (0..actions.len())
+                    .map(|i| evs[i * n + j] / CHIPS_PER_BB)
+                    .collect(),
             },
         })
         .collect();
