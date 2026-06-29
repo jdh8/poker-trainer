@@ -1,0 +1,8 @@
+/target
+**/*.rs.bk
+*.pdb
+
+# Note: Cargo.lock is intentionally NOT ignored — commit it for binaries/apps.
+
+# Solved sims can get large; ignore the cache dir, ship a curated set elsewhere.
+/sims_cache

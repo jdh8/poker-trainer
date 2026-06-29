@@ -1,0 +1,20 @@
+[package]
+name = "poker-trainer"
+version = "0.1.0"
+edition = "2021"
+description = "A post-flop-focused GTO poker trainer (CLI)"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+
+# --- Add these as you reach each phase (keeps the initial build dependency-light) ---
+#
+# Phase 0 (equity & board-texture drills):
+#   cargo add rs-poker          # fast eval + Monte Carlo equity, MIT
+#   cargo add pokers            # fast range-vs-range equity, MIT
+#
+# Phase 3 (live solving, OPTIONAL — AGPL-3.0):
+#   postflop-solver is git-only and AGPL. When you add it, put it in its own
+#   crate (e.g. crates/trainer-solver) so the license boundary stays explicit
+#   and it doesn't block publishing the rest. See README.
