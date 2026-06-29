@@ -62,7 +62,11 @@ mod tests {
     use super::*;
 
     fn flop(a: &str, b: &str, c: &str) -> [Card; 3] {
-        [a.try_into().unwrap(), b.try_into().unwrap(), c.try_into().unwrap()]
+        [
+            a.try_into().unwrap(),
+            b.try_into().unwrap(),
+            c.try_into().unwrap(),
+        ]
     }
 
     #[test]

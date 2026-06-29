@@ -15,7 +15,10 @@ pub fn equity(hero: [Card; 2], villain: [Card; 2], flop: [Card; 3], iters: u32) 
     let known = [
         hero[0], hero[1], villain[0], villain[1], flop[0], flop[1], flop[2],
     ];
-    let remaining: Vec<Card> = Deck::default().into_iter().filter(|c| !known.contains(c)).collect();
+    let remaining: Vec<Card> = Deck::default()
+        .into_iter()
+        .filter(|c| !known.contains(c))
+        .collect();
 
     let mut rng = rand::rng();
     let mut score = 0.0; // win = 1.0, tie = 0.5, loss = 0.0
@@ -35,7 +38,13 @@ pub fn equity(hero: [Card; 2], villain: [Card; 2], flop: [Card; 3], iters: u32) 
 
 fn seven(hole: [Card; 2], flop: [Card; 3], turn_river: &[Card]) -> Hand {
     Hand::new_with_cards(vec![
-        hole[0], hole[1], flop[0], flop[1], flop[2], turn_river[0], turn_river[1],
+        hole[0],
+        hole[1],
+        flop[0],
+        flop[1],
+        flop[2],
+        turn_river[0],
+        turn_river[1],
     ])
 }
 

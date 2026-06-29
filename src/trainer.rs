@@ -49,7 +49,12 @@ pub fn run_pot_odds_drill() {
 
         println!("Spot #{}", spots + 1);
         println!("  Your hand: {} {}", fmt(hero[0]), fmt(hero[1]));
-        println!("  Flop:      {} {} {}", fmt(flop[0]), fmt(flop[1]), fmt(flop[2]));
+        println!(
+            "  Flop:      {} {} {}",
+            fmt(flop[0]),
+            fmt(flop[1]),
+            fmt(flop[2])
+        );
         println!("  Pot {POT:.0}bb. Villain bets {bet:.1}bb.");
         println!(
             "  Call {:.1} to win {:.1}  ->  need {:.0}% equity.",
@@ -162,7 +167,11 @@ pub fn run_texture_drill() {
                 SuitPattern::Monotone => "monotone",
             },
             if t.paired { "paired" } else { "unpaired" },
-            if t.straighty { "straighty" } else { "disconnected" },
+            if t.straighty {
+                "straighty"
+            } else {
+                "disconnected"
+            },
             char::from(t.high),
             if right { "correct" } else { "wrong" }
         );
@@ -215,7 +224,10 @@ pub fn run_gto_drill() {
         if matches!(input.as_str(), "" | "q" | "quit") {
             break;
         }
-        let Some(chosen) = input.parse::<usize>().ok().filter(|n| (1..=ns.actions.len()).contains(n))
+        let Some(chosen) = input
+            .parse::<usize>()
+            .ok()
+            .filter(|n| (1..=ns.actions.len()).contains(n))
         else {
             println!("  (enter 1..{}, or q to quit)\n", ns.actions.len());
             continue;
