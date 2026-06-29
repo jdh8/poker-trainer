@@ -1,0 +1,18 @@
+[package]
+name = "solve-gen"
+version = "0.1.0"
+edition = "2021"
+description = "Offline GTO solution generator for poker-trainer"
+# AGPL because it links postflop-solver. Kept in its own crate so the trainer
+# binary (MIT OR Apache-2.0) never links the solver — it only reads the JSON
+# this produces. Solver *output* is not a derivative work.
+license = "AGPL-3.0-or-later"
+publish = false
+
+[dependencies]
+# Pinned: the solver ships breaking changes without version bumps.
+# default-features=false drops its `bincode` feature — we extract to our own
+# JSON, never the solver's tree format, and bincode 2.0.x broke rc.3's API.
+postflop-solver = { git = "https://github.com/b-inary/postflop-solver", rev = "9d1509fe5077d019825f833eed04b16d342dfda1", default-features = false, features = ["rayon"] }
+poker-trainer = { path = "../.." }
+serde_json = "1"

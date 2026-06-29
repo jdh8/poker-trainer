@@ -1,13 +1,5 @@
-// Scaffold: lots of intentionally-unused stubs while modules are filled in.
-#![allow(dead_code)]
-
-mod board;
-mod eval;
-mod range;
-mod solution;
-mod trainer;
-
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
+use poker_trainer::trainer;
 
 #[derive(Parser)]
 #[command(name = "poker-trainer", about = "Post-flop-focused GTO poker trainer")]
@@ -18,15 +10,30 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Run a training drill (present a spot, score your action vs. GTO).
-    Drill,
-    /// Solve a custom spot and cache it (phase 3 — not implemented yet).
-    Solve,
+    /// Run a training drill (present a spot, score your action).
+    Drill {
+        /// Which drill to run.
+        #[arg(value_enum, default_value_t = Mode::PotOdds)]
+        mode: Mode,
+    },
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum Mode {
+    /// Call/fold vs. break-even pot odds (Monte-Carlo equity).
+    PotOdds,
+    /// Classify the flop's board texture.
+    Texture,
+    /// Act vs. a precomputed GTO solution; scored on EV loss.
+    Gto,
 }
 
 fn main() {
     match Cli::parse().command {
-        Command::Drill => trainer::run_drill(),
-        Command::Solve => eprintln!("solve: not implemented yet (phase 3)"),
+        Command::Drill { mode } => match mode {
+            Mode::PotOdds => trainer::run_pot_odds_drill(),
+            Mode::Texture => trainer::run_texture_drill(),
+            Mode::Gto => trainer::run_gto_drill(),
+        },
     }
 }

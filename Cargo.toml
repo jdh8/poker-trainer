@@ -9,10 +9,10 @@ license = "MIT OR Apache-2.0"
 clap = { version = "4", features = ["derive"] }
 rand = "0.10"                   # RNG for dealing; matches rs_poker's rand
 rs_poker = "5"                  # card types + hand eval (crate name uses _, not -)
+serde = { version = "1", features = ["derive"] } # solution file format
+serde_json = "1"               # human-inspectable solution files
 
-# --- Add these as you reach each phase ---
-#
-# Phase 3 (live solving, OPTIONAL — AGPL-3.0):
-#   postflop-solver is git-only and AGPL. When you add it, put it in its own
-#   crate (e.g. crates/trainer-solver) so the license boundary stays explicit
-#   and it doesn't block publishing the rest. See README.
+# The AGPL solver lives in its own crate (crates/solve-gen) so it never links
+# into this binary — the trainer only deserializes the JSON it produces.
+[workspace]
+members = ["crates/solve-gen"]
