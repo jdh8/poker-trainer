@@ -55,11 +55,12 @@ goes through it, so a **file-backed** provider (precomputed sims) and, later, a
    size, across 8 textures. Grow it by adding flops/lines in `crates/solve-gen`
    (more positions, bet sizes, or turn/river nodes).
 2. **Range-builder mode + leak stats** — *done.* `drill range` picks one solved
-   spot, buckets its whole range by made-hand strength (value / pair / draw /
-   air), lets you assign one action per bucket, then scores the full strategy:
-   combo-weighted EV loss and a per-bucket leak report. Bucketing is absolute
-   hand strength + draws (no equity-vs-range yet); a finer top-pair/overpair
-   split is the obvious next step.
+   spot, buckets its whole range by made-hand strength (value / overpair /
+   top pair / pair / draw / air), lets you assign one action per bucket, then
+   scores the full strategy: combo-weighted EV loss and a per-bucket leak
+   report. Bucketing is absolute hand strength + draws; equity-vs-range (so two
+   hands in the same bucket facing different board coverage split apart) is the
+   obvious next step.
 3. **Live solving (optional)** — `postflop-solver` behind `SolutionProvider` for
    custom spots, with explicit "~30 s, ~1 GB RAM" expectations.
 

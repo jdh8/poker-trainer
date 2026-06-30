@@ -405,12 +405,12 @@ fn report_range(
         100.0 * matched as f64 / combos as f64
     );
     println!(
-        "  {:<6} {:>6}  {:<14} {:>9}  {:>12}",
+        "  {:<9} {:>6}  {:<14} {:>9}  {:>12}",
         "bucket", "combos", "your action", "avg loss", "GTO plays it"
     );
     for l in &leaks {
         println!(
-            "  {:<6} {:>6}  {:<14} {:>6.2}bb  {:>11.0}%",
+            "  {:<9} {:>6}  {:<14} {:>6.2}bb  {:>11.0}%",
             l.bucket.to_string(),
             l.combos,
             actions[l.action],

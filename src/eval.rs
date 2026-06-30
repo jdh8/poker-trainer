@@ -52,16 +52,20 @@ fn seven(hole: [Card; 2], flop: [Card; 3], turn_river: &[Card]) -> Hand {
 /// Declared strong -> weak so it sorts and prints in that order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Bucket {
-    Value, // two pair or better
-    Pair,  // a single pair the hero actually helped make
-    Draw,  // no made pair, but a flush or straight draw
-    Air,   // no pair, no draw
+    Value,    // two pair or better
+    Overpair, // a pocket pair above the whole board
+    TopPair,  // paired the highest board card
+    Pair,     // a weaker pair (second pair, underpair, bottom pair) the hero made
+    Draw,     // no made pair, but a flush or straight draw
+    Air,      // no pair, no draw
 }
 
 impl std::fmt::Display for Bucket {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
             Bucket::Value => "Value",
+            Bucket::Overpair => "Overpair",
+            Bucket::TopPair => "TopPair",
             Bucket::Pair => "Pair",
             Bucket::Draw => "Draw",
             Bucket::Air => "Air",
@@ -83,7 +87,7 @@ pub fn classify_hand(hole: [Card; 2], flop: [Card; 3]) -> Bucket {
         | CoreRank::FullHouse
         | CoreRank::FourOfAKind
         | CoreRank::StraightFlush => Bucket::Value,
-        CoreRank::OnePair if hero_makes_pair(hole, flop) => Bucket::Pair,
+        CoreRank::OnePair if hero_makes_pair(hole, flop) => pair_strength(hole, flop),
         // ponytail: a board pair (e.g. 8h8c3d) ranks every hand OnePair, so only count it as a
         // Pair when the hero contributed. Exotic pure-board hands on a trips board aren't gated.
         CoreRank::OnePair | CoreRank::HighCard => {
@@ -93,6 +97,19 @@ pub fn classify_hand(hole: [Card; 2], flop: [Card; 3]) -> Bucket {
                 Bucket::Air
             }
         }
+    }
+}
+
+/// Split a made single pair into overpair / top pair / weaker, by board rank.
+fn pair_strength(hole: [Card; 2], flop: [Card; 3]) -> Bucket {
+    let top = flop.iter().map(|c| u8::from(c.value)).max().unwrap();
+    let is_pocket = hole[0].value == hole[1].value;
+    if is_pocket && u8::from(hole[0].value) > top {
+        Bucket::Overpair
+    } else if hole.iter().any(|c| u8::from(c.value) == top) {
+        Bucket::TopPair
+    } else {
+        Bucket::Pair
     }
 }
 
@@ -169,8 +186,12 @@ mod tests {
         assert_eq!(classify_hand(hole("Ts", "Tc"), board), Bucket::Value);
         // Two pair -> Value.
         assert_eq!(classify_hand(hole("Th", "9s"), board), Bucket::Value);
-        // Top pair -> Pair.
-        assert_eq!(classify_hand(hole("Tc", "2s"), board), Bucket::Pair);
+        // Paired the top board card -> TopPair.
+        assert_eq!(classify_hand(hole("Tc", "2s"), board), Bucket::TopPair);
+        // Pocket pair above the board -> Overpair.
+        assert_eq!(classify_hand(hole("Js", "Jc"), board), Bucket::Overpair);
+        // Paired the middle board card -> weaker Pair.
+        assert_eq!(classify_hand(hole("9s", "2c"), board), Bucket::Pair);
         // Underpair the hero made -> Pair.
         assert_eq!(classify_hand(hole("4s", "4c"), board), Bucket::Pair);
         // Open-ended straight draw (J8 wants a 7 or Q), no pair -> Draw.
