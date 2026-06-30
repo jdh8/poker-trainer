@@ -58,9 +58,9 @@ goes through it, so a **file-backed** provider (precomputed sims) and, later, a
    spot, buckets its whole range by made-hand strength (value / overpair /
    top pair / pair / draw / air), lets you assign one action per bucket, then
    scores the full strategy: combo-weighted EV loss and a per-bucket leak
-   report. Bucketing is absolute hand strength + draws; equity-vs-range (so two
-   hands in the same bucket facing different board coverage split apart) is the
-   obvious next step.
+   report. Each big-enough bucket is split (`▲`/`▽`) at its median equity vs the
+   villain's range — taken from the opposite-position node on the same board — so
+   a strong and a weak top pair land in different slices you score separately.
 3. **Live solving (optional)** — `postflop-solver` behind `SolutionProvider` for
    custom spots, with explicit "~30 s, ~1 GB RAM" expectations.
 

@@ -36,6 +36,29 @@ pub fn equity(hero: [Card; 2], villain: [Card; 2], flop: [Card; 3], iters: u32) 
     score / iters as f64
 }
 
+/// Mean equity of `hero` vs every combo in `villain_range` that doesn't collide
+/// with the hero's cards or the flop. `0.5` if nothing is left to play against.
+///
+/// ponytail: O(hero × villain) Monte Carlo — fine because the range drill runs
+/// this once at startup; keep per-pair `iters` low and the variance averages out
+/// across the many villain combos.
+pub fn equity_vs_range(
+    hero: [Card; 2],
+    flop: [Card; 3],
+    villain_range: &[[Card; 2]],
+    iters: u32,
+) -> f64 {
+    let blocked = |v: &[Card; 2]| v.iter().any(|c| hero.contains(c) || flop.contains(c));
+    let live: Vec<&[Card; 2]> = villain_range.iter().filter(|v| !blocked(v)).collect();
+    if live.is_empty() {
+        return 0.5;
+    }
+    live.iter()
+        .map(|v| equity(hero, **v, flop, iters))
+        .sum::<f64>()
+        / live.len() as f64
+}
+
 fn seven(hole: [Card; 2], flop: [Card; 3], turn_river: &[Card]) -> Hand {
     Hand::new_with_cards(vec![
         hole[0],
@@ -170,6 +193,22 @@ mod tests {
         let villain = [card("2c"), card("2d")];
         let flop = [card("Qs"), card("Js"), card("Ts")];
         assert_eq!(equity(hero, villain, flop, 1000), 1.0);
+    }
+
+    #[test]
+    fn nuts_beats_whole_range() {
+        // Hero flops the nuts; vs any (live) villain range, equity is 1.0.
+        let hero = [card("As"), card("Ks")];
+        let flop = [card("Qs"), card("Js"), card("Ts")];
+        let range = [
+            [card("2c"), card("2d")],
+            [card("9h"), card("9c")],
+            [card("Ad"), card("Kd")],
+            [card("As"), card("2h")], // collides with hero -> skipped
+        ];
+        assert_eq!(equity_vs_range(hero, flop, &range, 200), 1.0);
+        // Empty / fully-blocked range -> neutral 0.5.
+        assert_eq!(equity_vs_range(hero, flop, &[], 200), 0.5);
     }
 
     fn hole(a: &str, b: &str) -> [Card; 2] {

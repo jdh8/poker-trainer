@@ -18,6 +18,11 @@ const POT: f64 = 10.0; // bb, fixed for now
 const BET_FRACTIONS: [f64; 5] = [0.33, 0.5, 0.75, 1.0, 1.5];
 const ITERS: u32 = 10_000;
 
+// Range-drill equity sub-bucketing knobs.
+const EQ_ITERS: u32 = 40; // Monte-Carlo runouts per (hero, villain) pair
+const EQ_VILLAIN_CAP: usize = 120; // sample at most this many villain combos
+const SPLIT_MIN: usize = 6; // don't split a bucket smaller than this
+
 /// Break-even equity to call: you risk `bet` to win `pot + bet`.
 fn required_equity(pot: f64, bet: f64) -> f64 {
     bet / (pot + 2.0 * bet)
@@ -297,7 +302,6 @@ pub fn run_range_drill() {
         eprintln!("Spot has an unparseable board ({:?}).", spot.board);
         return;
     };
-    let groups = group_by_bucket(spot, flop);
     let actions = &spot.strategies[0].strategy.actions;
 
     println!("poker-trainer — range drill. Assign your whole range, one action per bucket.\n");
@@ -308,13 +312,23 @@ pub fn run_range_drill() {
     for (i, label) in actions.iter().enumerate() {
         println!("    {}) {}", i + 1, label);
     }
-    println!();
 
-    // Assign one action per present bucket (strong -> weak). q or EOF aborts.
-    let mut chosen: BTreeMap<Bucket, usize> = BTreeMap::new();
-    for (&bucket, strats) in &groups {
+    // Villain's range = the opposite-position sibling's hero hands; sample it down
+    // so the one-time equity pass stays sub-second.
+    let villain: Vec<[Card; 2]> = villain_range(spots, spot)
+        .sample(&mut rng, EQ_VILLAIN_CAP)
+        .copied()
+        .collect();
+    print!("\n  Bucketing range by equity… ");
+    io::stdout().flush().unwrap();
+    let groups = group_by_subrange(spot, flop, &villain);
+    println!("done.\n");
+
+    // Assign one action per present sub-bucket (strong -> weak). q or EOF aborts.
+    let mut chosen: BTreeMap<Subrange, usize> = BTreeMap::new();
+    for (&sub, strats) in &groups {
         let pick = loop {
-            let Some(input) = prompt(&format!("  {bucket} ({} combos) action? > ", strats.len()))
+            let Some(input) = prompt(&format!("  {sub} ({} combos) action? > ", strats.len()))
             else {
                 println!("\nAborted — nothing scored.");
                 return;
@@ -332,15 +346,15 @@ pub fn run_range_drill() {
                 None => println!("    (enter 1..{})", actions.len()),
             }
         };
-        chosen.insert(bucket, pick);
+        chosen.insert(sub, pick);
     }
 
     report_range(&groups, &chosen, actions);
 }
 
-/// One bucket's contribution to the range score (all sums are over its combos).
+/// One sub-bucket's contribution to the range score (all sums are over its combos).
 struct BucketLeak {
-    bucket: Bucket,
+    subrange: Subrange,
     combos: usize,
     action: usize,
     ev_loss: f32,
@@ -348,17 +362,17 @@ struct BucketLeak {
     matched: usize,
 }
 
-/// Score each bucket's chosen action over its combos. Pure; sorted worst-first.
+/// Score each sub-bucket's chosen action over its combos. Pure; sorted worst-first.
 fn score_buckets(
-    groups: &BTreeMap<Bucket, Vec<&NodeStrategy>>,
-    chosen: &BTreeMap<Bucket, usize>,
+    groups: &BTreeMap<Subrange, Vec<&NodeStrategy>>,
+    chosen: &BTreeMap<Subrange, usize>,
 ) -> Vec<BucketLeak> {
     let mut leaks: Vec<BucketLeak> = groups
         .iter()
-        .map(|(&bucket, strats)| {
-            let action = chosen.get(&bucket).copied().unwrap_or(0);
+        .map(|(&subrange, strats)| {
+            let action = chosen.get(&subrange).copied().unwrap_or(0);
             let mut leak = BucketLeak {
-                bucket,
+                subrange,
                 combos: strats.len(),
                 action,
                 ev_loss: 0.0,
@@ -380,10 +394,10 @@ fn score_buckets(
     leaks
 }
 
-/// Print the per-bucket leak report.
+/// Print the per-sub-bucket leak report.
 fn report_range(
-    groups: &BTreeMap<Bucket, Vec<&NodeStrategy>>,
-    chosen: &BTreeMap<Bucket, usize>,
+    groups: &BTreeMap<Subrange, Vec<&NodeStrategy>>,
+    chosen: &BTreeMap<Subrange, usize>,
     actions: &[String],
 ) {
     let leaks = score_buckets(groups, chosen);
@@ -405,13 +419,13 @@ fn report_range(
         100.0 * matched as f64 / combos as f64
     );
     println!(
-        "  {:<9} {:>6}  {:<14} {:>9}  {:>12}",
+        "  {:<12} {:>6}  {:<14} {:>9}  {:>12}",
         "bucket", "combos", "your action", "avg loss", "GTO plays it"
     );
     for l in &leaks {
         println!(
-            "  {:<9} {:>6}  {:<14} {:>6.2}bb  {:>11.0}%",
-            l.bucket.to_string(),
+            "  {:<12} {:>6}  {:<14} {:>6.2}bb  {:>11.0}%",
+            l.subrange.to_string(),
             l.combos,
             actions[l.action],
             l.ev_loss / l.combos as f32,
@@ -442,15 +456,116 @@ fn parse_cards(s: &str) -> Option<Vec<Card>> {
         .collect()
 }
 
-/// Group a spot's combos into strength buckets, skipping unparseable hands.
-fn group_by_bucket(spot: &SolvedSpot, flop: [Card; 3]) -> BTreeMap<Bucket, Vec<&NodeStrategy>> {
-    let mut groups: BTreeMap<Bucket, Vec<&NodeStrategy>> = BTreeMap::new();
+/// Which equity half of a strength bucket a combo lands in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum Half {
+    Whole,  // bucket wasn't split (too small, or no villain range)
+    Strong, // higher equity vs the villain's range
+    Weak,   // lower equity
+}
+
+/// A strength bucket, optionally split by equity-vs-range. Sorts by bucket first
+/// (strong -> weak), then Whole/Strong/Weak — so the report reads top to bottom.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+struct Subrange {
+    bucket: Bucket,
+    half: Half,
+}
+
+impl std::fmt::Display for Subrange {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.half {
+            Half::Whole => write!(f, "{}", self.bucket),
+            Half::Strong => write!(f, "{} ▲", self.bucket),
+            Half::Weak => write!(f, "{} ▽", self.bucket),
+        }
+    }
+}
+
+/// The villain's range here = the opposite-position sibling node's hero hands.
+///
+/// ponytail: taken unweighted; for a defend node this includes the bettor's
+/// checking hands too. Frequency-weight by bet freq if it ever shifts the tiers.
+fn villain_range(spots: &[SolvedSpot], spot: &SolvedSpot) -> Vec<[Card; 2]> {
+    spots
+        .iter()
+        .find(|s| s.board == spot.board && s.hero_oop != spot.hero_oop)
+        .map(|s| {
+            s.strategies
+                .iter()
+                .filter_map(|hs| parse_hole(&hs.hand))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Split combos into (strong, weak) halves at the median equity; ties go strong.
+/// Pure — equities are supplied, so it's testable without any Monte Carlo.
+fn split_by_median(items: Vec<(f64, &NodeStrategy)>) -> (Vec<&NodeStrategy>, Vec<&NodeStrategy>) {
+    let mut eqs: Vec<f64> = items.iter().map(|(e, _)| *e).collect();
+    eqs.sort_by(f64::total_cmp);
+    let median = eqs[eqs.len() / 2];
+    let (strong, weak): (Vec<_>, Vec<_>) = items.into_iter().partition(|(e, _)| *e >= median);
+    (
+        strong.into_iter().map(|(_, ns)| ns).collect(),
+        weak.into_iter().map(|(_, ns)| ns).collect(),
+    )
+}
+
+/// Group a spot's combos into strength buckets, then split each big-enough bucket
+/// by its members' equity vs the villain range. Skips unparseable hands.
+fn group_by_subrange<'a>(
+    spot: &'a SolvedSpot,
+    flop: [Card; 3],
+    villain: &[[Card; 2]],
+) -> BTreeMap<Subrange, Vec<&'a NodeStrategy>> {
+    // 1. classify each combo and measure its equity vs the villain range.
+    let mut by_bucket: BTreeMap<Bucket, Vec<(f64, &NodeStrategy)>> = BTreeMap::new();
     for hs in &spot.strategies {
         if let Some(hole) = parse_hole(&hs.hand) {
-            groups
+            let eq = if villain.is_empty() {
+                0.5
+            } else {
+                eval::equity_vs_range(hole, flop, villain, EQ_ITERS)
+            };
+            by_bucket
                 .entry(eval::classify_hand(hole, flop))
                 .or_default()
-                .push(&hs.strategy);
+                .push((eq, &hs.strategy));
+        }
+    }
+    // 2. split each bucket at its median equity (small buckets stay whole).
+    let mut groups: BTreeMap<Subrange, Vec<&NodeStrategy>> = BTreeMap::new();
+    for (bucket, items) in by_bucket {
+        if villain.is_empty() || items.len() < SPLIT_MIN {
+            let combos = items.into_iter().map(|(_, ns)| ns).collect();
+            groups.insert(
+                Subrange {
+                    bucket,
+                    half: Half::Whole,
+                },
+                combos,
+            );
+        } else {
+            let (strong, weak) = split_by_median(items);
+            if !strong.is_empty() {
+                groups.insert(
+                    Subrange {
+                        bucket,
+                        half: Half::Strong,
+                    },
+                    strong,
+                );
+            }
+            if !weak.is_empty() {
+                groups.insert(
+                    Subrange {
+                        bucket,
+                        half: Half::Weak,
+                    },
+                    weak,
+                );
+            }
         }
     }
     groups
@@ -526,14 +641,39 @@ mod tests {
         // c2: EV [2.0, 5.0] -> ev_loss 3.0, freq[0]=0.10 (>= 5%, matched)
         let c1 = ns(vec![0.0, 1.0], vec![1.0, 3.0]);
         let c2 = ns(vec![0.10, 0.90], vec![2.0, 5.0]);
-        let mut groups: BTreeMap<Bucket, Vec<&NodeStrategy>> = BTreeMap::new();
-        groups.insert(Bucket::Air, vec![&c1, &c2]);
-        let chosen = BTreeMap::from([(Bucket::Air, 0usize)]);
+        let air = Subrange {
+            bucket: Bucket::Air,
+            half: Half::Whole,
+        };
+        let mut groups: BTreeMap<Subrange, Vec<&NodeStrategy>> = BTreeMap::new();
+        groups.insert(air, vec![&c1, &c2]);
+        let chosen = BTreeMap::from([(air, 0usize)]);
 
         let leaks = score_buckets(&groups, &chosen);
         assert_eq!(leaks.len(), 1);
         assert_eq!(leaks[0].combos, 2);
         assert!((leaks[0].ev_loss - 5.0).abs() < 1e-6); // 2.0 + 3.0, summed not single
         assert_eq!(leaks[0].matched, 1); // only c2 plays Check >= 5%
+    }
+
+    #[test]
+    fn split_by_median_partitions_strong_and_weak() {
+        // Four distinct equities -> median = eqs[2] = 0.6; >= median is strong.
+        let (a, b, c, d) = (
+            ns(vec![], vec![]),
+            ns(vec![], vec![]),
+            ns(vec![], vec![]),
+            ns(vec![], vec![]),
+        );
+        let items = vec![(0.2, &a), (0.5, &b), (0.6, &c), (0.9, &d)];
+        let (strong, weak) = split_by_median(items);
+        assert_eq!(strong.len(), 2); // 0.6 and 0.9
+        assert_eq!(weak.len(), 2); // 0.2 and 0.5
+
+        // All-equal equities: median ties everything into the strong half.
+        let (e, f) = (ns(vec![], vec![]), ns(vec![], vec![]));
+        let (strong, weak) = split_by_median(vec![(0.5, &e), (0.5, &f)]);
+        assert_eq!(strong.len(), 2);
+        assert_eq!(weak.len(), 0);
     }
 }
