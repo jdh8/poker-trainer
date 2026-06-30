@@ -6,11 +6,12 @@
 //! - `run_texture_drill`: deal a flop, you classify its objective texture.
 //! - `run_gto_drill`: act vs. a precomputed solution; scored on EV loss (Phase 1).
 
-use crate::eval;
-use crate::solution::{FileSolutionProvider, SolutionProvider};
+use crate::eval::{self, Bucket};
+use crate::solution::{FileSolutionProvider, NodeStrategy, SolutionProvider, SolvedSpot};
 use crate::texture::{self, SuitPattern};
 use rand::seq::IndexedRandom;
 use rs_poker::core::{Card, Deck, Suit};
+use std::collections::BTreeMap;
 use std::io::{self, Write};
 
 const POT: f64 = 10.0; // bb, fixed for now
@@ -185,16 +186,8 @@ pub fn run_texture_drill() {
 /// Pick a precomputed spot, deal the hero a hand from its solved range, present
 /// the decision, and score the chosen action on EV loss vs. the equilibrium mix.
 pub fn run_gto_drill() {
-    let provider = match FileSolutionProvider::load("data/solutions") {
-        Ok(p) if !p.spots().is_empty() => p,
-        Ok(_) => {
-            eprintln!("No solutions in data/solutions — run `cargo run -p solve-gen` first.");
-            return;
-        }
-        Err(e) => {
-            eprintln!("Couldn't load data/solutions ({e}) — run `cargo run -p solve-gen` first.");
-            return;
-        }
+    let Some(provider) = load_provider() else {
+        return;
     };
     let spots = provider.spots();
 
@@ -271,6 +264,198 @@ pub fn run_gto_drill() {
     }
 }
 
+/// Load the precomputed solution library, or print a hint and return `None`.
+fn load_provider() -> Option<FileSolutionProvider> {
+    match FileSolutionProvider::load("data/solutions") {
+        Ok(p) if !p.spots().is_empty() => Some(p),
+        Ok(_) => {
+            eprintln!("No solutions in data/solutions — run `cargo run -p solve-gen` first.");
+            None
+        }
+        Err(e) => {
+            eprintln!("Couldn't load data/solutions ({e}) — run `cargo run -p solve-gen` first.");
+            None
+        }
+    }
+}
+
+/// Entry point for `poker-trainer drill range` (Phase 2).
+///
+/// Pick one precomputed spot, bucket its whole range by made-hand strength, let
+/// you assign an action per bucket, then score the full strategy: combo-weighted
+/// EV loss and a per-bucket leak report.
+pub fn run_range_drill() {
+    let Some(provider) = load_provider() else {
+        return;
+    };
+    let spots = provider.spots();
+
+    let mut rng = rand::rng();
+    let spot = spots.choose(&mut rng).unwrap();
+
+    let Some(flop) = parse_flop(&spot.board) else {
+        eprintln!("Spot has an unparseable board ({:?}).", spot.board);
+        return;
+    };
+    let groups = group_by_bucket(spot, flop);
+    let actions = &spot.strategies[0].strategy.actions;
+
+    println!("poker-trainer — range drill. Assign your whole range, one action per bucket.\n");
+    println!("Spot: {}", spot.label);
+    println!("  Board: {}", fmt_hand_str(&spot.board.join("")));
+    println!("  Pot {:.1}bb. {}.", spot.pot_bb, spot.villain_action);
+    println!("  Actions:");
+    for (i, label) in actions.iter().enumerate() {
+        println!("    {}) {}", i + 1, label);
+    }
+    println!();
+
+    // Assign one action per present bucket (strong -> weak). q or EOF aborts.
+    let mut chosen: BTreeMap<Bucket, usize> = BTreeMap::new();
+    for (&bucket, strats) in &groups {
+        let pick = loop {
+            let Some(input) = prompt(&format!("  {bucket} ({} combos) action? > ", strats.len()))
+            else {
+                println!("\nAborted — nothing scored.");
+                return;
+            };
+            if matches!(input.as_str(), "q" | "quit") {
+                println!("\nAborted — nothing scored.");
+                return;
+            }
+            match input
+                .parse::<usize>()
+                .ok()
+                .filter(|n| (1..=actions.len()).contains(n))
+            {
+                Some(n) => break n - 1,
+                None => println!("    (enter 1..{})", actions.len()),
+            }
+        };
+        chosen.insert(bucket, pick);
+    }
+
+    report_range(&groups, &chosen, actions);
+}
+
+/// One bucket's contribution to the range score (all sums are over its combos).
+struct BucketLeak {
+    bucket: Bucket,
+    combos: usize,
+    action: usize,
+    ev_loss: f32,
+    freq_sum: f32, // summed GTO frequency of the chosen action
+    matched: usize,
+}
+
+/// Score each bucket's chosen action over its combos. Pure; sorted worst-first.
+fn score_buckets(
+    groups: &BTreeMap<Bucket, Vec<&NodeStrategy>>,
+    chosen: &BTreeMap<Bucket, usize>,
+) -> Vec<BucketLeak> {
+    let mut leaks: Vec<BucketLeak> = groups
+        .iter()
+        .map(|(&bucket, strats)| {
+            let action = chosen.get(&bucket).copied().unwrap_or(0);
+            let mut leak = BucketLeak {
+                bucket,
+                combos: strats.len(),
+                action,
+                ev_loss: 0.0,
+                freq_sum: 0.0,
+                matched: 0,
+            };
+            for ns in strats {
+                leak.ev_loss += ns.ev_loss(action);
+                leak.freq_sum += ns.frequencies[action];
+                if ns.frequencies[action] >= 0.05 {
+                    leak.matched += 1;
+                }
+            }
+            leak
+        })
+        .collect();
+    // Worst-leaking bucket first, by EV lost *per combo* (severity, not just count).
+    leaks.sort_by(|a, b| (b.ev_loss / b.combos as f32).total_cmp(&(a.ev_loss / a.combos as f32)));
+    leaks
+}
+
+/// Print the per-bucket leak report.
+fn report_range(
+    groups: &BTreeMap<Bucket, Vec<&NodeStrategy>>,
+    chosen: &BTreeMap<Bucket, usize>,
+    actions: &[String],
+) {
+    let leaks = score_buckets(groups, chosen);
+    let combos: usize = leaks.iter().map(|l| l.combos).sum();
+    if combos == 0 {
+        println!("\nNo combos to score.");
+        return;
+    }
+    let total_ev_loss: f32 = leaks.iter().map(|l| l.ev_loss).sum();
+    let matched: usize = leaks.iter().map(|l| l.matched).sum();
+
+    println!(
+        "\nRange scored: {combos} combos in {} buckets.",
+        leaks.len()
+    );
+    println!(
+        "  Avg EV loss: {:.2}bb/combo  |  Accuracy: {:.0}% of combos on a GTO action.\n",
+        total_ev_loss / combos as f32,
+        100.0 * matched as f64 / combos as f64
+    );
+    println!(
+        "  {:<6} {:>6}  {:<14} {:>9}  {:>12}",
+        "bucket", "combos", "your action", "avg loss", "GTO plays it"
+    );
+    for l in &leaks {
+        println!(
+            "  {:<6} {:>6}  {:<14} {:>6.2}bb  {:>11.0}%",
+            l.bucket.to_string(),
+            l.combos,
+            actions[l.action],
+            l.ev_loss / l.combos as f32,
+            100.0 * (l.freq_sum / l.combos as f32)
+        );
+    }
+}
+
+/// Parse a 3-card board (`["6h","9d","Td"]`) into a flop array.
+fn parse_flop(board: &[String]) -> Option<[Card; 3]> {
+    parse_cards(&board.join(""))?.try_into().ok()
+}
+
+/// Parse the hero's two hole cards from an `"AsKh"` string.
+fn parse_hole(hand: &str) -> Option<[Card; 2]> {
+    parse_cards(hand)?.try_into().ok()
+}
+
+/// Parse a packed card string (`"6h9dTd"`) into cards; `None` if any chunk fails.
+fn parse_cards(s: &str) -> Option<Vec<Card>> {
+    s.as_bytes()
+        .chunks(2)
+        .map(|c| {
+            std::str::from_utf8(c)
+                .ok()
+                .and_then(|cs| Card::try_from(cs).ok())
+        })
+        .collect()
+}
+
+/// Group a spot's combos into strength buckets, skipping unparseable hands.
+fn group_by_bucket(spot: &SolvedSpot, flop: [Card; 3]) -> BTreeMap<Bucket, Vec<&NodeStrategy>> {
+    let mut groups: BTreeMap<Bucket, Vec<&NodeStrategy>> = BTreeMap::new();
+    for hs in &spot.strategies {
+        if let Some(hole) = parse_hole(&hs.hand) {
+            groups
+                .entry(eval::classify_hand(hole, flop))
+                .or_default()
+                .push(&hs.strategy);
+        }
+    }
+    groups
+}
+
 /// Render a packed card string like `"Td9d6h"` or `"AsKh"` with suit glyphs.
 fn fmt_hand_str(s: &str) -> String {
     s.as_bytes()
@@ -318,11 +503,37 @@ fn fmt(c: Card) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::required_equity;
+    use super::*;
 
     #[test]
     fn pot_odds_formula() {
         // Pot 10, bet 7: call 7 to win 17, break-even = 7 / (10 + 14) = 7/24.
         assert!((required_equity(10.0, 7.0) - 7.0 / 24.0).abs() < 1e-12);
+    }
+
+    fn ns(freqs: Vec<f32>, evs: Vec<f32>) -> NodeStrategy {
+        NodeStrategy {
+            actions: vec!["Check".into(), "Bet".into()],
+            frequencies: freqs,
+            action_ev: evs,
+        }
+    }
+
+    #[test]
+    fn score_sums_ev_loss_over_combos_in_a_bucket() {
+        // Two combos in one bucket, both assigned Check (action 0).
+        // c1: EV [1.0, 3.0] -> ev_loss 2.0, freq[0]=0.00 (not a GTO action)
+        // c2: EV [2.0, 5.0] -> ev_loss 3.0, freq[0]=0.10 (>= 5%, matched)
+        let c1 = ns(vec![0.0, 1.0], vec![1.0, 3.0]);
+        let c2 = ns(vec![0.10, 0.90], vec![2.0, 5.0]);
+        let mut groups: BTreeMap<Bucket, Vec<&NodeStrategy>> = BTreeMap::new();
+        groups.insert(Bucket::Air, vec![&c1, &c2]);
+        let chosen = BTreeMap::from([(Bucket::Air, 0usize)]);
+
+        let leaks = score_buckets(&groups, &chosen);
+        assert_eq!(leaks.len(), 1);
+        assert_eq!(leaks[0].combos, 2);
+        assert!((leaks[0].ev_loss - 5.0).abs() < 1e-6); // 2.0 + 3.0, summed not single
+        assert_eq!(leaks[0].matched, 1); // only c2 plays Check >= 5%
     }
 }

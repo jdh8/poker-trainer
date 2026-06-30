@@ -26,6 +26,8 @@ enum Mode {
     Texture,
     /// Act vs. a precomputed GTO solution; scored on EV loss.
     Gto,
+    /// Assign an action for your whole range; scored with per-bucket leak stats.
+    Range,
 }
 
 fn main() {
@@ -34,6 +36,7 @@ fn main() {
             Mode::PotOdds => trainer::run_pot_odds_drill(),
             Mode::Texture => trainer::run_texture_drill(),
             Mode::Gto => trainer::run_gto_drill(),
+            Mode::Range => trainer::run_range_drill(),
         },
     }
 }

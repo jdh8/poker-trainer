@@ -7,7 +7,9 @@ optimal frequency mix.
 
 > Status: Phase 0 done (equity + board-texture drills). Phase 1 (precomputed GTO
 > solutions) is live — `drill gto` covers 8 flop textures, each as both the BTN's
-> c-bet decision and the BB's defend. See the phased plan below.
+> c-bet decision and the BB's defend. Phase 2 (`drill range`) builds on the same
+> solutions: assign an action to your whole range by strength bucket and get
+> per-bucket leak stats. See the phased plan below.
 
 ## Build & run
 
@@ -15,6 +17,7 @@ optimal frequency mix.
 cargo run -- drill pot-odds   # call/fold vs. break-even pot odds (Monte-Carlo equity)
 cargo run -- drill texture    # classify a flop's board texture
 cargo run -- drill gto        # act vs. a precomputed GTO solution (Phase 1)
+cargo run -- drill range      # assign your whole range by bucket; leak stats (Phase 2)
 ```
 
 The `gto` drill needs solution files; generate them with the (AGPL) solver crate:
@@ -51,8 +54,12 @@ goes through it, so a **file-backed** provider (precomputed sims) and, later, a
    real size-mix: check / 33% / 75%) plus a BB defend node facing *each* c-bet
    size, across 8 textures. Grow it by adding flops/lines in `crates/solve-gen`
    (more positions, bet sizes, or turn/river nodes).
-2. **Range-builder mode + leak stats** — assign the action for a whole range and
-   score the full strategy; track per-spot EV loss.
+2. **Range-builder mode + leak stats** — *done.* `drill range` picks one solved
+   spot, buckets its whole range by made-hand strength (value / pair / draw /
+   air), lets you assign one action per bucket, then scores the full strategy:
+   combo-weighted EV loss and a per-bucket leak report. Bucketing is absolute
+   hand strength + draws (no equity-vs-range yet); a finer top-pair/overpair
+   split is the obvious next step.
 3. **Live solving (optional)** — `postflop-solver` behind `SolutionProvider` for
    custom spots, with explicit "~30 s, ~1 GB RAM" expectations.
 
