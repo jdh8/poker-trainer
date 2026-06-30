@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io;
 use std::path::Path;
+use std::process::Command;
 
 /// A single decision node's equilibrium strategy.
 ///
@@ -103,6 +104,159 @@ impl SolutionProvider for FileSolutionProvider {
     }
 }
 
+/// What to live-solve for a custom spot. Only `flop` is required; `None` fields
+/// let `solve-gen` apply its own defaults. Everything is an opaque string we
+/// forward — the trainer never parses ranges or bet sizes (that needs the
+/// solver), which is what keeps it unlinked from postflop-solver.
+#[derive(Debug, Clone)]
+pub struct SolveRequest {
+    pub flop: String,
+    pub oop: Option<String>,
+    pub ip: Option<String>,
+    pub sizes: Option<String>,
+    pub stack: Option<f32>,
+    pub pot: Option<f32>,
+}
+
+impl SolveRequest {
+    pub fn new(flop: impl Into<String>) -> Self {
+        Self {
+            flop: flop.into(),
+            oop: None,
+            ip: None,
+            sizes: None,
+            stack: None,
+            pot: None,
+        }
+    }
+
+    /// True if any field overrides solve-gen's defaults. The on-disk cache key
+    /// is the flop alone, so a custom request forces a re-solve even when a
+    /// file for this flop already exists.
+    pub fn is_custom(&self) -> bool {
+        self.oop.is_some()
+            || self.ip.is_some()
+            || self.sizes.is_some()
+            || self.stack.is_some()
+            || self.pot.is_some()
+    }
+}
+
+/// Live-solving provider: shells out to the `solve-gen` binary (the only thing
+/// that links the solver), which writes `SolvedSpot` JSON into the solution
+/// dir; we then load just the spots for the requested flop. Delivers on the
+/// README's "a live-solving provider can implement this same trait".
+pub struct LiveSolutionProvider {
+    spots: Vec<SolvedSpot>,
+}
+
+impl LiveSolutionProvider {
+    /// Solve `req` into `dir` (unless a non-custom request is already cached
+    /// there), then load the spots whose board matches the requested flop.
+    pub fn solve(req: &SolveRequest, dir: impl AsRef<Path>) -> io::Result<Self> {
+        let dir = dir.as_ref();
+        let stem = req.flop.to_lowercase();
+        let cached = dir.join(format!("{stem}-ip.json")).exists();
+        if !cached || req.is_custom() {
+            eprintln!(
+                "Solving {} — postflop-solver, expect ~30 s and ~1 GB RAM…",
+                req.flop
+            );
+            run_solve_gen(req, dir)?;
+        }
+
+        let key = flop_key(&req.flop);
+        let spots: Vec<SolvedSpot> = FileSolutionProvider::load(dir)?
+            .spots
+            .into_iter()
+            .filter(|s| flop_key(&s.board.join("")) == key)
+            .collect();
+        if spots.is_empty() {
+            return Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                format!("no solved spots for flop {} in {}", req.flop, dir.display()),
+            ));
+        }
+        Ok(Self { spots })
+    }
+}
+
+impl SolutionProvider for LiveSolutionProvider {
+    fn spots(&self) -> &[SolvedSpot] {
+        &self.spots
+    }
+}
+
+/// Split a flop string like `"Td9d6h"` (or a joined board) into sorted
+/// lowercase cards — an order-independent identity, since the file stem keeps
+/// the user's card order but the board field is solver-sorted.
+fn flop_key(flop: &str) -> Vec<String> {
+    let mut cards: Vec<String> = flop
+        .as_bytes()
+        .chunks(2)
+        .map(|c| String::from_utf8_lossy(c).to_lowercase())
+        .collect();
+    cards.sort();
+    cards
+}
+
+/// The `solve …` argv passed to solve-gen (program excluded) — pure, so it's
+/// unit-testable without spawning anything.
+fn solve_gen_args(req: &SolveRequest, out_dir: &Path) -> Vec<String> {
+    let mut a = vec!["solve".into(), "--flop".into(), req.flop.clone()];
+    let mut opt = |flag: &str, val: &str| {
+        a.push(flag.into());
+        a.push(val.into());
+    };
+    if let Some(v) = &req.oop {
+        opt("--oop", v);
+    }
+    if let Some(v) = &req.ip {
+        opt("--ip", v);
+    }
+    if let Some(v) = &req.sizes {
+        opt("--sizes", v);
+    }
+    if let Some(v) = req.stack {
+        opt("--stack", &v.to_string());
+    }
+    if let Some(v) = req.pot {
+        opt("--pot", &v.to_string());
+    }
+    opt("--out", &out_dir.to_string_lossy());
+    a
+}
+
+/// Spawn solve-gen, inheriting stdout/stderr so its progress + any range/size
+/// parse error show live. Prefer a prebuilt binary via `POKER_TRAINER_SOLVE_GEN`;
+/// otherwise fall back to `cargo run -p solve-gen` for the dev workspace.
+// ponytail: cargo-run shim is fine in-tree; point the env var at a packaged
+// solve-gen binary when shipping a standalone trainer.
+fn run_solve_gen(req: &SolveRequest, out_dir: &Path) -> io::Result<()> {
+    let args = solve_gen_args(req, out_dir);
+    let mut cmd = match std::env::var_os("POKER_TRAINER_SOLVE_GEN") {
+        Some(bin) => {
+            let mut c = Command::new(bin);
+            c.args(&args);
+            c
+        }
+        None => {
+            let mut c = Command::new("cargo");
+            c.args(["run", "-p", "solve-gen", "--release", "--quiet", "--"]);
+            c.args(&args);
+            c
+        }
+    };
+    let status = cmd.status()?;
+    if !status.success() {
+        return Err(io::Error::new(
+            io::ErrorKind::Other,
+            format!("solve-gen failed ({status}) — see its output above"),
+        ));
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -164,5 +318,48 @@ mod tests {
         assert_eq!(provider.spots()[0].strategies[0].hand, "AsKs");
 
         fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn flop_key_is_order_independent() {
+        // File stem keeps the user's order; the board field is solver-sorted.
+        assert_eq!(flop_key("6h5d4c"), flop_key("4c5d6h"));
+        assert_eq!(flop_key("Td9d6h"), flop_key(&["Td", "9d", "6h"].join("")));
+        assert_ne!(flop_key("6h5d4c"), flop_key("6h5d4d"));
+    }
+
+    #[test]
+    fn is_custom_only_when_a_field_overrides() {
+        assert!(!SolveRequest::new("Td9d6h").is_custom());
+        let mut r = SolveRequest::new("Td9d6h");
+        r.sizes = Some("50%".into());
+        assert!(r.is_custom());
+    }
+
+    #[test]
+    fn solve_gen_args_forwards_only_set_fields() {
+        let req = SolveRequest::new("Td9d6h");
+        assert_eq!(
+            solve_gen_args(&req, Path::new("data/solutions")),
+            ["solve", "--flop", "Td9d6h", "--out", "data/solutions"]
+        );
+
+        let mut req = SolveRequest::new("Td9d6h");
+        req.sizes = Some("50%, 100%".into());
+        req.pot = Some(8.0);
+        assert_eq!(
+            solve_gen_args(&req, Path::new("/tmp/sol")),
+            [
+                "solve",
+                "--flop",
+                "Td9d6h",
+                "--sizes",
+                "50%, 100%",
+                "--pot",
+                "8",
+                "--out",
+                "/tmp/sol"
+            ]
+        );
     }
 }

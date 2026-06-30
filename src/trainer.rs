@@ -7,7 +7,10 @@
 //! - `run_gto_drill`: act vs. a precomputed solution; scored on EV loss (Phase 1).
 
 use crate::eval::{self, Bucket};
-use crate::solution::{FileSolutionProvider, NodeStrategy, SolutionProvider, SolvedSpot};
+use crate::solution::{
+    FileSolutionProvider, LiveSolutionProvider, NodeStrategy, SolutionProvider, SolveRequest,
+    SolvedSpot,
+};
 use crate::texture::{self, SuitPattern};
 use rand::seq::IndexedRandom;
 use rs_poker::core::{Card, Deck, Suit};
@@ -186,12 +189,13 @@ pub fn run_texture_drill() {
     report(correct, spots);
 }
 
-/// Entry point for `poker-trainer drill gto` (Phase 1).
+/// Entry point for `poker-trainer drill gto` (Phase 1, plus Phase 3 live solve).
 ///
 /// Pick a precomputed spot, deal the hero a hand from its solved range, present
-/// the decision, and score the chosen action on EV loss vs. the equilibrium mix.
-pub fn run_gto_drill() {
-    let Some(provider) = load_provider() else {
+/// the decision, and score the chosen action on EV loss vs. the equilibrium
+/// mix. With a [`SolveRequest`] (`--board …`), live-solve that spot first.
+pub fn run_gto_drill(req: Option<SolveRequest>) {
+    let Some(provider) = resolve_provider(req) else {
         return;
     };
     let spots = provider.spots();
@@ -269,6 +273,21 @@ pub fn run_gto_drill() {
     }
 }
 
+/// Pick the provider for a drill: live-solve when `req` is given (`--board`),
+/// else the curated file library. Prints a hint and returns `None` on failure.
+fn resolve_provider(req: Option<SolveRequest>) -> Option<Box<dyn SolutionProvider>> {
+    match req {
+        Some(req) => match LiveSolutionProvider::solve(&req, "data/solutions") {
+            Ok(p) => Some(Box::new(p)),
+            Err(e) => {
+                eprintln!("Live solve failed: {e}");
+                None
+            }
+        },
+        None => load_provider().map(|p| Box::new(p) as Box<dyn SolutionProvider>),
+    }
+}
+
 /// Load the precomputed solution library, or print a hint and return `None`.
 fn load_provider() -> Option<FileSolutionProvider> {
     match FileSolutionProvider::load("data/solutions") {
@@ -289,8 +308,8 @@ fn load_provider() -> Option<FileSolutionProvider> {
 /// Pick one precomputed spot, bucket its whole range by made-hand strength, let
 /// you assign an action per bucket, then score the full strategy: combo-weighted
 /// EV loss and a per-bucket leak report.
-pub fn run_range_drill() {
-    let Some(provider) = load_provider() else {
+pub fn run_range_drill(req: Option<SolveRequest>) {
+    let Some(provider) = resolve_provider(req) else {
         return;
     };
     let spots = provider.spots();

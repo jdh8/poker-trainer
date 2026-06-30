@@ -9,7 +9,8 @@ optimal frequency mix.
 > solutions) is live — `drill gto` covers 8 flop textures, each as both the BTN's
 > c-bet decision and the BB's defend. Phase 2 (`drill range`) builds on the same
 > solutions: assign an action to your whole range by strength bucket and get
-> per-bucket leak stats. See the phased plan below.
+> per-bucket leak stats. Phase 3 adds on-demand **live solving** of any spot you
+> pass via `--board`. See the phased plan below.
 
 ## Build & run
 
@@ -23,8 +24,34 @@ cargo run -- drill range      # assign your whole range by bucket; leak stats (P
 The `gto` drill needs solution files; generate them with the (AGPL) solver crate:
 
 ```sh
-cargo run -p solve-gen        # writes data/solutions/*.json
+cargo run -p solve-gen        # writes the curated library to data/solutions/*.json
 ```
+
+### Live solving a custom spot (Phase 3)
+
+Pass `--board` to `drill gto`/`drill range` to solve any flop on demand instead
+of drilling a curated one. It's **CPU-saturating and takes tens of seconds to a
+few minutes** (the wide default ranges run ~4 min on an 8-core box) and ~1 GB
+RAM. The result is cached in `data/solutions/` and reused (and so also joins the
+random pool of plain `drill gto`/`range`).
+
+```sh
+cargo run -- drill gto --board 7c5d2h      # solve this flop, then drill it
+cargo run -- drill range --board Td9d6h    # same, range-builder mode
+```
+
+Optional overrides (forwarded straight to the solver; any of them forces a
+re-solve even if the flop is cached):
+
+```sh
+cargo run -- drill gto --board Td9d6h \
+  --oop "22+,A2s+,..." --ip "22+,A2s+,..." \
+  --sizes "33%, 75%" --stack 100 --pot 6
+```
+
+The trainer never links the solver: `--board` shells out to the `solve-gen`
+binary. In-tree it falls back to `cargo run -p solve-gen`; set
+`POKER_TRAINER_SOLVE_GEN` to a prebuilt `solve-gen` binary to skip that.
 
 ## Architecture
 
@@ -61,8 +88,15 @@ goes through it, so a **file-backed** provider (precomputed sims) and, later, a
    report. Each big-enough bucket is split (`▲`/`▽`) at its median equity vs the
    villain's range — taken from the opposite-position node on the same board — so
    a strong and a weak top pair land in different slices you score separately.
-3. **Live solving (optional)** — `postflop-solver` behind `SolutionProvider` for
-   custom spots, with explicit "~30 s, ~1 GB RAM" expectations.
+3. **Live solving (optional)** — *done.* `drill gto`/`drill range --board <flop>`
+   live-solves a custom spot through `LiveSolutionProvider`, which shells out to
+   the `solve-gen` binary (the only thing that links `postflop-solver`), caches
+   the result in `data/solutions/`, then drills it. `--oop/--ip/--sizes/--stack/--pot`
+   forward the full postflop game config to the solver; the trainer just passes
+   the strings through. A solve is CPU-saturating — tens of seconds to a few
+   minutes (range/hardware-dependent) and ~1 GB RAM. (Multi-position presets and
+   preflop/multiway modeling stay out of scope — this exposes the postflop knobs
+   solve-gen already has.)
 
 ## Licensing
 

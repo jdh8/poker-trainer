@@ -5,85 +5,129 @@
 //! per-hand action mix + per-action EV as `data/solutions/<board>.json`. The
 //! trainer reads those files and never links this crate.
 
+use clap::{Args, Parser, Subcommand};
 use poker_trainer::solution::{HandStrategy, NodeStrategy, SolvedSpot};
 use postflop_solver::*;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 const CHIPS_PER_BB: f32 = 100.0;
 
-/// One spot to solve. Hero is always OOP facing a flop c-bet here (v1).
+// Wide-ish SRP BTN-vs-BB ranges; the defaults for a custom solve.
+const OOP: &str =
+    "22+,A2s+,K2s+,Q5s+,J7s+,T7s+,96s+,86s+,75s+,64s+,53s+,A2o+,K9o+,Q9o+,J9o+,T9o,98o"; // hero = BB
+const IP: &str =
+    "22+,A2s+,K2s+,Q4s+,J6s+,T6s+,96s+,85s+,75s+,64s+,53s+,43s,A2o+,K7o+,Q8o+,J8o+,T8o+,98o";
+const DEFAULT_SIZES: &str = "33%, 75%"; // flop c-bet sizes
+const DEFAULT_STACK_BB: f32 = 97.0;
+const DEFAULT_POT_BB: f32 = 6.0;
+
+/// One spot to solve: a BTN-vs-BB SRP whose flop, ranges, and game knobs are
+/// configurable. One solve yields the BTN c-bet node + one BB defend node per
+/// c-bet size.
 struct Spot {
-    label: &'static str,
-    flop: &'static str,
-    oop_range: &'static str,
-    ip_range: &'static str,
+    label: String,
+    flop: String,
+    oop_range: String,
+    ip_range: String,
+    /// Flop c-bet sizes, e.g. `"33%, 75%"` (parsed by postflop-solver).
+    flop_bets: String,
+    stack_bb: f32,
+    pot_bb: f32,
+}
+
+#[derive(Parser)]
+#[command(name = "solve-gen", about = "Offline GTO solution generator")]
+struct Cli {
+    #[command(subcommand)]
+    command: Option<Command>,
+}
+
+#[derive(Subcommand)]
+enum Command {
+    /// Regenerate the curated solution library (default).
+    Gen,
+    /// Solve one custom spot and write its JSON into the solution dir.
+    Solve(SolveArgs),
+}
+
+#[derive(Args)]
+struct SolveArgs {
+    /// Flop as rs_poker cards, e.g. `Td9d6h`.
+    #[arg(long)]
+    flop: String,
+    /// OOP (BB) range string.
+    #[arg(long, default_value = OOP)]
+    oop: String,
+    /// IP (BTN) range string.
+    #[arg(long, default_value = IP)]
+    ip: String,
+    /// Flop c-bet sizes, e.g. `"33%, 75%"`.
+    #[arg(long, default_value = DEFAULT_SIZES)]
+    sizes: String,
+    /// Effective stack in bb.
+    #[arg(long, default_value_t = DEFAULT_STACK_BB)]
+    stack: f32,
+    /// Starting pot in bb.
+    #[arg(long, default_value_t = DEFAULT_POT_BB)]
+    pot: f32,
+    /// Output directory (defaults to the repo's data/solutions).
+    #[arg(long)]
+    out: Option<PathBuf>,
 }
 
 fn main() {
-    // Wide-ish SRP BTN-vs-BB ranges. Hero = BB (OOP).
-    const OOP: &str =
-        "22+,A2s+,K2s+,Q5s+,J7s+,T7s+,96s+,86s+,75s+,64s+,53s+,A2o+,K9o+,Q9o+,J9o+,T9o,98o";
-    const IP: &str =
-        "22+,A2s+,K2s+,Q4s+,J6s+,T6s+,96s+,85s+,75s+,64s+,53s+,43s,A2o+,K7o+,Q8o+,J8o+,T8o+,98o";
+    let default_out = || Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/solutions");
+    match Cli::parse().command.unwrap_or(Command::Gen) {
+        Command::Gen => write_all(&curated(), &default_out()),
+        Command::Solve(a) => {
+            let out = a.out.clone().unwrap_or_else(default_out);
+            write_all(std::slice::from_ref(&spot_from_args(a)), &out);
+        }
+    }
+}
 
-    // Base label = position + board + texture tag; each solve appends the
-    // node-specific question (c-bet? / defend?). Aim for texture spread.
-    let spots = [
-        Spot {
-            label: "SRP BTN vs BB, Td9d6h (wet)",
-            flop: "Td9d6h",
-            oop_range: OOP,
-            ip_range: IP,
-        },
-        Spot {
-            label: "SRP BTN vs BB, Kh7c2d (dry)",
-            flop: "Kh7c2d",
-            oop_range: OOP,
-            ip_range: IP,
-        },
-        Spot {
-            label: "SRP BTN vs BB, Ah8h3h (monotone)",
-            flop: "Ah8h3h",
-            oop_range: OOP,
-            ip_range: IP,
-        },
-        Spot {
-            label: "SRP BTN vs BB, 8h8c3d (paired)",
-            flop: "8h8c3d",
-            oop_range: OOP,
-            ip_range: IP,
-        },
-        Spot {
-            label: "SRP BTN vs BB, QhJd9c (broadway)",
-            flop: "QhJd9c",
-            oop_range: OOP,
-            ip_range: IP,
-        },
-        Spot {
-            label: "SRP BTN vs BB, As7d2c (ace-high dry)",
-            flop: "As7d2c",
-            oop_range: OOP,
-            ip_range: IP,
-        },
-        Spot {
-            label: "SRP BTN vs BB, 6h5d4c (low connected)",
-            flop: "6h5d4c",
-            oop_range: OOP,
-            ip_range: IP,
-        },
-        Spot {
-            label: "SRP BTN vs BB, 9s8s4d (two-tone mid)",
-            flop: "9s8s4d",
-            oop_range: OOP,
-            ip_range: IP,
-        },
-    ];
+fn spot_from_args(a: SolveArgs) -> Spot {
+    Spot {
+        label: format!("Custom BTN vs BB, {}", a.flop),
+        flop: a.flop,
+        oop_range: a.oop,
+        ip_range: a.ip,
+        flop_bets: a.sizes,
+        stack_bb: a.stack,
+        pot_bb: a.pot,
+    }
+}
 
-    let out_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/solutions");
-    fs::create_dir_all(&out_dir).unwrap();
+/// The curated, texture-spread library. Defaults match the v1 hardcoded config
+/// so regenerating produces byte-identical files.
+fn curated() -> Vec<Spot> {
+    [
+        ("SRP BTN vs BB, Td9d6h (wet)", "Td9d6h"),
+        ("SRP BTN vs BB, Kh7c2d (dry)", "Kh7c2d"),
+        ("SRP BTN vs BB, Ah8h3h (monotone)", "Ah8h3h"),
+        ("SRP BTN vs BB, 8h8c3d (paired)", "8h8c3d"),
+        ("SRP BTN vs BB, QhJd9c (broadway)", "QhJd9c"),
+        ("SRP BTN vs BB, As7d2c (ace-high dry)", "As7d2c"),
+        ("SRP BTN vs BB, 6h5d4c (low connected)", "6h5d4c"),
+        ("SRP BTN vs BB, 9s8s4d (two-tone mid)", "9s8s4d"),
+    ]
+    .into_iter()
+    .map(|(label, flop)| Spot {
+        label: label.into(),
+        flop: flop.into(),
+        oop_range: OOP.into(),
+        ip_range: IP.into(),
+        flop_bets: DEFAULT_SIZES.into(),
+        stack_bb: DEFAULT_STACK_BB,
+        pot_bb: DEFAULT_POT_BB,
+    })
+    .collect()
+}
 
-    for spot in &spots {
+fn write_all(spots: &[Spot], out_dir: &Path) {
+    fs::create_dir_all(out_dir).unwrap();
+    for spot in spots {
         println!("Solving: {}", spot.label);
         // One solved game yields the IP c-bet node plus one OOP defend node per
         // c-bet size; solve_spot hands back each with its own file stem.
@@ -100,25 +144,25 @@ fn main() {
 }
 
 fn solve_spot(spot: &Spot) -> Vec<(String, SolvedSpot)> {
-    let starting_pot = (6.0 * CHIPS_PER_BB) as i32; // 6bb SRP pot
+    let starting_pot = (spot.pot_bb * CHIPS_PER_BB) as i32;
     let card_config = CardConfig {
         range: [
             spot.oop_range.parse().unwrap(),
             spot.ip_range.parse().unwrap(),
         ],
-        flop: flop_from_str(spot.flop).unwrap(),
+        flop: flop_from_str(&spot.flop).unwrap(),
         turn: NOT_DEALT,
         river: NOT_DEALT,
     };
-    // Two flop c-bet sizes so the c-bet node is a real size-mix decision.
+    // Configurable flop c-bet sizes so the c-bet node is a real size-mix.
     // ponytail: turn/river stay single-size to bound tree growth (one size was
     // applied to every street before) — widen them too if you train later nodes.
-    let flop_bets = BetSizeOptions::try_from(("33%, 75%", "2.5x")).unwrap();
+    let flop_bets = BetSizeOptions::try_from((spot.flop_bets.as_str(), "2.5x")).unwrap();
     let later_bets = BetSizeOptions::try_from(("33%", "2.5x")).unwrap();
     let tree_config = TreeConfig {
         initial_state: BoardState::Flop,
         starting_pot,
-        effective_stack: (97.0 * CHIPS_PER_BB) as i32,
+        effective_stack: (spot.stack_bb * CHIPS_PER_BB) as i32,
         rake_rate: 0.0,
         rake_cap: 0.0,
         flop_bet_sizes: [flop_bets.clone(), flop_bets.clone()],
@@ -143,7 +187,7 @@ fn solve_spot(spot: &Spot) -> Vec<(String, SolvedSpot)> {
     );
 
     let pot_bb = starting_pot as f32 / CHIPS_PER_BB;
-    let board: Vec<String> = flop_from_str(spot.flop)
+    let board: Vec<String> = flop_from_str(&spot.flop)
         .unwrap()
         .iter()
         .map(|&c| card_to_string(c).unwrap())
@@ -286,5 +330,39 @@ fn fmt_action(a: &Action) -> String {
         Action::Raise(c) => format!("Raise to {:.1}bb", bb(*c)),
         Action::AllIn(c) => format!("All-in {:.1}bb", bb(*c)),
         other => format!("{other:?}"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The curated library must keep solving with the v1 game config, or
+    /// regenerating would silently rewrite the committed JSON.
+    #[test]
+    fn curated_uses_the_committed_defaults() {
+        let spots = curated();
+        assert_eq!(spots.len(), 8);
+        for s in &spots {
+            assert_eq!(s.oop_range, OOP);
+            assert_eq!(s.ip_range, IP);
+            assert_eq!(s.flop_bets, "33%, 75%");
+            assert_eq!(s.stack_bb, 97.0);
+            assert_eq!(s.pot_bb, 6.0);
+        }
+    }
+
+    #[test]
+    fn solve_flag_maps_to_spot_with_defaults_for_the_rest() {
+        let cli = Cli::parse_from(["solve-gen", "solve", "--flop", "Td9d6h", "--sizes", "50%"]);
+        let Some(Command::Solve(a)) = cli.command else {
+            panic!("expected solve subcommand")
+        };
+        let spot = spot_from_args(a);
+        assert_eq!(spot.flop, "Td9d6h");
+        assert_eq!(spot.flop_bets, "50%"); // overridden
+        assert_eq!(spot.oop_range, OOP); // defaulted
+        assert_eq!(spot.pot_bb, 6.0); // defaulted
+        assert!(spot.label.contains("Td9d6h"));
     }
 }
