@@ -47,9 +47,10 @@ goes through it, so a **file-backed** provider (precomputed sims) and, later, a
    solves a curated library offline with `postflop-solver`, dumps per-hand
    strategy tables to `data/solutions/<flop>-{ip,oop}.json`, and `drill gto`
    loads them via `FileSolutionProvider` and scores your action on EV loss vs.
-   the equilibrium mix. Each solved flop yields two decision nodes — the BTN's
-   c-bet and the BB's defend — across 8 textures. Grow it by adding flops/lines
-   in `crates/solve-gen` (more positions, bet sizes, or turn/river nodes).
+   the equilibrium mix. Each solved flop yields the BTN's c-bet decision (a
+   real size-mix: check / 33% / 75%) plus a BB defend node facing *each* c-bet
+   size, across 8 textures. Grow it by adding flops/lines in `crates/solve-gen`
+   (more positions, bet sizes, or turn/river nodes).
 2. **Range-builder mode + leak stats** — assign the action for a whole range and
    score the full strategy; track per-spot EV loss.
 3. **Live solving (optional)** — `postflop-solver` behind `SolutionProvider` for

@@ -85,10 +85,10 @@ fn main() {
 
     for spot in &spots {
         println!("Solving: {}", spot.label);
-        // One solved game yields two nodes (IP c-bet decision, OOP defend).
-        for solved in solve_spot(spot) {
-            let role = if solved.hero_oop { "oop" } else { "ip" };
-            let file = out_dir.join(format!("{}-{}.json", spot.flop.to_lowercase(), role));
+        // One solved game yields the IP c-bet node plus one OOP defend node per
+        // c-bet size; solve_spot hands back each with its own file stem.
+        for (stem, solved) in solve_spot(spot) {
+            let file = out_dir.join(format!("{stem}.json"));
             fs::write(&file, serde_json::to_string_pretty(&solved).unwrap()).unwrap();
             println!(
                 "  -> {} ({} hero hands)",
@@ -99,7 +99,7 @@ fn main() {
     }
 }
 
-fn solve_spot(spot: &Spot) -> Vec<SolvedSpot> {
+fn solve_spot(spot: &Spot) -> Vec<(String, SolvedSpot)> {
     let starting_pot = (6.0 * CHIPS_PER_BB) as i32; // 6bb SRP pot
     let card_config = CardConfig {
         range: [
@@ -149,57 +149,75 @@ fn solve_spot(spot: &Spot) -> Vec<SolvedSpot> {
         .map(|&c| card_to_string(c).unwrap())
         .collect();
 
-    // Both decision nodes come from this one solved game: OOP checks, then IP
-    // decides whether to c-bet (hero = BTN), then OOP faces the bet (hero = BB).
-    let mut out = Vec::with_capacity(2);
-    game.back_to_root();
-    assert_eq!(game.current_player(), 0, "root should be OOP");
-    game.play(action_index(&game, |a| matches!(a, Action::Check)));
+    // All decision nodes come from this one solved game. Navigate: OOP checks,
+    // IP decides whether to c-bet (hero = BTN), then OOP faces each c-bet size
+    // (hero = BB) — one defend node per size for a symmetric library.
+    let stem = spot.flop.to_lowercase();
+    let to_cbet = |game: &mut PostFlopGame| {
+        game.back_to_root();
+        assert_eq!(game.current_player(), 0, "root should be OOP");
+        game.play(action_index(game, |a| matches!(a, Action::Check)));
+        assert_eq!(
+            game.current_player(),
+            1,
+            "after check, IP (hero) decides whether to c-bet"
+        );
+    };
+
+    let mut out = Vec::new();
 
     // Node 1: hero is IP (BTN), villain (BB) has checked — c-bet or check back?
-    assert_eq!(
-        game.current_player(),
-        1,
-        "after check, IP (hero) decides whether to c-bet"
-    );
-    let bet_actions = game
+    to_cbet(&mut game);
+    let bet_indices: Vec<usize> = game
         .available_actions()
         .iter()
-        .filter(|a| matches!(a, Action::Bet(_)))
-        .count();
+        .enumerate()
+        .filter(|(_, a)| matches!(a, Action::Bet(_)))
+        .map(|(i, _)| i)
+        .collect();
     assert!(
-        bet_actions >= 2,
-        "c-bet node should offer >=2 sizes, got {bet_actions} (bet-size config didn't widen?)"
+        bet_indices.len() >= 2,
+        "c-bet node should offer >=2 sizes, got {} (bet-size config didn't widen?)",
+        bet_indices.len()
     );
-    out.push(extract(
-        &mut game,
-        format!("{} — you're BTN, BB checks: c-bet?", spot.label),
-        board.clone(),
-        pot_bb,
-        false,
-        "Villain (BB) checks to you".to_string(),
-    ));
-
-    // Descend into the c-bet, then Node 2: hero is OOP (BB) facing the bet.
-    let ip_bet = action_index(&game, |a| matches!(a, Action::Bet(_)));
-    let bet_chips = match game.available_actions()[ip_bet] {
-        Action::Bet(c) => c,
-        _ => unreachable!(),
-    };
-    game.play(ip_bet);
-    assert_eq!(game.current_player(), 0, "hero (OOP) faces the bet");
-    let bet_bb = bet_chips as f32 / CHIPS_PER_BB;
-    out.push(extract(
-        &mut game,
-        format!("{} — you're BB, facing BTN c-bet: defend?", spot.label),
-        board,
-        pot_bb,
-        true,
-        format!(
-            "You check, villain bets {bet_bb:.1}bb ({:.0}% pot)",
-            100.0 * bet_chips as f32 / starting_pot as f32
+    out.push((
+        format!("{stem}-ip"),
+        extract(
+            &mut game,
+            format!("{} — you're BTN, BB checks: c-bet?", spot.label),
+            board.clone(),
+            pot_bb,
+            false,
+            "Villain (BB) checks to you".to_string(),
         ),
     ));
+
+    // Defend node per c-bet size: descend into each bet, extract, re-navigate.
+    for &bi in &bet_indices {
+        let bet_chips = match game.available_actions()[bi] {
+            Action::Bet(c) => c,
+            _ => unreachable!(),
+        };
+        let pct = (100.0 * bet_chips as f32 / starting_pot as f32).round() as i32;
+        let bet_bb = bet_chips as f32 / CHIPS_PER_BB;
+        game.play(bi);
+        assert_eq!(game.current_player(), 0, "hero (OOP) faces the bet");
+        out.push((
+            format!("{stem}-oop-{pct}"),
+            extract(
+                &mut game,
+                format!(
+                    "{} — you're BB, facing BTN {pct}% c-bet: defend?",
+                    spot.label
+                ),
+                board.clone(),
+                pot_bb,
+                true,
+                format!("You check, villain bets {bet_bb:.1}bb ({pct}% pot)"),
+            ),
+        ));
+        to_cbet(&mut game); // reset to the c-bet node for the next size
+    }
 
     out
 }

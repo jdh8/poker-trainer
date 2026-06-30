@@ -1,0 +1,9593 @@
+{
+  "label": "SRP BTN vs BB, Td9d6h (wet) — you're BB, facing BTN 75% c-bet: defend?",
+  "board": [
+    "6h",
+    "9d",
+    "Td"
+  ],
+  "pot_bb": 6.0,
+  "hero_oop": true,
+  "villain_action": "You check, villain bets 4.5bb (75% pot)",
+  "strategies": [
+    {
+      "hand": "2d2c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.186195,
+          -1.257879
+        ]
+      }
+    },
+    {
+      "hand": "2h2c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.408486,
+          -1.7558646
+        ]
+      }
+    },
+    {
+      "hand": "2s2c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.4235129,
+          -1.7166449
+        ]
+      }
+    },
+    {
+      "hand": "Kc2c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -2.0625806,
+          -2.5761352
+        ]
+      }
+    },
+    {
+      "hand": "Ac2c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5862799,
+          -1.9439486
+        ]
+      }
+    },
+    {
+      "hand": "Ad2c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.8716986,
+          -0.9226877
+        ]
+      }
+    },
+    {
+      "hand": "Ah2c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.6616681,
+          -2.0990064
+        ]
+      }
+    },
+    {
+      "hand": "As2c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5862799,
+          -1.9439486
+        ]
+      }
+    },
+    {
+      "hand": "2h2d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.1783929,
+          -1.2952261
+        ]
+      }
+    },
+    {
+      "hand": "2s2d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.186195,
+          -1.257879
+        ]
+      }
+    },
+    {
+      "hand": "Kd2d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.92945105,
+          0.07054891
+        ],
+        "action_ev": [
+          0.0,
+          3.9772522,
+          3.9804664
+        ]
+      }
+    },
+    {
+      "hand": "Ac2d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.4235339,
+          -1.6580036
+        ]
+      }
+    },
+    {
+      "hand": "Ad2d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.76036185,
+          0.23963818
+        ],
+        "action_ev": [
+          0.0,
+          6.10486,
+          6.0887413
+        ]
+      }
+    },
+    {
+      "hand": "Ah2d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.4862692,
+          -1.7775689
+        ]
+      }
+    },
+    {
+      "hand": "As2d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.4235339,
+          -1.6580036
+        ]
+      }
+    },
+    {
+      "hand": "2s2h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.408486,
+          -1.7558646
+        ]
+      }
+    },
+    {
+      "hand": "Kh2h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5237014,
+          -1.7908145
+        ]
+      }
+    },
+    {
+      "hand": "Ac2h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5939538,
+          -2.0124118
+        ]
+      }
+    },
+    {
+      "hand": "Ad2h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.8940515,
+          -0.9800415
+        ]
+      }
+    },
+    {
+      "hand": "Ah2h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.95933896,
+          -1.1691458
+        ]
+      }
+    },
+    {
+      "hand": "As2h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5939538,
+          -2.0124118
+        ]
+      }
+    },
+    {
+      "hand": "Ks2s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -2.0625806,
+          -2.5761352
+        ]
+      }
+    },
+    {
+      "hand": "Ac2s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5862799,
+          -1.9439486
+        ]
+      }
+    },
+    {
+      "hand": "Ad2s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.8716986,
+          -0.9226877
+        ]
+      }
+    },
+    {
+      "hand": "Ah2s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.6616681,
+          -2.0990064
+        ]
+      }
+    },
+    {
+      "hand": "As2s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5862799,
+          -1.9439486
+        ]
+      }
+    },
+    {
+      "hand": "3d3c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.0970623,
+          -1.2013248
+        ]
+      }
+    },
+    {
+      "hand": "3h3c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.320462,
+          -1.7719864
+        ]
+      }
+    },
+    {
+      "hand": "3s3c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.3501337,
+          -1.6830548
+        ]
+      }
+    },
+    {
+      "hand": "5c3c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -2.2769494,
+          -2.54805
+        ]
+      }
+    },
+    {
+      "hand": "Kc3c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -2.051085,
+          -2.5669892
+        ]
+      }
+    },
+    {
+      "hand": "Ac3c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5725684,
+          -1.9432815
+        ]
+      }
+    },
+    {
+      "hand": "Ad3c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.85497254,
+          -0.906965
+        ]
+      }
+    },
+    {
+      "hand": "Ah3c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.6488675,
+          -2.0954556
+        ]
+      }
+    },
+    {
+      "hand": "As3c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5725684,
+          -1.9432815
+        ]
+      }
+    },
+    {
+      "hand": "3h3d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.0798199,
+          -1.2868936
+        ]
+      }
+    },
+    {
+      "hand": "3s3d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.0970623,
+          -1.2013248
+        ]
+      }
+    },
+    {
+      "hand": "5d3d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          2.368149,
+          2.321133
+        ]
+      }
+    },
+    {
+      "hand": "Kd3d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.92779225,
+          0.07220772
+        ],
+        "action_ev": [
+          0.0,
+          3.972522,
+          3.979403
+        ]
+      }
+    },
+    {
+      "hand": "Ac3d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.4074689,
+          -1.6363181
+        ]
+      }
+    },
+    {
+      "hand": "Ad3d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.69488597,
+          0.30511397
+        ],
+        "action_ev": [
+          0.0,
+          6.0349927,
+          6.054132
+        ]
+      }
+    },
+    {
+      "hand": "Ah3d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.4673069,
+          -1.7455914
+        ]
+      }
+    },
+    {
+      "hand": "As3d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.4074689,
+          -1.6363181
+        ]
+      }
+    },
+    {
+      "hand": "3s3h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.320462,
+          -1.7719864
+        ]
+      }
+    },
+    {
+      "hand": "5h3h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.8697662,
+          -2.019912
+        ]
+      }
+    },
+    {
+      "hand": "Kh3h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5277096,
+          -1.8452063
+        ]
+      }
+    },
+    {
+      "hand": "Ac3h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5787686,
+          -2.0576162
+        ]
+      }
+    },
+    {
+      "hand": "Ad3h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.8948901,
+          -1.0211459
+        ]
+      }
+    },
+    {
+      "hand": "Ah3h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.9492706,
+          -1.2267288
+        ]
+      }
+    },
+    {
+      "hand": "As3h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5787686,
+          -2.0576162
+        ]
+      }
+    },
+    {
+      "hand": "5s3s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -2.2769494,
+          -2.54805
+        ]
+      }
+    },
+    {
+      "hand": "Ks3s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -2.051085,
+          -2.5669892
+        ]
+      }
+    },
+    {
+      "hand": "Ac3s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5725684,
+          -1.9432815
+        ]
+      }
+    },
+    {
+      "hand": "Ad3s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.85497254,
+          -0.906965
+        ]
+      }
+    },
+    {
+      "hand": "Ah3s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.6488675,
+          -2.0954556
+        ]
+      }
+    },
+    {
+      "hand": "As3s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5725684,
+          -1.9432815
+        ]
+      }
+    },
+    {
+      "hand": "4d4c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.9866324,
+          -1.0751104
+        ]
+      }
+    },
+    {
+      "hand": "4h4c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.2670486,
+          -1.7503124
+        ]
+      }
+    },
+    {
+      "hand": "4s4c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.2974982,
+          -1.6815494
+        ]
+      }
+    },
+    {
+      "hand": "5c4c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -2.2808373,
+          -2.5668592
+        ]
+      }
+    },
+    {
+      "hand": "6c4c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.45050323,
+          -0.29554412
+        ]
+      }
+    },
+    {
+      "hand": "Kc4c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -2.0435686,
+          -2.5755858
+        ]
+      }
+    },
+    {
+      "hand": "Ac4c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5668756,
+          -1.9476529
+        ]
+      }
+    },
+    {
+      "hand": "Ad4c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.8535892,
+          -0.9071033
+        ]
+      }
+    },
+    {
+      "hand": "Ah4c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.6411471,
+          -2.0992804
+        ]
+      }
+    },
+    {
+      "hand": "As4c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5668756,
+          -1.9476529
+        ]
+      }
+    },
+    {
+      "hand": "4h4d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.9702292,
+          -1.1400989
+        ]
+      }
+    },
+    {
+      "hand": "4s4d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.9866324,
+          -1.0751104
+        ]
+      }
+    },
+    {
+      "hand": "5d4d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9873336,
+          0.012666422
+        ],
+        "action_ev": [
+          0.0,
+          2.4552536,
+          2.4608274
+        ]
+      }
+    },
+    {
+      "hand": "6d4d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          5.2502375,
+          5.0771155
+        ]
+      }
+    },
+    {
+      "hand": "Kd4d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9549423,
+          0.045057703
+        ],
+        "action_ev": [
+          0.0,
+          3.9549005,
+          3.9542336
+        ]
+      }
+    },
+    {
+      "hand": "Ac4d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.3621374,
+          -1.539058
+        ]
+      }
+    },
+    {
+      "hand": "Ad4d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.68205273,
+          0.31794724
+        ],
+        "action_ev": [
+          0.0,
+          5.990102,
+          6.0037303
+        ]
+      }
+    },
+    {
+      "hand": "Ah4d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.43202,
+          -1.6521072
+        ]
+      }
+    },
+    {
+      "hand": "As4d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.3621374,
+          -1.539058
+        ]
+      }
+    },
+    {
+      "hand": "4s4h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.2670486,
+          -1.7503124
+        ]
+      }
+    },
+    {
+      "hand": "5h4h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.8654547,
+          -2.0130017
+        ]
+      }
+    },
+    {
+      "hand": "Kh4h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5350796,
+          -1.84875
+        ]
+      }
+    },
+    {
+      "hand": "Ac4h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5692667,
+          -2.033216
+        ]
+      }
+    },
+    {
+      "hand": "Ad4h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.88393676,
+          -0.9942331
+        ]
+      }
+    },
+    {
+      "hand": "Ah4h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.94328153,
+          -1.2356217
+        ]
+      }
+    },
+    {
+      "hand": "As4h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5692667,
+          -2.033216
+        ]
+      }
+    },
+    {
+      "hand": "5s4s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -2.2808373,
+          -2.5668592
+        ]
+      }
+    },
+    {
+      "hand": "6s4s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.45050323,
+          -0.29554412
+        ]
+      }
+    },
+    {
+      "hand": "Ks4s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -2.0435686,
+          -2.5755858
+        ]
+      }
+    },
+    {
+      "hand": "Ac4s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5668756,
+          -1.9476529
+        ]
+      }
+    },
+    {
+      "hand": "Ad4s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.8535892,
+          -0.9071033
+        ]
+      }
+    },
+    {
+      "hand": "Ah4s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.6411471,
+          -2.0992804
+        ]
+      }
+    },
+    {
+      "hand": "As4s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5668756,
+          -1.9476529
+        ]
+      }
+    },
+    {
+      "hand": "5d5c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.90285337,
+          -0.9274426
+        ]
+      }
+    },
+    {
+      "hand": "5h5c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.2076416,
+          -1.6045853
+        ]
+      }
+    },
+    {
+      "hand": "5s5c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.2272022,
+          -1.5604129
+        ]
+      }
+    },
+    {
+      "hand": "6c5c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.4352945,
+          -0.25200105
+        ]
+      }
+    },
+    {
+      "hand": "7c5c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.92536896,
+          -1.1181177
+        ]
+      }
+    },
+    {
+      "hand": "Qc5c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -2.0178967,
+          -2.3922107
+        ]
+      }
+    },
+    {
+      "hand": "Kc5c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -2.0343113,
+          -2.510379
+        ]
+      }
+    },
+    {
+      "hand": "Ac5c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5527124,
+          -1.8879099
+        ]
+      }
+    },
+    {
+      "hand": "Ad5c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.84100527,
+          -0.87624514
+        ]
+      }
+    },
+    {
+      "hand": "Ah5c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.6264087,
+          -2.03721
+        ]
+      }
+    },
+    {
+      "hand": "As5c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5527124,
+          -1.8879099
+        ]
+      }
+    },
+    {
+      "hand": "5h5d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.9011877,
+          -0.96783996
+        ]
+      }
+    },
+    {
+      "hand": "5s5d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.90285337,
+          -0.9274426
+        ]
+      }
+    },
+    {
+      "hand": "6d5d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          5.296454,
+          5.103125
+        ]
+      }
+    },
+    {
+      "hand": "7d5d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.70884603,
+          0.291154
+        ],
+        "action_ev": [
+          0.0,
+          3.9660053,
+          3.9827783
+        ]
+      }
+    },
+    {
+      "hand": "Qd5d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          3.336781,
+          3.1290352
+        ]
+      }
+    },
+    {
+      "hand": "Kd5d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9928153,
+          0.007184684
+        ],
+        "action_ev": [
+          0.0,
+          3.891549,
+          3.883808
+        ]
+      }
+    },
+    {
+      "hand": "Ac5d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.372763,
+          -1.4723133
+        ]
+      }
+    },
+    {
+      "hand": "Ad5d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.76969165,
+          0.23030835
+        ],
+        "action_ev": [
+          0.0,
+          5.9695187,
+          5.9722157
+        ]
+      }
+    },
+    {
+      "hand": "Ah5d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.4544979,
+          -1.6030158
+        ]
+      }
+    },
+    {
+      "hand": "As5d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.372763,
+          -1.4723133
+        ]
+      }
+    },
+    {
+      "hand": "5s5h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.2076416,
+          -1.6045853
+        ]
+      }
+    },
+    {
+      "hand": "7h5h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.42807007,
+          -0.47214568
+        ]
+      }
+    },
+    {
+      "hand": "Qh5h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5230842,
+          -1.6743857
+        ]
+      }
+    },
+    {
+      "hand": "Kh5h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5256827,
+          -1.777492
+        ]
+      }
+    },
+    {
+      "hand": "Ac5h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5601251,
+          -1.9507608
+        ]
+      }
+    },
+    {
+      "hand": "Ad5h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.8612851,
+          -0.92048
+        ]
+      }
+    },
+    {
+      "hand": "Ah5h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.9268787,
+          -1.1606158
+        ]
+      }
+    },
+    {
+      "hand": "As5h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5601251,
+          -1.9507608
+        ]
+      }
+    },
+    {
+      "hand": "6s5s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.4352945,
+          -0.25200105
+        ]
+      }
+    },
+    {
+      "hand": "7s5s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.92536896,
+          -1.1181177
+        ]
+      }
+    },
+    {
+      "hand": "Qs5s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -2.0178967,
+          -2.3922107
+        ]
+      }
+    },
+    {
+      "hand": "Ks5s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -2.0343113,
+          -2.510379
+        ]
+      }
+    },
+    {
+      "hand": "Ac5s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5527124,
+          -1.8879099
+        ]
+      }
+    },
+    {
+      "hand": "Ad5s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.84100527,
+          -0.87624514
+        ]
+      }
+    },
+    {
+      "hand": "Ah5s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.6264087,
+          -2.03721
+        ]
+      }
+    },
+    {
+      "hand": "As5s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -1.5527124,
+          -1.8879099
+        ]
+      }
+    },
+    {
+      "hand": "6d6c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.06824737,
+          0.9317526
+        ],
+        "action_ev": [
+          0.0,
+          13.242039,
+          13.247136
+        ]
+      }
+    },
+    {
+      "hand": "6s6c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.048735972,
+          0.951264
+        ],
+        "action_ev": [
+          0.0,
+          12.879338,
+          12.913343
+        ]
+      }
+    },
+    {
+      "hand": "7c6c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.8776852,
+          0.1223148
+        ],
+        "action_ev": [
+          0.0,
+          1.0468864,
+          1.0127423
+        ]
+      }
+    },
+    {
+      "hand": "8c6c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.8861329,
+          0.11386711
+        ],
+        "action_ev": [
+          0.0,
+          1.1364162,
+          1.1417916
+        ]
+      }
+    },
+    {
+      "hand": "9c6c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.717382,
+          0.28261802
+        ],
+        "action_ev": [
+          0.0,
+          7.2779174,
+          7.2672048
+        ]
+      }
+    },
+    {
+      "hand": "Qc6c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.6761772,
+          0.26739156,
+          0.056431293
+        ],
+        "action_ev": [
+          0.0,
+          -0.0057580564,
+          0.023440856
+        ]
+      }
+    },
+    {
+      "hand": "Kc6c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.9766052,
+          0.023394844,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.043454897,
+          -0.13385132
+        ]
+      }
+    },
+    {
+      "hand": "Ac6c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.5707743,
+          0.42921963,
+          0.00000603362
+        ],
+        "action_ev": [
+          0.0,
+          0.025975341,
+          -0.001293335
+        ]
+      }
+    },
+    {
+      "hand": "Ad6c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.56216526,
+          0.43783468
+        ],
+        "action_ev": [
+          0.0,
+          0.56045747,
+          0.5962956
+        ]
+      }
+    },
+    {
+      "hand": "Ah6c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.73168033,
+          0.26831967,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.07278595,
+          -0.11067444
+        ]
+      }
+    },
+    {
+      "hand": "As6c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.5707743,
+          0.42921963,
+          0.00000603362
+        ],
+        "action_ev": [
+          0.0,
+          0.025975341,
+          -0.001293335
+        ]
+      }
+    },
+    {
+      "hand": "6s6d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.06824737,
+          0.9317526
+        ],
+        "action_ev": [
+          0.0,
+          13.242039,
+          13.247136
+        ]
+      }
+    },
+    {
+      "hand": "7d6d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.0020299826,
+          0.99797004
+        ],
+        "action_ev": [
+          0.0,
+          7.2815003,
+          7.3016877
+        ]
+      }
+    },
+    {
+      "hand": "8d6d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.07234763,
+          0.92765236
+        ],
+        "action_ev": [
+          0.0,
+          7.635742,
+          7.631918
+        ]
+      }
+    },
+    {
+      "hand": "Qd6d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.70723367,
+          0.2927663
+        ],
+        "action_ev": [
+          0.0,
+          6.3395715,
+          6.320484
+        ]
+      }
+    },
+    {
+      "hand": "Kd6d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.49517906,
+          0.50482094
+        ],
+        "action_ev": [
+          0.0,
+          6.8884935,
+          6.8691225
+        ]
+      }
+    },
+    {
+      "hand": "Ac6d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.80541146,
+          0.19458856
+        ],
+        "action_ev": [
+          0.0,
+          0.38786957,
+          0.3933197
+        ]
+      }
+    },
+    {
+      "hand": "Ad6d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          0.0,
+          8.54909,
+          8.623837
+        ]
+      }
+    },
+    {
+      "hand": "Ah6d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.8162526,
+          0.18374741
+        ],
+        "action_ev": [
+          0.0,
+          0.2748169,
+          0.28532654
+        ]
+      }
+    },
+    {
+      "hand": "As6d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.80541146,
+          0.19458856
+        ],
+        "action_ev": [
+          0.0,
+          0.38786957,
+          0.3933197
+        ]
+      }
+    },
+    {
+      "hand": "7s6s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.8776852,
+          0.1223148
+        ],
+        "action_ev": [
+          0.0,
+          1.0468864,
+          1.0127423
+        ]
+      }
+    },
+    {
+      "hand": "8s6s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.8861329,
+          0.11386711
+        ],
+        "action_ev": [
+          0.0,
+          1.1364162,
+          1.1417916
+        ]
+      }
+    },
+    {
+      "hand": "9s6s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.717382,
+          0.28261802
+        ],
+        "action_ev": [
+          0.0,
+          7.2779174,
+          7.2672048
+        ]
+      }
+    },
+    {
+      "hand": "Qs6s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.6761772,
+          0.26739156,
+          0.056431293
+        ],
+        "action_ev": [
+          0.0,
+          -0.0057580564,
+          0.023440856
+        ]
+      }
+    },
+    {
+      "hand": "Ks6s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.9766052,
+          0.023394844,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.043454897,
+          -0.13385132
+        ]
+      }
+    },
+    {
+      "hand": "Ac6s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.5707743,
+          0.42921963,
+          0.00000603362
+        ],
+        "action_ev": [
+          0.0,
+          0.025975341,
+          -0.001293335
+        ]
+      }
+    },
+    {
+      "hand": "Ad6s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.56216526,
+          0.43783468
+        ],
+        "action_ev": [
+          0.0,
+          0.56045747,
+          0.5962956
+        ]
+      }
+    },
+    {
+      "hand": "Ah6s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.73168033,
+          0.26831967,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.07278595,
+          -0.11067444
+        ]
+      }
+    },
+    {
+      "hand": "As6s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.5707743,
+          0.42921963,
+          0.00000603362
+        ],
+        "action_ev": [
+          0.0,
+          0.025975341,
+          -0.001293335
+        ]
+      }
+    },
+    {
+      "hand": "7d7c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.99203444,
+          0.7328278
+        ]
+      }
+    },
+    {
+      "hand": "7h7c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.51129794,
+          0.022565307
+        ]
+      }
+    },
+    {
+      "hand": "7s7c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.5145645,
+          0.043770447
+        ]
+      }
+    },
+    {
+      "hand": "8c7c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          0.0,
+          14.490689,
+          15.62128
+        ]
+      }
+    },
+    {
+      "hand": "9c7c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.77222747,
+          0.22777252
+        ],
+        "action_ev": [
+          0.0,
+          1.2423078,
+          1.2421558
+        ]
+      }
+    },
+    {
+      "hand": "Tc7c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.99999934,
+          6.418756e-7
+        ],
+        "action_ev": [
+          0.0,
+          1.7939793,
+          1.7156234
+        ]
+      }
+    },
+    {
+      "hand": "Jc7c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.34562743,
+          -0.67635924
+        ]
+      }
+    },
+    {
+      "hand": "Qc7c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.577735,
+          -0.86255676
+        ]
+      }
+    },
+    {
+      "hand": "Kc7c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.69448274,
+          -0.90182096
+        ]
+      }
+    },
+    {
+      "hand": "Ac7c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.14694336,
+          -0.31140685
+        ]
+      }
+    },
+    {
+      "hand": "Ad7c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.7847444,
+          0.21525559
+        ],
+        "action_ev": [
+          0.0,
+          0.7123593,
+          0.728781
+        ]
+      }
+    },
+    {
+      "hand": "Ah7c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.23103149,
+          -0.42635253
+        ]
+      }
+    },
+    {
+      "hand": "As7c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.14694336,
+          -0.31140685
+        ]
+      }
+    },
+    {
+      "hand": "7h7d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.9800897,
+          0.7342273
+        ]
+      }
+    },
+    {
+      "hand": "7s7d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.99203444,
+          0.7328278
+        ]
+      }
+    },
+    {
+      "hand": "8d7d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          0.0,
+          18.541594,
+          19.769361
+        ]
+      }
+    },
+    {
+      "hand": "Jd7d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.83438146,
+          0.16561851
+        ],
+        "action_ev": [
+          0.0,
+          5.4506135,
+          5.4758983
+        ]
+      }
+    },
+    {
+      "hand": "Qd7d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.45307592,
+          0.5469241
+        ],
+        "action_ev": [
+          0.0,
+          4.914201,
+          4.920832
+        ]
+      }
+    },
+    {
+      "hand": "Kd7d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          0.0,
+          5.6473536,
+          5.9136
+        ]
+      }
+    },
+    {
+      "hand": "Ac7d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.002622975,
+          0.51247007,
+          0.48490697
+        ],
+        "action_ev": [
+          0.0,
+          0.17218567,
+          0.17916809
+        ]
+      }
+    },
+    {
+      "hand": "Ad7d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          0.0,
+          7.9039702,
+          8.20631
+        ]
+      }
+    },
+    {
+      "hand": "Ah7d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0971951,
+          0.50669765,
+          0.39610723
+        ],
+        "action_ev": [
+          0.0,
+          0.07871673,
+          0.06868866
+        ]
+      }
+    },
+    {
+      "hand": "As7d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.002622975,
+          0.51247007,
+          0.48490697
+        ],
+        "action_ev": [
+          0.0,
+          0.17218567,
+          0.17916809
+        ]
+      }
+    },
+    {
+      "hand": "7s7h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.51129794,
+          0.022565307
+        ]
+      }
+    },
+    {
+      "hand": "8h7h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          0.0,
+          14.868122,
+          16.015009
+        ]
+      }
+    },
+    {
+      "hand": "9h7h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.5549636,
+          0.44503638
+        ],
+        "action_ev": [
+          0.0,
+          2.01006,
+          2.0452433
+        ]
+      }
+    },
+    {
+      "hand": "Th7h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.21483527,
+          0.7851648
+        ],
+        "action_ev": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "hand": "Jh7h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.027289165,
+          0.97271085,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.06839264,
+          -0.029893493
+        ]
+      }
+    },
+    {
+      "hand": "Qh7h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.04752777,
+          -0.13591431
+        ]
+      }
+    },
+    {
+      "hand": "Kh7h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.9999983,
+          0.0000016776763,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.06518402,
+          -0.04607178
+        ]
+      }
+    },
+    {
+      "hand": "Ac7h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.9999977,
+          0.0000023227499,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.16191529,
+          -0.33781067
+        ]
+      }
+    },
+    {
+      "hand": "Ad7h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.8101917,
+          0.18980832
+        ],
+        "action_ev": [
+          0.0,
+          0.67418593,
+          0.67577606
+        ]
+      }
+    },
+    {
+      "hand": "Ah7h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9995626,
+          0.0004373631
+        ],
+        "action_ev": [
+          0.0,
+          0.5550934,
+          0.52331376
+        ]
+      }
+    },
+    {
+      "hand": "As7h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.9999977,
+          0.0000023227499,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.16191529,
+          -0.33781067
+        ]
+      }
+    },
+    {
+      "hand": "8s7s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          0.0,
+          14.490689,
+          15.62128
+        ]
+      }
+    },
+    {
+      "hand": "9s7s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.77222747,
+          0.22777252
+        ],
+        "action_ev": [
+          0.0,
+          1.2423078,
+          1.2421558
+        ]
+      }
+    },
+    {
+      "hand": "Ts7s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.99999934,
+          6.418756e-7
+        ],
+        "action_ev": [
+          0.0,
+          1.7939793,
+          1.7156234
+        ]
+      }
+    },
+    {
+      "hand": "Js7s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.34562743,
+          -0.67635924
+        ]
+      }
+    },
+    {
+      "hand": "Qs7s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.577735,
+          -0.86255676
+        ]
+      }
+    },
+    {
+      "hand": "Ks7s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.69448274,
+          -0.90182096
+        ]
+      }
+    },
+    {
+      "hand": "Ac7s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.14694336,
+          -0.31140685
+        ]
+      }
+    },
+    {
+      "hand": "Ad7s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.7847444,
+          0.21525559
+        ],
+        "action_ev": [
+          0.0,
+          0.7123593,
+          0.728781
+        ]
+      }
+    },
+    {
+      "hand": "Ah7s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.23103149,
+          -0.42635253
+        ]
+      }
+    },
+    {
+      "hand": "As7s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.14694336,
+          -0.31140685
+        ]
+      }
+    },
+    {
+      "hand": "8d8c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.99999976,
+          2.8335091e-7
+        ],
+        "action_ev": [
+          0.0,
+          1.3261608,
+          1.2650261
+        ]
+      }
+    },
+    {
+      "hand": "8h8c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.6526674,
+          0.5657222
+        ]
+      }
+    },
+    {
+      "hand": "8s8c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.60101104,
+          0.48292756
+        ]
+      }
+    },
+    {
+      "hand": "9c8c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.8933331,
+          0.106666915
+        ],
+        "action_ev": [
+          0.0,
+          1.3480699,
+          1.3655952
+        ]
+      }
+    },
+    {
+      "hand": "9h8c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.99073493,
+          0.009265061
+        ],
+        "action_ev": [
+          0.0,
+          1.3848703,
+          1.3781502
+        ]
+      }
+    },
+    {
+      "hand": "9s8c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.89419234,
+          0.10580764
+        ],
+        "action_ev": [
+          0.0,
+          1.3481976,
+          1.3650092
+        ]
+      }
+    },
+    {
+      "hand": "Tc8c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9527757,
+          0.047224287
+        ],
+        "action_ev": [
+          0.0,
+          2.188202,
+          2.1843023
+        ]
+      }
+    },
+    {
+      "hand": "Jc8c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.64891356,
+          0.35108647
+        ],
+        "action_ev": [
+          0.0,
+          1.896975,
+          1.9012549
+        ]
+      }
+    },
+    {
+      "hand": "Qc8c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.66403246,
+          0.3359675
+        ],
+        "action_ev": [
+          0.0,
+          0.9243779,
+          0.9432695
+        ]
+      }
+    },
+    {
+      "hand": "Kc8c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.43678832,
+          -0.70407045
+        ]
+      }
+    },
+    {
+      "hand": "Ac8c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.4517101,
+          0.5482899,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.06464233,
+          -0.010891113
+        ]
+      }
+    },
+    {
+      "hand": "Ad8c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9542942,
+          0.04570579
+        ],
+        "action_ev": [
+          0.0,
+          0.86975557,
+          0.89490175
+        ]
+      }
+    },
+    {
+      "hand": "Ah8c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.55748564,
+          0.44251436,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.016154785,
+          -0.1156134
+        ]
+      }
+    },
+    {
+      "hand": "As8c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.4517101,
+          0.5482899,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.06464233,
+          -0.010891113
+        ]
+      }
+    },
+    {
+      "hand": "8h8d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.99997413,
+          0.000025832322
+        ],
+        "action_ev": [
+          0.0,
+          1.3756953,
+          1.3467817
+        ]
+      }
+    },
+    {
+      "hand": "8s8d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.99999976,
+          2.8335091e-7
+        ],
+        "action_ev": [
+          0.0,
+          1.3261608,
+          1.2650261
+        ]
+      }
+    },
+    {
+      "hand": "9c8d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.63114613,
+          0.3688539
+        ],
+        "action_ev": [
+          0.0,
+          2.100743,
+          2.1200764
+        ]
+      }
+    },
+    {
+      "hand": "9h8d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.64426416,
+          0.3557359
+        ],
+        "action_ev": [
+          0.0,
+          2.13595,
+          2.1385872
+        ]
+      }
+    },
+    {
+      "hand": "9s8d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.63114613,
+          0.3688539
+        ],
+        "action_ev": [
+          0.0,
+          2.100743,
+          2.1200764
+        ]
+      }
+    },
+    {
+      "hand": "Jd8d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.37799063,
+          0.6220094
+        ],
+        "action_ev": [
+          0.0,
+          8.536979,
+          8.511685
+        ]
+      }
+    },
+    {
+      "hand": "Qd8d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.09610085,
+          0.90389913
+        ],
+        "action_ev": [
+          0.0,
+          7.4500012,
+          7.4450026
+        ]
+      }
+    },
+    {
+      "hand": "Kd8d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.19994433,
+          0.8000557
+        ],
+        "action_ev": [
+          0.0,
+          5.9200697,
+          5.898385
+        ]
+      }
+    },
+    {
+      "hand": "Ac8d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.6772432,
+          0.32275677
+        ],
+        "action_ev": [
+          0.0,
+          0.6096228,
+          0.5864603
+        ]
+      }
+    },
+    {
+      "hand": "Ad8d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          0.0,
+          8.272793,
+          8.443238
+        ]
+      }
+    },
+    {
+      "hand": "Ah8d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.73950344,
+          0.2604966
+        ],
+        "action_ev": [
+          0.0,
+          0.5184331,
+          0.48091507
+        ]
+      }
+    },
+    {
+      "hand": "As8d",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.6772432,
+          0.32275677
+        ],
+        "action_ev": [
+          0.0,
+          0.6096228,
+          0.5864603
+        ]
+      }
+    },
+    {
+      "hand": "8s8h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.6526674,
+          0.5657222
+        ]
+      }
+    },
+    {
+      "hand": "9c8h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9396712,
+          0.06032878
+        ],
+        "action_ev": [
+          0.0,
+          1.394023,
+          1.398727
+        ]
+      }
+    },
+    {
+      "hand": "9h8h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.6546092,
+          0.34539074
+        ],
+        "action_ev": [
+          0.0,
+          2.173774,
+          2.1911778
+        ]
+      }
+    },
+    {
+      "hand": "9s8h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9396712,
+          0.06032878
+        ],
+        "action_ev": [
+          0.0,
+          1.394023,
+          1.398727
+        ]
+      }
+    },
+    {
+      "hand": "Th8h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.001583587,
+          0.9984164
+        ],
+        "action_ev": [
+          0.0,
+          3.09228,
+          3.1847842
+        ]
+      }
+    },
+    {
+      "hand": "Jh8h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.5313724,
+          0.4686276
+        ],
+        "action_ev": [
+          0.0,
+          2.558861,
+          2.5438209
+        ]
+      }
+    },
+    {
+      "hand": "Qh8h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.52958655,
+          0.47041345
+        ],
+        "action_ev": [
+          0.0,
+          1.6508706,
+          1.6420065
+        ]
+      }
+    },
+    {
+      "hand": "Kh8h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.000093290815,
+          0.963721,
+          0.036185756
+        ],
+        "action_ev": [
+          0.0,
+          0.130448,
+          0.12510681
+        ]
+      }
+    },
+    {
+      "hand": "Ac8h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.3588353,
+          0.64038515,
+          0.0007795054
+        ],
+        "action_ev": [
+          0.0,
+          0.080690615,
+          0.051273193
+        ]
+      }
+    },
+    {
+      "hand": "Ad8h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.8719594,
+          0.12804061
+        ],
+        "action_ev": [
+          0.0,
+          0.8968051,
+          0.94011873
+        ]
+      }
+    },
+    {
+      "hand": "Ah8h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.95564944,
+          0.044350542
+        ],
+        "action_ev": [
+          0.0,
+          0.816481,
+          0.8358975
+        ]
+      }
+    },
+    {
+      "hand": "As8h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.3588353,
+          0.64038515,
+          0.0007795054
+        ],
+        "action_ev": [
+          0.0,
+          0.080690615,
+          0.051273193
+        ]
+      }
+    },
+    {
+      "hand": "9c8s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.89419234,
+          0.10580764
+        ],
+        "action_ev": [
+          0.0,
+          1.3481976,
+          1.3650092
+        ]
+      }
+    },
+    {
+      "hand": "9h8s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.99073493,
+          0.009265061
+        ],
+        "action_ev": [
+          0.0,
+          1.3848703,
+          1.3781502
+        ]
+      }
+    },
+    {
+      "hand": "9s8s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.8933331,
+          0.106666915
+        ],
+        "action_ev": [
+          0.0,
+          1.3480699,
+          1.3655952
+        ]
+      }
+    },
+    {
+      "hand": "Ts8s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9527757,
+          0.047224287
+        ],
+        "action_ev": [
+          0.0,
+          2.188202,
+          2.1843023
+        ]
+      }
+    },
+    {
+      "hand": "Js8s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.64891356,
+          0.35108647
+        ],
+        "action_ev": [
+          0.0,
+          1.896975,
+          1.9012549
+        ]
+      }
+    },
+    {
+      "hand": "Qs8s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.66403246,
+          0.3359675
+        ],
+        "action_ev": [
+          0.0,
+          0.9243779,
+          0.9432695
+        ]
+      }
+    },
+    {
+      "hand": "Ks8s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.43678832,
+          -0.70407045
+        ]
+      }
+    },
+    {
+      "hand": "Ac8s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.4517101,
+          0.5482899,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.06464233,
+          -0.010891113
+        ]
+      }
+    },
+    {
+      "hand": "Ad8s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9542942,
+          0.04570579
+        ],
+        "action_ev": [
+          0.0,
+          0.86975557,
+          0.89490175
+        ]
+      }
+    },
+    {
+      "hand": "Ah8s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.55748564,
+          0.44251436,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.016154785,
+          -0.1156134
+        ]
+      }
+    },
+    {
+      "hand": "As8s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.4517101,
+          0.5482899,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.06464233,
+          -0.010891113
+        ]
+      }
+    },
+    {
+      "hand": "9h9c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.019470986,
+          0.980529
+        ],
+        "action_ev": [
+          0.0,
+          14.500248,
+          14.509294
+        ]
+      }
+    },
+    {
+      "hand": "9s9c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.003130896,
+          0.9968691
+        ],
+        "action_ev": [
+          0.0,
+          14.459958,
+          14.482166
+        ]
+      }
+    },
+    {
+      "hand": "Tc9c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.24402595,
+          0.75597405
+        ],
+        "action_ev": [
+          0.0,
+          8.629397,
+          8.650196
+        ]
+      }
+    },
+    {
+      "hand": "Th9c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.45961386,
+          0.5403861
+        ],
+        "action_ev": [
+          0.0,
+          8.6370125,
+          8.654669
+        ]
+      }
+    },
+    {
+      "hand": "Ts9c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.24607176,
+          0.75392824
+        ],
+        "action_ev": [
+          0.0,
+          8.629952,
+          8.650266
+        ]
+      }
+    },
+    {
+      "hand": "Jc9c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9818057,
+          0.018194297
+        ],
+        "action_ev": [
+          0.0,
+          0.53802186,
+          0.5499524
+        ]
+      }
+    },
+    {
+      "hand": "Jd9c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.899001,
+          0.10099902
+        ],
+        "action_ev": [
+          0.0,
+          1.3731784,
+          1.3832135
+        ]
+      }
+    },
+    {
+      "hand": "Jh9c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9999955,
+          0.000004442692
+        ],
+        "action_ev": [
+          0.0,
+          0.57393354,
+          0.5202635
+        ]
+      }
+    },
+    {
+      "hand": "Js9c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9818644,
+          0.018135633
+        ],
+        "action_ev": [
+          0.0,
+          0.53800356,
+          0.5498927
+        ]
+      }
+    },
+    {
+      "hand": "Qc9c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.4083496,
+          0.38539276
+        ]
+      }
+    },
+    {
+      "hand": "Qd9c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.8992987,
+          0.10070126
+        ],
+        "action_ev": [
+          0.0,
+          1.295257,
+          1.3080993
+        ]
+      }
+    },
+    {
+      "hand": "Qh9c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          2.68579e-8
+        ],
+        "action_ev": [
+          0.0,
+          0.4004123,
+          0.3613202
+        ]
+      }
+    },
+    {
+      "hand": "Qs9c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.40828368,
+          0.38544098
+        ]
+      }
+    },
+    {
+      "hand": "Kc9c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.3144568,
+          0.20123321
+        ]
+      }
+    },
+    {
+      "hand": "Kd9c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.97415376,
+          0.025846185
+        ],
+        "action_ev": [
+          0.0,
+          1.2052889,
+          1.2101804
+        ]
+      }
+    },
+    {
+      "hand": "Kh9c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.000001327325,
+          0.9999987,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.22106048,
+          0.102695316
+        ]
+      }
+    },
+    {
+      "hand": "Ks9c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.31443816,
+          0.20124115
+        ]
+      }
+    },
+    {
+      "hand": "Ac9c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.39551178,
+          0.34372497
+        ]
+      }
+    },
+    {
+      "hand": "Ad9c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.8409083,
+          0.15909176
+        ],
+        "action_ev": [
+          0.0,
+          1.0123485,
+          1.0325286
+        ]
+      }
+    },
+    {
+      "hand": "Ah9c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.27150086,
+          0.20729919
+        ]
+      }
+    },
+    {
+      "hand": "As9c",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.39551178,
+          0.34372497
+        ]
+      }
+    },
+    {
+      "hand": "9s9h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.019470986,
+          0.980529
+        ],
+        "action_ev": [
+          0.0,
+          14.500248,
+          14.509294
+        ]
+      }
+    },
+    {
+      "hand": "Tc9h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.4862116,
+          0.5137884
+        ],
+        "action_ev": [
+          0.0,
+          8.625389,
+          8.624913
+        ]
+      }
+    },
+    {
+      "hand": "Th9h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.0000032390114,
+          0.9999968
+        ],
+        "action_ev": [
+          0.0,
+          9.364942,
+          9.444226
+        ]
+      }
+    },
+    {
+      "hand": "Ts9h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.4862116,
+          0.5137884
+        ],
+        "action_ev": [
+          0.0,
+          8.625389,
+          8.624913
+        ]
+      }
+    },
+    {
+      "hand": "Jc9h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.99999917,
+          8.803225e-7
+        ],
+        "action_ev": [
+          0.0,
+          0.5683699,
+          0.54769135
+        ]
+      }
+    },
+    {
+      "hand": "Jd9h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9753141,
+          0.024685914
+        ],
+        "action_ev": [
+          0.0,
+          1.4024504,
+          1.3917398
+        ]
+      }
+    },
+    {
+      "hand": "Jh9h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.78598106,
+          0.2140189
+        ],
+        "action_ev": [
+          0.0,
+          1.3849324,
+          1.3896793
+        ]
+      }
+    },
+    {
+      "hand": "Js9h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.99999917,
+          8.803225e-7
+        ],
+        "action_ev": [
+          0.0,
+          0.5683699,
+          0.54769135
+        ]
+      }
+    },
+    {
+      "hand": "Qc9h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          3.987713e-10
+        ],
+        "action_ev": [
+          0.0,
+          0.4370102,
+          0.3805716
+        ]
+      }
+    },
+    {
+      "hand": "Qd9h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.97701293,
+          0.022987086
+        ],
+        "action_ev": [
+          0.0,
+          1.3236362,
+          1.3211778
+        ]
+      }
+    },
+    {
+      "hand": "Qh9h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.7972822,
+          0.20271783
+        ],
+        "action_ev": [
+          0.0,
+          1.2539631,
+          1.2828883
+        ]
+      }
+    },
+    {
+      "hand": "Qs9h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          3.987713e-10
+        ],
+        "action_ev": [
+          0.0,
+          0.4370102,
+          0.3805716
+        ]
+      }
+    },
+    {
+      "hand": "Kc9h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.32874572,
+          0.16460022
+        ]
+      }
+    },
+    {
+      "hand": "Kd9h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.99931294,
+          0.00068707496
+        ],
+        "action_ev": [
+          0.0,
+          1.2175292,
+          1.216636
+        ]
+      }
+    },
+    {
+      "hand": "Kh9h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.975812,
+          0.024187986
+        ],
+        "action_ev": [
+          0.0,
+          1.1424805,
+          1.1351091
+        ]
+      }
+    },
+    {
+      "hand": "Ks9h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.32874572,
+          0.16460022
+        ]
+      }
+    },
+    {
+      "hand": "Ac9h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.38112885,
+          0.28105682
+        ]
+      }
+    },
+    {
+      "hand": "Ad9h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.8966542,
+          0.10334584
+        ],
+        "action_ev": [
+          0.0,
+          0.9946387,
+          1.0001799
+        ]
+      }
+    },
+    {
+      "hand": "Ah9h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.75097775,
+          0.24902225
+        ],
+        "action_ev": [
+          0.0,
+          1.209768,
+          1.2426316
+        ]
+      }
+    },
+    {
+      "hand": "As9h",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.38112885,
+          0.28105682
+        ]
+      }
+    },
+    {
+      "hand": "Tc9s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.24607176,
+          0.75392824
+        ],
+        "action_ev": [
+          0.0,
+          8.629952,
+          8.650266
+        ]
+      }
+    },
+    {
+      "hand": "Th9s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.45961386,
+          0.5403861
+        ],
+        "action_ev": [
+          0.0,
+          8.6370125,
+          8.654669
+        ]
+      }
+    },
+    {
+      "hand": "Ts9s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.24402595,
+          0.75597405
+        ],
+        "action_ev": [
+          0.0,
+          8.629397,
+          8.650196
+        ]
+      }
+    },
+    {
+      "hand": "Jc9s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9818644,
+          0.018135633
+        ],
+        "action_ev": [
+          0.0,
+          0.53800356,
+          0.5498927
+        ]
+      }
+    },
+    {
+      "hand": "Jd9s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.899001,
+          0.10099902
+        ],
+        "action_ev": [
+          0.0,
+          1.3731784,
+          1.3832135
+        ]
+      }
+    },
+    {
+      "hand": "Jh9s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9999955,
+          0.000004442692
+        ],
+        "action_ev": [
+          0.0,
+          0.57393354,
+          0.5202635
+        ]
+      }
+    },
+    {
+      "hand": "Js9s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9818057,
+          0.018194297
+        ],
+        "action_ev": [
+          0.0,
+          0.53802186,
+          0.5499524
+        ]
+      }
+    },
+    {
+      "hand": "Qc9s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.40828368,
+          0.38544098
+        ]
+      }
+    },
+    {
+      "hand": "Qd9s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.8992987,
+          0.10070126
+        ],
+        "action_ev": [
+          0.0,
+          1.295257,
+          1.3080993
+        ]
+      }
+    },
+    {
+      "hand": "Qh9s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          2.68579e-8
+        ],
+        "action_ev": [
+          0.0,
+          0.4004123,
+          0.3613202
+        ]
+      }
+    },
+    {
+      "hand": "Qs9s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.4083496,
+          0.38539276
+        ]
+      }
+    },
+    {
+      "hand": "Kc9s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.31443816,
+          0.20124115
+        ]
+      }
+    },
+    {
+      "hand": "Kd9s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.97415376,
+          0.025846185
+        ],
+        "action_ev": [
+          0.0,
+          1.2052889,
+          1.2101804
+        ]
+      }
+    },
+    {
+      "hand": "Kh9s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.000001327325,
+          0.9999987,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.22106048,
+          0.102695316
+        ]
+      }
+    },
+    {
+      "hand": "Ks9s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.3144568,
+          0.20123321
+        ]
+      }
+    },
+    {
+      "hand": "Ac9s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.39551178,
+          0.34372497
+        ]
+      }
+    },
+    {
+      "hand": "Ad9s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.8409083,
+          0.15909176
+        ],
+        "action_ev": [
+          0.0,
+          1.0123485,
+          1.0325286
+        ]
+      }
+    },
+    {
+      "hand": "Ah9s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.27150086,
+          0.20729919
+        ]
+      }
+    },
+    {
+      "hand": "As9s",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.39551178,
+          0.34372497
+        ]
+      }
+    },
+    {
+      "hand": "ThTc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          0.0,
+          15.979162,
+          16.315042
+        ]
+      }
+    },
+    {
+      "hand": "TsTc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          0.0,
+          15.911263,
+          16.30141
+        ]
+      }
+    },
+    {
+      "hand": "JcTc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9985092,
+          0.0014907421
+        ],
+        "action_ev": [
+          0.0,
+          1.6686708,
+          1.6676487
+        ]
+      }
+    },
+    {
+      "hand": "JdTc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.916266,
+          0.08373401
+        ],
+        "action_ev": [
+          0.0,
+          2.4598773,
+          2.453716
+        ]
+      }
+    },
+    {
+      "hand": "JhTc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.99999774,
+          0.0000022147915
+        ],
+        "action_ev": [
+          0.0,
+          1.6829888,
+          1.6407325
+        ]
+      }
+    },
+    {
+      "hand": "JsTc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9985277,
+          0.0014722622
+        ],
+        "action_ev": [
+          0.0,
+          1.668655,
+          1.6676351
+        ]
+      }
+    },
+    {
+      "hand": "QcTc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9088609,
+          0.09113907
+        ],
+        "action_ev": [
+          0.0,
+          1.7899716,
+          1.7991132
+        ]
+      }
+    },
+    {
+      "hand": "QdTc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.8123512,
+          0.18764877
+        ],
+        "action_ev": [
+          0.0,
+          2.6564476,
+          2.6572165
+        ]
+      }
+    },
+    {
+      "hand": "QhTc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.988958,
+          0.011041997
+        ],
+        "action_ev": [
+          0.0,
+          1.7627017,
+          1.76517
+        ]
+      }
+    },
+    {
+      "hand": "QsTc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.90782315,
+          0.09217684
+        ],
+        "action_ev": [
+          0.0,
+          1.7899063,
+          1.7993094
+        ]
+      }
+    },
+    {
+      "hand": "KcTc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          2.1164005,
+          2.0487673
+        ]
+      }
+    },
+    {
+      "hand": "KdTc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.94377905,
+          0.05622095
+        ],
+        "action_ev": [
+          0.0,
+          3.034426,
+          3.0387843
+        ]
+      }
+    },
+    {
+      "hand": "KhTc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          2.0233665,
+          1.9501922
+        ]
+      }
+    },
+    {
+      "hand": "KsTc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          2.116487,
+          2.0488052
+        ]
+      }
+    },
+    {
+      "hand": "AcTc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.83491987,
+          0.16508012
+        ],
+        "action_ev": [
+          0.0,
+          2.462781,
+          2.4726288
+        ]
+      }
+    },
+    {
+      "hand": "AdTc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.3299909,
+          0.67000914
+        ],
+        "action_ev": [
+          0.0,
+          3.159516,
+          3.2204742
+        ]
+      }
+    },
+    {
+      "hand": "AhTc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.79583746,
+          0.20416254
+        ],
+        "action_ev": [
+          0.0,
+          2.3325746,
+          2.343752
+        ]
+      }
+    },
+    {
+      "hand": "AsTc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.83491987,
+          0.16508012
+        ],
+        "action_ev": [
+          0.0,
+          2.462781,
+          2.4726288
+        ]
+      }
+    },
+    {
+      "hand": "TsTh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          0.0,
+          15.979162,
+          16.315042
+        ]
+      }
+    },
+    {
+      "hand": "JcTh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9993987,
+          0.00060127454
+        ],
+        "action_ev": [
+          0.0,
+          1.7899786,
+          1.7861596
+        ]
+      }
+    },
+    {
+      "hand": "JdTh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9812905,
+          0.018709496
+        ],
+        "action_ev": [
+          0.0,
+          2.5793726,
+          2.5828707
+        ]
+      }
+    },
+    {
+      "hand": "JhTh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.73133653,
+          0.26866347
+        ],
+        "action_ev": [
+          0.0,
+          2.5449295,
+          2.5524366
+        ]
+      }
+    },
+    {
+      "hand": "JsTh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9993987,
+          0.00060127454
+        ],
+        "action_ev": [
+          0.0,
+          1.7899786,
+          1.7861596
+        ]
+      }
+    },
+    {
+      "hand": "QcTh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9679788,
+          0.032021232
+        ],
+        "action_ev": [
+          0.0,
+          1.8593603,
+          1.8695173
+        ]
+      }
+    },
+    {
+      "hand": "QdTh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.91622454,
+          0.08377546
+        ],
+        "action_ev": [
+          0.0,
+          2.7286747,
+          2.7280953
+        ]
+      }
+    },
+    {
+      "hand": "QhTh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.5421787,
+          0.45782128
+        ],
+        "action_ev": [
+          0.0,
+          2.6014783,
+          2.6781204
+        ]
+      }
+    },
+    {
+      "hand": "QsTh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9679788,
+          0.032021232
+        ],
+        "action_ev": [
+          0.0,
+          1.8593603,
+          1.8695173
+        ]
+      }
+    },
+    {
+      "hand": "KcTh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          2.1238902,
+          2.0238752
+        ]
+      }
+    },
+    {
+      "hand": "KdTh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.99872875,
+          0.00127123
+        ],
+        "action_ev": [
+          0.0,
+          3.0446923,
+          3.0368066
+        ]
+      }
+    },
+    {
+      "hand": "KhTh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.99051976,
+          0.009480196
+        ],
+        "action_ev": [
+          0.0,
+          2.8583758,
+          2.8601773
+        ]
+      }
+    },
+    {
+      "hand": "KsTh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          2.1238902,
+          2.0238752
+        ]
+      }
+    },
+    {
+      "hand": "AcTh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.90785116,
+          0.09214885
+        ],
+        "action_ev": [
+          0.0,
+          2.3904943,
+          2.3952339
+        ]
+      }
+    },
+    {
+      "hand": "AdTh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.3728796,
+          0.62712044
+        ],
+        "action_ev": [
+          0.0,
+          3.075251,
+          3.146076
+        ]
+      }
+    },
+    {
+      "hand": "AhTh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.4154345,
+          0.5845655
+        ],
+        "action_ev": [
+          0.0,
+          3.1415634,
+          3.216383
+        ]
+      }
+    },
+    {
+      "hand": "AsTh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.90785116,
+          0.09214885
+        ],
+        "action_ev": [
+          0.0,
+          2.3904943,
+          2.3952339
+        ]
+      }
+    },
+    {
+      "hand": "JcTs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9985277,
+          0.0014722622
+        ],
+        "action_ev": [
+          0.0,
+          1.668655,
+          1.6676351
+        ]
+      }
+    },
+    {
+      "hand": "JdTs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.916266,
+          0.08373401
+        ],
+        "action_ev": [
+          0.0,
+          2.4598773,
+          2.453716
+        ]
+      }
+    },
+    {
+      "hand": "JhTs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.99999774,
+          0.0000022147915
+        ],
+        "action_ev": [
+          0.0,
+          1.6829888,
+          1.6407325
+        ]
+      }
+    },
+    {
+      "hand": "JsTs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9985092,
+          0.0014907421
+        ],
+        "action_ev": [
+          0.0,
+          1.6686708,
+          1.6676487
+        ]
+      }
+    },
+    {
+      "hand": "QcTs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.90782315,
+          0.09217684
+        ],
+        "action_ev": [
+          0.0,
+          1.7899063,
+          1.7993094
+        ]
+      }
+    },
+    {
+      "hand": "QdTs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.8123512,
+          0.18764877
+        ],
+        "action_ev": [
+          0.0,
+          2.6564476,
+          2.6572165
+        ]
+      }
+    },
+    {
+      "hand": "QhTs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.988958,
+          0.011041997
+        ],
+        "action_ev": [
+          0.0,
+          1.7627017,
+          1.76517
+        ]
+      }
+    },
+    {
+      "hand": "QsTs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9088609,
+          0.09113907
+        ],
+        "action_ev": [
+          0.0,
+          1.7899716,
+          1.7991132
+        ]
+      }
+    },
+    {
+      "hand": "KcTs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          2.116487,
+          2.0488052
+        ]
+      }
+    },
+    {
+      "hand": "KdTs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.94377905,
+          0.05622095
+        ],
+        "action_ev": [
+          0.0,
+          3.034426,
+          3.0387843
+        ]
+      }
+    },
+    {
+      "hand": "KhTs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          2.0233665,
+          1.9501922
+        ]
+      }
+    },
+    {
+      "hand": "KsTs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          2.1164005,
+          2.0487673
+        ]
+      }
+    },
+    {
+      "hand": "AcTs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.83491987,
+          0.16508012
+        ],
+        "action_ev": [
+          0.0,
+          2.462781,
+          2.4726288
+        ]
+      }
+    },
+    {
+      "hand": "AdTs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.3299909,
+          0.67000914
+        ],
+        "action_ev": [
+          0.0,
+          3.159516,
+          3.2204742
+        ]
+      }
+    },
+    {
+      "hand": "AhTs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.79583746,
+          0.20416254
+        ],
+        "action_ev": [
+          0.0,
+          2.3325746,
+          2.343752
+        ]
+      }
+    },
+    {
+      "hand": "AsTs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.83491987,
+          0.16508012
+        ],
+        "action_ev": [
+          0.0,
+          2.462781,
+          2.4726288
+        ]
+      }
+    },
+    {
+      "hand": "JdJc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.50485253,
+          0.49514753
+        ],
+        "action_ev": [
+          0.0,
+          3.845133,
+          3.9195652
+        ]
+      }
+    },
+    {
+      "hand": "JhJc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.7949618,
+          0.20503817
+        ],
+        "action_ev": [
+          0.0,
+          3.1203058,
+          3.1156397
+        ]
+      }
+    },
+    {
+      "hand": "JsJc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.7422144,
+          0.2577856
+        ],
+        "action_ev": [
+          0.0,
+          3.11609,
+          3.1376398
+        ]
+      }
+    },
+    {
+      "hand": "QcJc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.7541788,
+          0.24582122
+        ],
+        "action_ev": [
+          0.0,
+          2.4167826,
+          2.444656
+        ]
+      }
+    },
+    {
+      "hand": "QdJc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.770087,
+          0.22991301
+        ],
+        "action_ev": [
+          0.0,
+          3.3117607,
+          3.3184235
+        ]
+      }
+    },
+    {
+      "hand": "QhJc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9391214,
+          0.060878545
+        ],
+        "action_ev": [
+          0.0,
+          2.4342535,
+          2.4237738
+        ]
+      }
+    },
+    {
+      "hand": "QsJc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.7539845,
+          0.24601543
+        ],
+        "action_ev": [
+          0.0,
+          2.4167914,
+          2.4446244
+        ]
+      }
+    },
+    {
+      "hand": "KcJc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.903312,
+          0.096687965
+        ],
+        "action_ev": [
+          0.0,
+          0.3598462,
+          0.3623416
+        ]
+      }
+    },
+    {
+      "hand": "KdJc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.44217354,
+          0.5578264
+        ],
+        "action_ev": [
+          0.0,
+          1.2762032,
+          1.3025562
+        ]
+      }
+    },
+    {
+      "hand": "KhJc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9722186,
+          0.02778143
+        ],
+        "action_ev": [
+          0.0,
+          0.32208985,
+          0.32374573
+        ]
+      }
+    },
+    {
+      "hand": "KsJc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.90306246,
+          0.09693753
+        ],
+        "action_ev": [
+          0.0,
+          0.35989562,
+          0.36236665
+        ]
+      }
+    },
+    {
+      "hand": "AcJc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.5825885,
+          -0.77687716
+        ]
+      }
+    },
+    {
+      "hand": "AdJc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.7311419,
+          0.26885808,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.030169373,
+          -0.021226807
+        ]
+      }
+    },
+    {
+      "hand": "AhJc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.7176279,
+          -0.9112381
+        ]
+      }
+    },
+    {
+      "hand": "AsJc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.5825885,
+          -0.77687716
+        ]
+      }
+    },
+    {
+      "hand": "JhJd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.4766351,
+          0.5233649
+        ],
+        "action_ev": [
+          0.0,
+          3.8531024,
+          3.9241784
+        ]
+      }
+    },
+    {
+      "hand": "JsJd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.50485253,
+          0.49514753
+        ],
+        "action_ev": [
+          0.0,
+          3.845133,
+          3.9195652
+        ]
+      }
+    },
+    {
+      "hand": "QcJd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.72351557,
+          0.27648443
+        ],
+        "action_ev": [
+          0.0,
+          3.2247198,
+          3.2525995
+        ]
+      }
+    },
+    {
+      "hand": "QdJd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          0.0,
+          9.3381195,
+          9.5735
+        ]
+      }
+    },
+    {
+      "hand": "QhJd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.82352746,
+          0.17647256
+        ],
+        "action_ev": [
+          0.0,
+          3.2457252,
+          3.2493863
+        ]
+      }
+    },
+    {
+      "hand": "QsJd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.72351557,
+          0.27648443
+        ],
+        "action_ev": [
+          0.0,
+          3.2247198,
+          3.2525995
+        ]
+      }
+    },
+    {
+      "hand": "KcJd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.65285444,
+          0.34714553
+        ],
+        "action_ev": [
+          0.0,
+          1.0511928,
+          1.0463166
+        ]
+      }
+    },
+    {
+      "hand": "KdJd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "action_ev": [
+          0.0,
+          7.7111034,
+          7.7956653
+        ]
+      }
+    },
+    {
+      "hand": "KhJd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.7277226,
+          0.27227744
+        ],
+        "action_ev": [
+          0.0,
+          1.005051,
+          1.0001179
+        ]
+      }
+    },
+    {
+      "hand": "KsJd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.65285444,
+          0.34714553
+        ],
+        "action_ev": [
+          0.0,
+          1.0511928,
+          1.0463166
+        ]
+      }
+    },
+    {
+      "hand": "AcJd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.49717072,
+          0.49529624,
+          0.007533041
+        ],
+        "action_ev": [
+          0.0,
+          0.06767334,
+          0.050598755
+        ]
+      }
+    },
+    {
+      "hand": "AdJd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.75818646,
+          0.24181351
+        ],
+        "action_ev": [
+          0.0,
+          7.521238,
+          7.5141172
+        ]
+      }
+    },
+    {
+      "hand": "AhJd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.7338979,
+          0.26610205,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.06425049,
+          -0.08073303
+        ]
+      }
+    },
+    {
+      "hand": "AsJd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.49717072,
+          0.49529624,
+          0.007533041
+        ],
+        "action_ev": [
+          0.0,
+          0.06767334,
+          0.050598755
+        ]
+      }
+    },
+    {
+      "hand": "JsJh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.7949618,
+          0.20503817
+        ],
+        "action_ev": [
+          0.0,
+          3.1203058,
+          3.1156397
+        ]
+      }
+    },
+    {
+      "hand": "QcJh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9793422,
+          0.020657804
+        ],
+        "action_ev": [
+          0.0,
+          2.4677262,
+          2.456964
+        ]
+      }
+    },
+    {
+      "hand": "QdJh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.85233426,
+          0.14766572
+        ],
+        "action_ev": [
+          0.0,
+          3.367016,
+          3.3668048
+        ]
+      }
+    },
+    {
+      "hand": "QhJh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.31038597,
+          0.689614
+        ],
+        "action_ev": [
+          0.0,
+          3.1215808,
+          3.2202697
+        ]
+      }
+    },
+    {
+      "hand": "QsJh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9793422,
+          0.020657804
+        ],
+        "action_ev": [
+          0.0,
+          2.4677262,
+          2.456964
+        ]
+      }
+    },
+    {
+      "hand": "KcJh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.99973243,
+          0.00026756577
+        ],
+        "action_ev": [
+          0.0,
+          0.3861737,
+          0.34834534
+        ]
+      }
+    },
+    {
+      "hand": "KdJh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.468149,
+          0.531851
+        ],
+        "action_ev": [
+          0.0,
+          1.3018054,
+          1.3048172
+        ]
+      }
+    },
+    {
+      "hand": "KhJh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.49914843,
+          0.5008516
+        ],
+        "action_ev": [
+          0.0,
+          1.1187127,
+          1.1488333
+        ]
+      }
+    },
+    {
+      "hand": "KsJh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.99973243,
+          0.00026756577
+        ],
+        "action_ev": [
+          0.0,
+          0.3861737,
+          0.34834534
+        ]
+      }
+    },
+    {
+      "hand": "AcJh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.5840317,
+          -0.77052736
+        ]
+      }
+    },
+    {
+      "hand": "AdJh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.6338074,
+          0.350165,
+          0.016027607
+        ],
+        "action_ev": [
+          0.0,
+          0.051858522,
+          0.028298035
+        ]
+      }
+    },
+    {
+      "hand": "AhJh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.038481336,
+          0.96151865,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.13382477,
+          0.019534606
+        ]
+      }
+    },
+    {
+      "hand": "AsJh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.5840317,
+          -0.77052736
+        ]
+      }
+    },
+    {
+      "hand": "QcJs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.7539845,
+          0.24601543
+        ],
+        "action_ev": [
+          0.0,
+          2.4167914,
+          2.4446244
+        ]
+      }
+    },
+    {
+      "hand": "QdJs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.770087,
+          0.22991301
+        ],
+        "action_ev": [
+          0.0,
+          3.3117607,
+          3.3184235
+        ]
+      }
+    },
+    {
+      "hand": "QhJs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9391214,
+          0.060878545
+        ],
+        "action_ev": [
+          0.0,
+          2.4342535,
+          2.4237738
+        ]
+      }
+    },
+    {
+      "hand": "QsJs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.7541788,
+          0.24582122
+        ],
+        "action_ev": [
+          0.0,
+          2.4167826,
+          2.444656
+        ]
+      }
+    },
+    {
+      "hand": "KcJs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.90306246,
+          0.09693753
+        ],
+        "action_ev": [
+          0.0,
+          0.35989562,
+          0.36236665
+        ]
+      }
+    },
+    {
+      "hand": "KdJs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.44217354,
+          0.5578264
+        ],
+        "action_ev": [
+          0.0,
+          1.2762032,
+          1.3025562
+        ]
+      }
+    },
+    {
+      "hand": "KhJs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9722186,
+          0.02778143
+        ],
+        "action_ev": [
+          0.0,
+          0.32208985,
+          0.32374573
+        ]
+      }
+    },
+    {
+      "hand": "KsJs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.903312,
+          0.096687965
+        ],
+        "action_ev": [
+          0.0,
+          0.3598462,
+          0.3623416
+        ]
+      }
+    },
+    {
+      "hand": "AcJs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.5825885,
+          -0.77687716
+        ]
+      }
+    },
+    {
+      "hand": "AdJs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.7311419,
+          0.26885808,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.030169373,
+          -0.021226807
+        ]
+      }
+    },
+    {
+      "hand": "AhJs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.7176279,
+          -0.9112381
+        ]
+      }
+    },
+    {
+      "hand": "AsJs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.5825885,
+          -0.77687716
+        ]
+      }
+    },
+    {
+      "hand": "QdQc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.20046285,
+          0.7995372
+        ],
+        "action_ev": [
+          0.0,
+          4.9637346,
+          4.9871893
+        ]
+      }
+    },
+    {
+      "hand": "QhQc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.7138829,
+          0.28611705
+        ],
+        "action_ev": [
+          0.0,
+          4.146282,
+          4.1689186
+        ]
+      }
+    },
+    {
+      "hand": "QsQc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.63694966,
+          0.3630503
+        ],
+        "action_ev": [
+          0.0,
+          4.1600204,
+          4.1900315
+        ]
+      }
+    },
+    {
+      "hand": "KcQc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.89111876,
+          0.10888125
+        ],
+        "action_ev": [
+          0.0,
+          0.49341187,
+          0.48989257
+        ]
+      }
+    },
+    {
+      "hand": "KdQc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.48449618,
+          0.5155038
+        ],
+        "action_ev": [
+          0.0,
+          1.3779502,
+          1.3864424
+        ]
+      }
+    },
+    {
+      "hand": "KhQc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.99654764,
+          0.0034523867
+        ],
+        "action_ev": [
+          0.0,
+          0.45475617,
+          0.44863555
+        ]
+      }
+    },
+    {
+      "hand": "KsQc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.89049435,
+          0.10950565
+        ],
+        "action_ev": [
+          0.0,
+          0.4934015,
+          0.48991668
+        ]
+      }
+    },
+    {
+      "hand": "AcQc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.52973145,
+          -0.769967
+        ]
+      }
+    },
+    {
+      "hand": "AdQc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.6561555,
+          0.34384447,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.049786683,
+          -0.0930838
+        ]
+      }
+    },
+    {
+      "hand": "AhQc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.6593182,
+          -0.9176654
+        ]
+      }
+    },
+    {
+      "hand": "AsQc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.52973145,
+          -0.769967
+        ]
+      }
+    },
+    {
+      "hand": "QhQd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.13521601,
+          0.864784
+        ],
+        "action_ev": [
+          0.0,
+          4.9642186,
+          4.9894733
+        ]
+      }
+    },
+    {
+      "hand": "QsQd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.20046285,
+          0.7995372
+        ],
+        "action_ev": [
+          0.0,
+          4.9637346,
+          4.9871893
+        ]
+      }
+    },
+    {
+      "hand": "KcQd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.45919615,
+          0.5408038
+        ],
+        "action_ev": [
+          0.0,
+          1.2182326,
+          1.2440338
+        ]
+      }
+    },
+    {
+      "hand": "KdQd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.21790043,
+          0.78209955
+        ],
+        "action_ev": [
+          0.0,
+          7.458295,
+          7.487406
+        ]
+      }
+    },
+    {
+      "hand": "KhQd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.5594932,
+          0.44050685
+        ],
+        "action_ev": [
+          0.0,
+          1.1756536,
+          1.1683421
+        ]
+      }
+    },
+    {
+      "hand": "KsQd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.45919615,
+          0.5408038
+        ],
+        "action_ev": [
+          0.0,
+          1.2182326,
+          1.2440338
+        ]
+      }
+    },
+    {
+      "hand": "AcQd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.09797563,
+          0.8469021,
+          0.055122286
+        ],
+        "action_ev": [
+          0.0,
+          0.1372992,
+          0.11237396
+        ]
+      }
+    },
+    {
+      "hand": "AdQd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.9955945,
+          0.0044054426
+        ],
+        "action_ev": [
+          0.0,
+          7.1890187,
+          7.147925
+        ]
+      }
+    },
+    {
+      "hand": "AhQd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.39731255,
+          0.6026875,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.014623108,
+          -0.025691833
+        ]
+      }
+    },
+    {
+      "hand": "AsQd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.09797563,
+          0.8469021,
+          0.055122286
+        ],
+        "action_ev": [
+          0.0,
+          0.1372992,
+          0.11237396
+        ]
+      }
+    },
+    {
+      "hand": "QsQh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.7138829,
+          0.28611705
+        ],
+        "action_ev": [
+          0.0,
+          4.146282,
+          4.1689186
+        ]
+      }
+    },
+    {
+      "hand": "KcQh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.99559766,
+          0.004402338
+        ],
+        "action_ev": [
+          0.0,
+          0.47090515,
+          0.46404174
+        ]
+      }
+    },
+    {
+      "hand": "KdQh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.53054005,
+          0.46945995
+        ],
+        "action_ev": [
+          0.0,
+          1.3515564,
+          1.342757
+        ]
+      }
+    },
+    {
+      "hand": "KhQh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.66545284,
+          0.33454716
+        ],
+        "action_ev": [
+          0.0,
+          1.202514,
+          1.2676316
+        ]
+      }
+    },
+    {
+      "hand": "KsQh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.99559766,
+          0.004402338
+        ],
+        "action_ev": [
+          0.0,
+          0.47090515,
+          0.46404174
+        ]
+      }
+    },
+    {
+      "hand": "AcQh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.5670453,
+          -0.8001938
+        ]
+      }
+    },
+    {
+      "hand": "AdQh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.7233528,
+          0.2766472,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.01384613,
+          -0.12159393
+        ]
+      }
+    },
+    {
+      "hand": "AhQh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.026408164,
+          0.9735918,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.12671295,
+          -0.006435547
+        ]
+      }
+    },
+    {
+      "hand": "AsQh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.5670453,
+          -0.8001938
+        ]
+      }
+    },
+    {
+      "hand": "KcQs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.89049435,
+          0.10950565
+        ],
+        "action_ev": [
+          0.0,
+          0.4934015,
+          0.48991668
+        ]
+      }
+    },
+    {
+      "hand": "KdQs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.48449618,
+          0.5155038
+        ],
+        "action_ev": [
+          0.0,
+          1.3779502,
+          1.3864424
+        ]
+      }
+    },
+    {
+      "hand": "KhQs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.99654764,
+          0.0034523867
+        ],
+        "action_ev": [
+          0.0,
+          0.45475617,
+          0.44863555
+        ]
+      }
+    },
+    {
+      "hand": "KsQs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.89111876,
+          0.10888125
+        ],
+        "action_ev": [
+          0.0,
+          0.49341187,
+          0.48989257
+        ]
+      }
+    },
+    {
+      "hand": "AcQs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.52973145,
+          -0.769967
+        ]
+      }
+    },
+    {
+      "hand": "AdQs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.6561555,
+          0.34384447,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.049786683,
+          -0.0930838
+        ]
+      }
+    },
+    {
+      "hand": "AhQs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.6593182,
+          -0.9176654
+        ]
+      }
+    },
+    {
+      "hand": "AsQs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.52973145,
+          -0.769967
+        ]
+      }
+    },
+    {
+      "hand": "KdKc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.2757381,
+          0.7242619
+        ],
+        "action_ev": [
+          0.0,
+          6.084624,
+          6.08456
+        ]
+      }
+    },
+    {
+      "hand": "KhKc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.5653214,
+          0.43467858
+        ],
+        "action_ev": [
+          0.0,
+          5.1625037,
+          5.1313453
+        ]
+      }
+    },
+    {
+      "hand": "KsKc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.4376939,
+          0.5623061
+        ],
+        "action_ev": [
+          0.0,
+          5.195548,
+          5.1614285
+        ]
+      }
+    },
+    {
+      "hand": "AcKc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.5036392,
+          -1.0170151
+        ]
+      }
+    },
+    {
+      "hand": "AdKc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.6581668,
+          0.34183323,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.044241637,
+          -0.36861512
+        ]
+      }
+    },
+    {
+      "hand": "AhKc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.6358771,
+          -1.1705087
+        ]
+      }
+    },
+    {
+      "hand": "AsKc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.5036392,
+          -1.0170151
+        ]
+      }
+    },
+    {
+      "hand": "KhKd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.37864175,
+          0.6213582
+        ],
+        "action_ev": [
+          0.0,
+          6.0555944,
+          6.067712
+        ]
+      }
+    },
+    {
+      "hand": "KsKd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.2757381,
+          0.7242619
+        ],
+        "action_ev": [
+          0.0,
+          6.084624,
+          6.08456
+        ]
+      }
+    },
+    {
+      "hand": "AcKd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0005526059,
+          0.99944735,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.21104676,
+          -0.00053588866
+        ]
+      }
+    },
+    {
+      "hand": "AdKd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          6.7060757,
+          6.3735948
+        ]
+      }
+    },
+    {
+      "hand": "AhKd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.06210008,
+          0.93789995,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.080279544,
+          -0.1439621
+        ]
+      }
+    },
+    {
+      "hand": "AsKd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0005526059,
+          0.99944735,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.21104676,
+          -0.00053588866
+        ]
+      }
+    },
+    {
+      "hand": "KsKh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.5653214,
+          0.43467858
+        ],
+        "action_ev": [
+          0.0,
+          5.1625037,
+          5.1313453
+        ]
+      }
+    },
+    {
+      "hand": "AcKh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.5819128,
+          -1.1156403
+        ]
+      }
+    },
+    {
+      "hand": "AdKh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.80428296,
+          0.19571704,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.025041198,
+          -0.48290956
+        ]
+      }
+    },
+    {
+      "hand": "AhKh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.024701545,
+          0.9752984,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.12053558,
+          -0.2599701
+        ]
+      }
+    },
+    {
+      "hand": "AsKh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.5819128,
+          -1.1156403
+        ]
+      }
+    },
+    {
+      "hand": "AcKs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.5036392,
+          -1.0170151
+        ]
+      }
+    },
+    {
+      "hand": "AdKs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.6581668,
+          0.34183323,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          0.044241637,
+          -0.36861512
+        ]
+      }
+    },
+    {
+      "hand": "AhKs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.6358771,
+          -1.1705087
+        ]
+      }
+    },
+    {
+      "hand": "AsKs",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "action_ev": [
+          0.0,
+          -0.5036392,
+          -1.0170151
+        ]
+      }
+    },
+    {
+      "hand": "AdAc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.34111968,
+          0.65888035
+        ],
+        "action_ev": [
+          0.0,
+          7.394841,
+          7.416891
+        ]
+      }
+    },
+    {
+      "hand": "AhAc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.7664081,
+          0.23359193
+        ],
+        "action_ev": [
+          0.0,
+          6.343735,
+          6.346322
+        ]
+      }
+    },
+    {
+      "hand": "AsAc",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.69754237,
+          0.3024577
+        ],
+        "action_ev": [
+          0.0,
+          6.3788347,
+          6.3732653
+        ]
+      }
+    },
+    {
+      "hand": "AhAd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.35745597,
+          0.64254403
+        ],
+        "action_ev": [
+          0.0,
+          7.3676662,
+          7.40521
+        ]
+      }
+    },
+    {
+      "hand": "AsAd",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.34111968,
+          0.65888035
+        ],
+        "action_ev": [
+          0.0,
+          7.394841,
+          7.416891
+        ]
+      }
+    },
+    {
+      "hand": "AsAh",
+      "strategy": {
+        "actions": [
+          "Fold",
+          "Call",
+          "Raise to 11.2bb"
+        ],
+        "frequencies": [
+          0.0,
+          0.7664081,
+          0.23359193
+        ],
+        "action_ev": [
+          0.0,
+          6.343735,
+          6.346322
+        ]
+      }
+    }
+  ]
+}
