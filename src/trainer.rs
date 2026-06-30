@@ -303,6 +303,16 @@ fn load_provider() -> Option<FileSolutionProvider> {
     }
 }
 
+/// Entry point for `poker-trainer table` — browse a solved spot's whole strategy
+/// as a GTO-Wizard-style 13×13 grid. Reuses the same provider plumbing as the
+/// drills, so `--board` live-solves a spot to browse just like `drill gto`.
+pub fn run_table(req: Option<SolveRequest>) {
+    let Some(provider) = resolve_provider(req) else {
+        return;
+    };
+    crate::table::run(provider.spots());
+}
+
 /// Entry point for `poker-trainer drill range` (Phase 2).
 ///
 /// Pick one precomputed spot, bucket its whole range by made-hand strength, let
@@ -459,7 +469,7 @@ fn parse_flop(board: &[String]) -> Option<[Card; 3]> {
 }
 
 /// Parse the hero's two hole cards from an `"AsKh"` string.
-fn parse_hole(hand: &str) -> Option<[Card; 2]> {
+pub(crate) fn parse_hole(hand: &str) -> Option<[Card; 2]> {
     parse_cards(hand)?.try_into().ok()
 }
 
@@ -591,7 +601,7 @@ fn group_by_subrange<'a>(
 }
 
 /// Render a packed card string like `"Td9d6h"` or `"AsKh"` with suit glyphs.
-fn fmt_hand_str(s: &str) -> String {
+pub(crate) fn fmt_hand_str(s: &str) -> String {
     s.as_bytes()
         .chunks(2)
         .filter_map(|c| std::str::from_utf8(c).ok())

@@ -11,6 +11,7 @@ rand = "0.10"                   # RNG for dealing; matches rs_poker's rand
 rs_poker = "5"                  # card types + hand eval (crate name uses _, not -)
 serde = { version = "1", features = ["derive"] } # solution file format
 serde_json = "1"               # human-inspectable solution files
+ratatui = "0.29"               # `table` TUI grid (MIT; re-exports crossterm)
 
 # The AGPL solver lives in its own crate (crates/solve-gen) so it never links
 # into this binary — the trainer only deserializes the JSON it produces.

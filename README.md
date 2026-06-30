@@ -19,6 +19,7 @@ cargo run -- drill pot-odds   # call/fold vs. break-even pot odds (Monte-Carlo e
 cargo run -- drill texture    # classify a flop's board texture
 cargo run -- drill gto        # act vs. a precomputed GTO solution (Phase 1)
 cargo run -- drill range      # assign your whole range by bucket; leak stats (Phase 2)
+cargo run -- table            # browse a solved spot's strategy as a 13×13 grid
 ```
 
 The `gto` drill needs solution files; generate them with the (AGPL) solver crate:
@@ -53,6 +54,20 @@ The trainer never links the solver: `--board` shells out to the `solve-gen`
 binary. In-tree it falls back to `cargo run -p solve-gen`; set
 `POKER_TRAINER_SOLVE_GEN` to a prebuilt `solve-gen` binary to skip that.
 
+### Browse a solution as a strategy table
+
+`cargo run -- table` opens a GTO-Wizard-style **13×13 grid**: every starting hand
+colored by its equilibrium action mix (red bet, green check/call, blue fold),
+out-of-range hands left blank. Move the cursor with the arrows or `hjkl`, cycle
+through solved nodes with `[`/`]`, and read the focused hand's exact mix in the
+side panel; `q` quits. Pass `--board` (and the same `--oop/--ip/…` knobs) to
+live-solve a flop and browse it instead of a curated one.
+
+```sh
+cargo run -- table                  # browse the curated library
+cargo run -- table --board Td9d6h   # live-solve this flop, then browse
+```
+
 ## Architecture
 
 Single binary crate for now, organized into modules:
@@ -64,6 +79,7 @@ Single binary crate for now, organized into modules:
 | `eval`       | hand evaluation & equity (wraps `rs-poker` / `pokers`)      |
 | `solution`   | **`SolutionProvider` trait** — where GTO answers come from  |
 | `trainer`    | the drill loop + scoring                                    |
+| `table`      | the GTO-Wizard-style 13×13 strategy grid (TUI)              |
 
 The key seam is `solution::SolutionProvider`. Everything that needs a strategy
 goes through it, so a **file-backed** provider (precomputed sims) and, later, a
