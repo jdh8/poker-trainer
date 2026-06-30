@@ -235,7 +235,7 @@ pub fn run_gto_drill() {
         let chosen = chosen - 1;
 
         let best = ns.best();
-        let ev_loss = (ns.action_ev[best] - ns.action_ev[chosen]).max(0.0);
+        let ev_loss = ns.ev_loss(chosen);
         played += 1;
         total_ev_loss += ev_loss;
         if ns.frequencies[chosen] >= 0.05 {

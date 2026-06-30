@@ -36,6 +36,11 @@ impl NodeStrategy {
             .map(|(i, _)| i)
             .unwrap_or(0)
     }
+
+    /// EV given up by taking `chosen` instead of the best action, in bb (>= 0).
+    pub fn ev_loss(&self, chosen: usize) -> f32 {
+        (self.action_ev[self.best()] - self.action_ev[chosen]).max(0.0)
+    }
 }
 
 /// One precomputed decision node and the strategy for every hero hand at it.
@@ -95,5 +100,69 @@ impl FileSolutionProvider {
 impl SolutionProvider for FileSolutionProvider {
     fn spots(&self) -> &[SolvedSpot] {
         &self.spots
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_spot() -> SolvedSpot {
+        SolvedSpot {
+            label: "test".into(),
+            board: vec!["Td".into(), "9d".into(), "6h".into()],
+            pot_bb: 6.0,
+            hero_oop: false,
+            villain_action: "checks".into(),
+            strategies: vec![HandStrategy {
+                hand: "AsKs".into(),
+                strategy: NodeStrategy {
+                    actions: vec!["Check".into(), "Bet 2.0bb".into()],
+                    frequencies: vec![0.25, 0.75],
+                    action_ev: vec![1.0, 3.5],
+                },
+            }],
+        }
+    }
+
+    #[test]
+    fn best_picks_max_ev() {
+        assert_eq!(sample_spot().strategies[0].strategy.best(), 1);
+    }
+
+    #[test]
+    fn best_empty_is_zero() {
+        let ns = NodeStrategy {
+            actions: vec![],
+            frequencies: vec![],
+            action_ev: vec![],
+        };
+        assert_eq!(ns.best(), 0);
+    }
+
+    #[test]
+    fn ev_loss_is_gap_to_best_clamped() {
+        let ns = &sample_spot().strategies[0].strategy;
+        assert_eq!(ns.ev_loss(1), 0.0); // best action: no loss
+        assert!((ns.ev_loss(0) - 2.5).abs() < 1e-6); // 3.5 - 1.0
+    }
+
+    #[test]
+    fn load_reads_json_and_skips_other_files() {
+        let dir = std::env::temp_dir().join(format!("pt-load-test-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(
+            dir.join("spot.json"),
+            serde_json::to_string(&sample_spot()).unwrap(),
+        )
+        .unwrap();
+        fs::write(dir.join("README.txt"), "not json").unwrap();
+
+        let provider = FileSolutionProvider::load(&dir).unwrap();
+        assert_eq!(provider.spots().len(), 1);
+        assert_eq!(provider.spots()[0].strategies[0].hand, "AsKs");
+
+        fs::remove_dir_all(&dir).unwrap();
     }
 }
