@@ -8,3 +8,4 @@ pub mod solution;
 pub mod table;
 pub mod texture;
 pub mod trainer;
+pub mod tree;

@@ -10,7 +10,9 @@ optimal frequency mix.
 > c-bet decision and the BB's defend. Phase 2 (`drill range`) builds on the same
 > solutions: assign an action to your whole range by strength bucket and get
 > per-bucket leak stats. Phase 3 adds on-demand **live solving** of any spot you
-> pass via `--board`. See the phased plan below.
+> pass via `--board`. Phase 4 (in progress) keeps the solved game resident in a
+> `solve-gen serve` subprocess so `table --board` walks the **whole game tree**.
+> See the phased plan below.
 
 ## Build & run
 
@@ -60,12 +62,18 @@ binary. In-tree it falls back to `cargo run -p solve-gen`; set
 colored by its equilibrium action mix (red bet, green check/call, blue fold),
 out-of-range hands left blank. Move the cursor with the arrows or `hjkl`, cycle
 through solved nodes with `[`/`]`, and read the focused hand's exact mix in the
-side panel; `q` quits. Pass `--board` (and the same `--oop/--ip/…` knobs) to
-live-solve a flop and browse it instead of a curated one.
+side panel; `q` quits.
+
+Pass `--board` (and the same `--oop/--ip/…` knobs) to live-solve a flop and
+browse the **whole game tree** instead: the solved game stays resident in a
+`solve-gen serve` subprocess (Phase 4), so any line and any runout is one
+keypress away. Number keys take the numbered actions, `u` goes one step up,
+`r` back to the root, and turn/river cards are picked from a 13×4 card grid;
+the line so far renders as a breadcrumb.
 
 ```sh
-cargo run -- table                  # browse the curated library
-cargo run -- table --board Td9d6h   # live-solve this flop, then browse
+cargo run -- table                  # browse the curated library (snapshots)
+cargo run -- table --board Td9d6h   # live-solve this flop, then walk its tree
 ```
 
 ## Architecture
@@ -113,9 +121,15 @@ goes through it, so a **file-backed** provider (precomputed sims) and, later, a
    minutes (range/hardware-dependent) and ~1 GB RAM. (Multi-position presets and
    preflop/multiway modeling stay out of scope — this exposes the postflop knobs
    solve-gen already has.)
-4. **Commercial parity (planned)** — phases 4–10 (tree sessions, full-hand
-   drills, study browser, aggregate reports, hand-history analysis,
-   nodelocking) are designed in [docs/design/](docs/design/00-overview.md).
+4. **Tree sessions** — *in progress.* `solve-gen serve` keeps a solved game
+   resident and answers node queries over line-delimited JSON on stdio
+   ([design 01](docs/design/01-tree-protocol.md)); the trainer's `TreeSession`
+   drives it, and `table --board` walks the full tree (any line, any runout).
+   Remaining: `runouts` op + weights/equity in payloads, config-hash save
+   cache, `lock`/`resolve`.
+5. **Commercial parity (planned)** — phases 5–10 (full-hand drills, study
+   browser, aggregate reports, hand-history analysis, nodelocking) are
+   designed in [docs/design/](docs/design/00-overview.md).
 
 ## Licensing
 

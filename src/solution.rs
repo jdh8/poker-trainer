@@ -107,8 +107,9 @@ impl SolutionProvider for FileSolutionProvider {
 /// What to live-solve for a custom spot. Only `flop` is required; `None` fields
 /// let `solve-gen` apply its own defaults. Everything is an opaque string we
 /// forward — the trainer never parses ranges or bet sizes (that needs the
-/// solver), which is what keeps it unlinked from postflop-solver.
-#[derive(Debug, Clone)]
+/// solver), which is what keeps it unlinked from postflop-solver. Serde because
+/// this is also the `config` of a tree-session `op:solve` (see `tree`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SolveRequest {
     pub flop: String,
     pub oop: Option<String>,
@@ -227,27 +228,31 @@ fn solve_gen_args(req: &SolveRequest, out_dir: &Path) -> Vec<String> {
     a
 }
 
-/// Spawn solve-gen, inheriting stdout/stderr so its progress + any range/size
-/// parse error show live. Prefer a prebuilt binary via `POKER_TRAINER_SOLVE_GEN`;
-/// otherwise fall back to `cargo run -p solve-gen` for the dev workspace.
+/// The command to run solve-gen with `args`: a prebuilt binary via
+/// `POKER_TRAINER_SOLVE_GEN`, else `cargo run -p solve-gen` for the dev
+/// workspace. Stderr is inherited so solve progress shows live.
 // ponytail: cargo-run shim is fine in-tree; point the env var at a packaged
 // solve-gen binary when shipping a standalone trainer.
-fn run_solve_gen(req: &SolveRequest, out_dir: &Path) -> io::Result<()> {
-    let args = solve_gen_args(req, out_dir);
-    let mut cmd = match std::env::var_os("POKER_TRAINER_SOLVE_GEN") {
+pub(crate) fn solve_gen_command(args: &[String]) -> Command {
+    match std::env::var_os("POKER_TRAINER_SOLVE_GEN") {
         Some(bin) => {
             let mut c = Command::new(bin);
-            c.args(&args);
+            c.args(args);
             c
         }
         None => {
             let mut c = Command::new("cargo");
             c.args(["run", "-p", "solve-gen", "--release", "--quiet", "--"]);
-            c.args(&args);
+            c.args(args);
             c
         }
-    };
-    let status = cmd.status()?;
+    }
+}
+
+/// Spawn solve-gen, inheriting stdout/stderr so its progress + any range/size
+/// parse error show live.
+fn run_solve_gen(req: &SolveRequest, out_dir: &Path) -> io::Result<()> {
+    let status = solve_gen_command(&solve_gen_args(req, out_dir)).status()?;
     if !status.success() {
         return Err(io::Error::new(
             io::ErrorKind::Other,

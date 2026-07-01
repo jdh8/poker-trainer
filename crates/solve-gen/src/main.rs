@@ -6,9 +6,12 @@
 //! trainer reads those files and never links this crate.
 
 use clap::{Args, Parser, Subcommand};
-use poker_trainer::solution::{HandStrategy, NodeStrategy, SolvedSpot};
+use poker_trainer::solution::{HandStrategy, NodeStrategy, SolveRequest, SolvedSpot};
+use poker_trainer::tree::TreeNode;
 use postflop_solver::*;
+use serde_json::{json, Value};
 use std::fs;
+use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
 
 const CHIPS_PER_BB: f32 = 100.0;
@@ -49,6 +52,9 @@ enum Command {
     Gen,
     /// Solve one custom spot and write its JSON into the solution dir.
     Solve(SolveArgs),
+    /// Tree-session server: solve a spot, keep it resident, and answer
+    /// line-delimited JSON node queries on stdio (protocol v1, design doc 01).
+    Serve,
 }
 
 #[derive(Args)]
@@ -84,6 +90,236 @@ fn main() {
             let out = a.out.clone().unwrap_or_else(default_out);
             write_all(std::slice::from_ref(&spot_from_args(a)), &out);
         }
+        Command::Serve => serve(),
+    }
+}
+
+/// A `SolveRequest` from the wire, `None` fields filled with the CLI defaults.
+fn spot_from_request(r: &SolveRequest) -> Spot {
+    Spot {
+        label: format!("Custom BTN vs BB, {}", r.flop),
+        flop: r.flop.clone(),
+        oop_range: r.oop.clone().unwrap_or_else(|| OOP.into()),
+        ip_range: r.ip.clone().unwrap_or_else(|| IP.into()),
+        flop_bets: r.sizes.clone().unwrap_or_else(|| DEFAULT_SIZES.into()),
+        stack_bb: r.stack.unwrap_or(DEFAULT_STACK_BB),
+        pot_bb: r.pot.unwrap_or(DEFAULT_POT_BB),
+    }
+}
+
+/// The solved game held by `serve`, plus what the game doesn't track for us:
+/// the display labels of the line walked so far.
+struct ServeSession {
+    game: PostFlopGame,
+    starting_pot: i32,
+    labels: Vec<String>,
+}
+
+/// `serve`: one JSON request per stdin line, one JSON response per stdout line.
+/// All human output (solve progress) goes to stderr — stdout is protocol-only.
+fn serve() {
+    let mut sess: Option<ServeSession> = None;
+    let stdin = std::io::stdin();
+    let mut stdout = std::io::stdout();
+    for line in stdin.lock().lines() {
+        let Ok(line) = line else { break };
+        if line.trim().is_empty() {
+            continue;
+        }
+        let (resp, quit) = respond(&mut sess, &line);
+        // stdout is block-buffered when piped; flush or the trainer hangs.
+        writeln!(stdout, "{resp}").unwrap();
+        stdout.flush().unwrap();
+        if quit {
+            break;
+        }
+    }
+}
+
+/// Handle one request line; returns the response JSON and whether to exit.
+/// Pure in/out (no I/O), so the dispatch is unit-testable without a solve.
+fn respond(sess: &mut Option<ServeSession>, line: &str) -> (Value, bool) {
+    let req: Value = match serde_json::from_str(line) {
+        Ok(v) => v,
+        Err(e) => return (json!({"error": format!("bad JSON: {e}")}), false),
+    };
+    let quit = req.get("op").and_then(Value::as_str) == Some("quit");
+    let mut resp = handle_op(sess, &req).unwrap_or_else(|e| json!({ "error": e }));
+    if let (Some(id), Some(obj)) = (req.get("id"), resp.as_object_mut()) {
+        obj.insert("id".into(), id.clone());
+    }
+    (resp, quit)
+}
+
+fn handle_op(sess: &mut Option<ServeSession>, req: &Value) -> Result<Value, String> {
+    let op = req
+        .get("op")
+        .and_then(Value::as_str)
+        .ok_or("missing \"op\"")?;
+    match op {
+        "quit" => return Ok(json!({"ok": true})),
+        "solve" => {
+            if let Some(v) = req.get("v").and_then(Value::as_u64) {
+                if v != 1 {
+                    return Err(format!("unsupported protocol v{v}; this serve speaks v1"));
+                }
+            }
+            let config = req.get("config").ok_or("solve needs \"config\"")?;
+            let r: SolveRequest =
+                serde_json::from_value(config.clone()).map_err(|e| format!("bad config: {e}"))?;
+            let spot = spot_from_request(&r);
+            let game = build_and_solve(&spot)?;
+            let s = sess.insert(ServeSession {
+                game,
+                starting_pot: (spot.pot_bb * CHIPS_PER_BB) as i32,
+                labels: Vec::new(),
+            });
+            return Ok(node_payload(s));
+        }
+        // Validate the op name before requiring a game, so an unknown op is
+        // reported as such even before the first solve.
+        "node" | "play" | "deal" | "back" | "root" | "snapshot" => {}
+        other => return Err(format!("unknown op {other:?}")),
+    }
+    let s = sess.as_mut().ok_or("no game held — send op:solve first")?;
+    match op {
+        "node" => {}
+        "play" => {
+            let i = req
+                .get("action")
+                .and_then(Value::as_u64)
+                .ok_or("play needs \"action\" (an index)")? as usize;
+            if s.game.is_terminal_node() || s.game.is_chance_node() {
+                return Err("not a player node — use op:deal at chance nodes".into());
+            }
+            let actions = s.game.available_actions();
+            if i >= actions.len() {
+                return Err(format!(
+                    "action {i} out of range ({} actions)",
+                    actions.len()
+                ));
+            }
+            let label = fmt_action(&actions[i]);
+            s.game.play(i);
+            s.labels.push(label);
+        }
+        "deal" => {
+            let card_str = req
+                .get("card")
+                .and_then(Value::as_str)
+                .ok_or("deal needs \"card\" (e.g. \"7h\")")?;
+            if !s.game.is_chance_node() {
+                return Err("not a chance node".into());
+            }
+            let card = card_from_str(card_str)?;
+            if s.game.possible_cards() & (1u64 << card) == 0 {
+                return Err(format!("{card_str} can't be dealt here"));
+            }
+            s.game.play(card as usize);
+            s.labels.push(format!("deal {card_str}"));
+        }
+        "back" => {
+            // history stores card IDs at chance nodes, so replaying it is exact.
+            let mut history = s.game.history().to_vec();
+            if history.pop().is_some() {
+                s.game.apply_history(&history);
+                s.labels.pop();
+            }
+        }
+        "root" => {
+            s.game.back_to_root();
+            s.labels.clear();
+        }
+        "snapshot" => {
+            if s.game.is_terminal_node() || s.game.is_chance_node() {
+                return Err("snapshot needs a player node".into());
+            }
+            let node = node_payload_parts(s);
+            let label = req
+                .get("label")
+                .and_then(Value::as_str)
+                .map(str::to_string)
+                .unwrap_or_else(|| node.line.join(" · "));
+            let hero_oop = s.game.current_player() == 0;
+            let villain_action = s.labels.last().cloned().unwrap_or_default();
+            let spot = extract(
+                &mut s.game,
+                label,
+                node.board,
+                node.pot_bb,
+                hero_oop,
+                villain_action,
+            );
+            return Ok(serde_json::to_value(spot).unwrap());
+        }
+        _ => unreachable!("op validated above"),
+    }
+    Ok(node_payload(s))
+}
+
+fn node_payload(s: &mut ServeSession) -> Value {
+    serde_json::to_value(node_payload_parts(s)).unwrap()
+}
+
+/// The current node as the protocol's [`TreeNode`] payload.
+fn node_payload_parts(s: &mut ServeSession) -> TreeNode {
+    let game = &mut s.game;
+    let board = game
+        .current_board()
+        .iter()
+        .map(|&c| card_to_string(c).unwrap())
+        .collect();
+    let bets = game.total_bet_amount();
+    let pot_bb = (s.starting_pot + bets[0] + bets[1]) as f32 / CHIPS_PER_BB;
+    let line = s.labels.clone();
+    let base = TreeNode {
+        board,
+        pot_bb,
+        line,
+        ..Default::default()
+    };
+
+    if game.is_terminal_node() {
+        return TreeNode {
+            player: "terminal".into(),
+            ..base
+        };
+    }
+    if game.is_chance_node() {
+        let mask = game.possible_cards();
+        return TreeNode {
+            player: "chance".into(),
+            dealable: (0u8..52)
+                .filter(|&c| mask & (1u64 << c) != 0)
+                .map(|c| card_to_string(c).unwrap())
+                .collect(),
+            ..base
+        };
+    }
+
+    let player = game.current_player();
+    game.cache_normalized_weights();
+    let actions: Vec<String> = game.available_actions().iter().map(fmt_action).collect();
+    let hands = holes_to_strings(game.private_cards(player)).unwrap();
+    let n = hands.len();
+    let strat = game.strategy(); // [action * n + hand]
+    let evs = game.expected_values_detail(player); // chips
+    TreeNode {
+        player: if player == 0 { "oop" } else { "ip" }.into(),
+        actions: actions.clone(),
+        hands,
+        freqs: (0..actions.len())
+            .map(|i| strat[i * n..(i + 1) * n].to_vec())
+            .collect(),
+        evs: (0..actions.len())
+            .map(|i| {
+                evs[i * n..(i + 1) * n]
+                    .iter()
+                    .map(|&x| x / CHIPS_PER_BB)
+                    .collect()
+            })
+            .collect(),
+        ..base
     }
 }
 
@@ -143,22 +379,22 @@ fn write_all(spots: &[Spot], out_dir: &Path) {
     }
 }
 
-fn solve_spot(spot: &Spot) -> Vec<(String, SolvedSpot)> {
+/// Build and solve one spot's game. Errors are strings from the solver's own
+/// validation (bad range/size/flop), so `serve` can report them over the
+/// protocol instead of dying. Progress prints on stderr.
+fn build_and_solve(spot: &Spot) -> Result<PostFlopGame, String> {
     let starting_pot = (spot.pot_bb * CHIPS_PER_BB) as i32;
     let card_config = CardConfig {
-        range: [
-            spot.oop_range.parse().unwrap(),
-            spot.ip_range.parse().unwrap(),
-        ],
-        flop: flop_from_str(&spot.flop).unwrap(),
+        range: [spot.oop_range.parse()?, spot.ip_range.parse()?],
+        flop: flop_from_str(&spot.flop)?,
         turn: NOT_DEALT,
         river: NOT_DEALT,
     };
     // Configurable flop c-bet sizes so the c-bet node is a real size-mix.
     // ponytail: turn/river stay single-size to bound tree growth (one size was
     // applied to every street before) — widen them too if you train later nodes.
-    let flop_bets = BetSizeOptions::try_from((spot.flop_bets.as_str(), "2.5x")).unwrap();
-    let later_bets = BetSizeOptions::try_from(("33%", "2.5x")).unwrap();
+    let flop_bets = BetSizeOptions::try_from((spot.flop_bets.as_str(), "2.5x"))?;
+    let later_bets = BetSizeOptions::try_from(("33%", "2.5x"))?;
     let tree_config = TreeConfig {
         initial_state: BoardState::Flop,
         starting_pot,
@@ -175,17 +411,22 @@ fn solve_spot(spot: &Spot) -> Vec<(String, SolvedSpot)> {
         merging_threshold: 0.1,
     };
 
-    let action_tree = ActionTree::new(tree_config).unwrap();
-    let mut game = PostFlopGame::with_config(card_config, action_tree).unwrap();
+    let action_tree = ActionTree::new(tree_config)?;
+    let mut game = PostFlopGame::with_config(card_config, action_tree)?;
     game.allocate_memory(false);
     let target = starting_pot as f32 * 0.005; // 0.5% of pot
     let exploitability = solve(&mut game, 1000, target, false);
-    println!(
+    eprintln!(
         "  exploitability: {:.3} chips ({:.3}bb)",
         exploitability,
         exploitability / CHIPS_PER_BB
     );
+    Ok(game)
+}
 
+fn solve_spot(spot: &Spot) -> Vec<(String, SolvedSpot)> {
+    let mut game = build_and_solve(spot).expect("spot must solve");
+    let starting_pot = (spot.pot_bb * CHIPS_PER_BB) as i32;
     let pot_bb = starting_pot as f32 / CHIPS_PER_BB;
     let board: Vec<String> = flop_from_str(&spot.flop)
         .unwrap()
@@ -350,6 +591,48 @@ mod tests {
             assert_eq!(s.stack_bb, 97.0);
             assert_eq!(s.pot_bb, 6.0);
         }
+    }
+
+    #[test]
+    fn spot_from_request_fills_defaults() {
+        let mut r = SolveRequest::new("Td9d6h");
+        r.sizes = Some("50%".into());
+        let spot = spot_from_request(&r);
+        assert_eq!(spot.flop, "Td9d6h");
+        assert_eq!(spot.flop_bets, "50%");
+        assert_eq!(spot.oop_range, OOP);
+        assert_eq!(spot.stack_bb, DEFAULT_STACK_BB);
+    }
+
+    /// Protocol dispatch without a solve: errors are responses, never panics,
+    /// and `id` echoes back.
+    #[test]
+    fn serve_dispatch_handles_errors_id_and_quit() {
+        let mut sess = None;
+
+        let (resp, quit) = respond(&mut sess, "not json");
+        assert!(resp["error"].as_str().unwrap().contains("bad JSON"));
+        assert!(!quit);
+
+        let (resp, _) = respond(&mut sess, r#"{"op":"node","id":7}"#);
+        assert!(resp["error"].as_str().unwrap().contains("op:solve first"));
+        assert_eq!(resp["id"], 7);
+
+        let (resp, _) = respond(&mut sess, r#"{"op":"warp"}"#);
+        assert!(resp["error"].as_str().unwrap().contains("unknown op"));
+
+        let (resp, _) = respond(
+            &mut sess,
+            r#"{"v":9,"op":"solve","config":{"flop":"Td9d6h"}}"#,
+        );
+        assert!(resp["error"]
+            .as_str()
+            .unwrap()
+            .contains("unsupported protocol"));
+
+        let (resp, quit) = respond(&mut sess, r#"{"op":"quit"}"#);
+        assert_eq!(resp["ok"], true);
+        assert!(quit);
     }
 
     #[test]

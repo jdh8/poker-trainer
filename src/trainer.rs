@@ -15,7 +15,7 @@ use crate::texture::{self, SuitPattern};
 use rand::seq::IndexedRandom;
 use rs_poker::core::{Card, Deck, Suit};
 use std::collections::BTreeMap;
-use std::io::{self, Write};
+use std::io::{self, IsTerminal, Write};
 
 const POT: f64 = 10.0; // bb, fixed for now
 const BET_FRACTIONS: [f64; 5] = [0.33, 0.5, 0.75, 1.0, 1.5];
@@ -304,13 +304,31 @@ fn load_provider() -> Option<FileSolutionProvider> {
 }
 
 /// Entry point for `poker-trainer table` — browse a solved spot's whole strategy
-/// as a GTO-Wizard-style 13×13 grid. Reuses the same provider plumbing as the
-/// drills, so `--board` live-solves a spot to browse just like `drill gto`.
+/// as a GTO-Wizard-style 13×13 grid. With `--board` it live-solves into a
+/// [`TreeSession`] and walks the whole game tree (any line, any runout);
+/// without it, it cycles the curated snapshot library exactly as before.
 pub fn run_table(req: Option<SolveRequest>) {
-    let Some(provider) = resolve_provider(req) else {
-        return;
-    };
-    crate::table::run(provider.spots());
+    match req {
+        Some(req) => {
+            // Bail before the ~30 s solve if there's no terminal to draw on.
+            if !std::io::stdout().is_terminal() {
+                eprintln!(
+                    "`table` draws an interactive color grid — run it in a terminal, not piped."
+                );
+                return;
+            }
+            match crate::tree::TreeSession::start(&req) {
+                Ok((session, root)) => crate::table::run_tree(session, root),
+                Err(e) => eprintln!("Tree session failed: {e}"),
+            }
+        }
+        None => {
+            let Some(provider) = load_provider() else {
+                return;
+            };
+            crate::table::run(provider.spots());
+        }
+    }
 }
 
 /// Entry point for `poker-trainer drill range` (Phase 2).

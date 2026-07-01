@@ -9,6 +9,7 @@
 
 use crate::solution::SolvedSpot;
 use crate::trainer::{fmt_hand_str, parse_hole};
+use crate::tree::{TreeNode, TreeSession};
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use ratatui::layout::{Constraint, Layout};
 use ratatui::style::{Color, Modifier, Style};
@@ -348,6 +349,215 @@ pub fn run(spots: &[SolvedSpot]) {
     ratatui::restore();
 }
 
+// ---- Tree-walking mode (P4 / design doc 03 M1) -----------------------------
+
+/// Suit rows of the chance-node card picker, low→high like solver card IDs.
+const SUITS: &[u8] = b"cdhs";
+
+/// The picker cell at `(suit_row, rank_col)` as a card string, e.g. `"Ah"`.
+fn picker_card(pick: (usize, usize)) -> String {
+    format!("{}{}", RANKS[pick.1] as char, SUITS[pick.0] as char)
+}
+
+/// The 13×4 card picker: ranks across, suits down, dead cards dimmed.
+fn picker_lines(dealable: &[String], pick: (usize, usize)) -> Vec<Line<'static>> {
+    let dim = Style::default().fg(Color::DarkGray);
+    let mut lines = vec![Line::from("Pick the next card:"), Line::default()];
+    for row in 0..SUITS.len() {
+        let mut spans = vec![Span::raw("  ")];
+        for col in 0..RANKS.len() {
+            let card = picker_card((row, col));
+            let live = dealable.contains(&card);
+            let mut style = if live {
+                Style::default().fg(Color::White)
+            } else {
+                dim
+            };
+            if pick == (row, col) {
+                style = style.add_modifier(Modifier::BOLD | Modifier::UNDERLINED);
+            }
+            spans.push(Span::styled(format!(" {card} "), style));
+        }
+        lines.push(Line::from(spans));
+    }
+    lines
+}
+
+/// The numbered action bar for a player node: `1 Check   2 Bet 3.3bb   …`.
+fn action_bar(node: &TreeNode) -> Line<'static> {
+    let mut spans = Vec::new();
+    for (i, action) in node.actions.iter().enumerate() {
+        spans.push(Span::styled(
+            format!("{} ", i + 1),
+            Style::default().add_modifier(Modifier::BOLD),
+        ));
+        spans.push(Span::styled(
+            format!("{action}   "),
+            Style::default().fg(action_color(action, i, node.actions.len())),
+        ));
+    }
+    Line::from(spans)
+}
+
+fn draw_tree(
+    f: &mut Frame,
+    node: &TreeNode,
+    grid: &[[Option<Cell>; 13]; 13],
+    cursor: (usize, usize),
+    pick: (usize, usize),
+) {
+    let rows = Layout::vertical([
+        Constraint::Length(5),  // breadcrumb + board/pot + action bar
+        Constraint::Length(16), // grid or card picker
+        Constraint::Min(5),     // detail | legend
+        Constraint::Length(1),  // help
+    ])
+    .split(f.area());
+
+    let breadcrumb = if node.line.is_empty() {
+        "(root)".to_string()
+    } else {
+        node.line.join(" · ")
+    };
+    let to_act = match node.player.as_str() {
+        "oop" => "OOP (BB) to act",
+        "ip" => "IP (BTN) to act",
+        "chance" => "dealing",
+        _ => "terminal",
+    };
+    let header = Paragraph::new(vec![
+        Line::from(Span::styled(
+            breadcrumb,
+            Style::default().add_modifier(Modifier::BOLD),
+        )),
+        Line::from(format!(
+            "Board {}   Pot {:.1}bb   {}",
+            fmt_hand_str(&node.board.join("")),
+            node.pot_bb,
+            to_act
+        )),
+        action_bar(node),
+    ])
+    .block(Block::default().borders(Borders::ALL).title(" tree "));
+    f.render_widget(header, rows[0]);
+
+    let (body, body_title): (Vec<Line>, &str) = match node.player.as_str() {
+        "chance" => (picker_lines(&node.dealable, pick), " runout "),
+        "terminal" => (
+            vec![Line::from("Terminal node — u to back up, r for root.")],
+            " end of line ",
+        ),
+        _ => (grid_lines(grid, cursor), " strategy "),
+    };
+    f.render_widget(
+        Paragraph::new(body).block(Block::default().borders(Borders::ALL).title(body_title)),
+        rows[1],
+    );
+
+    let mid =
+        Layout::horizontal([Constraint::Percentage(55), Constraint::Percentage(45)]).split(rows[2]);
+    f.render_widget(
+        Paragraph::new(detail_lines(grid, cursor))
+            .block(Block::default().borders(Borders::ALL).title(" hand ")),
+        mid[0],
+    );
+    f.render_widget(
+        Paragraph::new(legend_lines(grid))
+            .block(Block::default().borders(Borders::ALL).title(" actions ")),
+        mid[1],
+    );
+
+    let help = if node.player == "chance" {
+        "  ←↑↓→ / hjkl pick   ·   Enter deal   ·   u up   r root   ·   q quit"
+    } else {
+        "  ←↑↓→ / hjkl move   ·   1-9 act   ·   u up   r root   ·   q quit"
+    };
+    f.render_widget(
+        Paragraph::new(help).style(Style::default().fg(Color::DarkGray)),
+        rows[3],
+    );
+}
+
+/// Walk a solved game tree live: numbered actions descend, `u`/`r` go up, and
+/// chance nodes offer a card picker. The session (and its ~1 GB solver child)
+/// lives for the whole browse; a dead child ends the TUI with its error.
+pub fn run_tree(mut session: TreeSession, mut node: TreeNode) {
+    if !std::io::stdout().is_terminal() {
+        eprintln!("`table` draws an interactive color grid — run it in a terminal, not piped.");
+        return;
+    }
+
+    let mut terminal = ratatui::init();
+    let mut cursor = (0usize, 0usize);
+    let mut pick = (0usize, 0usize);
+    let mut grid = build_grid(&node.to_spot());
+    let mut died: Option<std::io::Error> = None;
+
+    loop {
+        let _ = terminal.draw(|f| draw_tree(f, &node, &grid, cursor, pick));
+
+        let Ok(Event::Key(key)) = event::read() else {
+            continue;
+        };
+        if key.kind != KeyEventKind::Press {
+            continue;
+        }
+        let at_chance = node.player == "chance";
+        // Cursor keys move the grid cursor, or the card picker at chance nodes.
+        let (pos, max) = if at_chance {
+            (&mut pick, (SUITS.len() - 1, RANKS.len() - 1))
+        } else {
+            (&mut cursor, (12, 12))
+        };
+        let nav = match key.code {
+            KeyCode::Char('q') | KeyCode::Esc => break,
+            KeyCode::Up | KeyCode::Char('k') => {
+                pos.0 = pos.0.saturating_sub(1);
+                None
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                pos.0 = (pos.0 + 1).min(max.0);
+                None
+            }
+            KeyCode::Left | KeyCode::Char('h') => {
+                pos.1 = pos.1.saturating_sub(1);
+                None
+            }
+            KeyCode::Right | KeyCode::Char('l') => {
+                pos.1 = (pos.1 + 1).min(max.1);
+                None
+            }
+            KeyCode::Char('u') => Some(session.back()),
+            KeyCode::Char('r') => Some(session.root()),
+            KeyCode::Enter if at_chance => {
+                let card = picker_card(pick);
+                node.dealable.contains(&card).then(|| session.deal(&card))
+            }
+            KeyCode::Char(c @ '1'..='9') if !at_chance => {
+                let i = c as usize - '1' as usize;
+                (i < node.actions.len()).then(|| session.play(i))
+            }
+            _ => None,
+        };
+        match nav {
+            Some(Ok(next)) => {
+                node = next;
+                grid = build_grid(&node.to_spot());
+            }
+            Some(Err(e)) => {
+                died = Some(e);
+                break;
+            }
+            None => {}
+        }
+    }
+
+    ratatui::restore();
+    if let Some(e) = died {
+        eprintln!("Tree session died: {e}");
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -402,6 +612,52 @@ mod tests {
         );
         assert_eq!(segment_widths(&[1.0], CELL_W), vec![CELL_W]);
         assert_eq!(segment_widths(&[], CELL_W), Vec::<usize>::new());
+    }
+
+    #[test]
+    fn picker_card_maps_rows_and_cols() {
+        assert_eq!(picker_card((0, 0)), "Ac"); // top-left: ace of clubs
+        assert_eq!(picker_card((3, 12)), "2s"); // bottom-right: deuce of spades
+        assert_eq!(picker_card((2, 4)), "Th");
+    }
+
+    #[test]
+    fn draws_tree_frames_without_panicking() {
+        use ratatui::backend::TestBackend;
+        use ratatui::Terminal;
+        let player = TreeNode {
+            player: "ip".into(),
+            board: vec!["Td".into(), "9d".into(), "6h".into()],
+            pot_bb: 6.0,
+            line: vec!["Check".into()],
+            actions: vec!["Check".into(), "Bet 2.0bb".into()],
+            hands: vec!["AsKs".into()],
+            freqs: vec![vec![0.4], vec![0.6]],
+            evs: vec![vec![1.0], vec![2.0]],
+            ..Default::default()
+        };
+        let chance = TreeNode {
+            player: "chance".into(),
+            board: vec!["Td".into(), "9d".into(), "6h".into()],
+            pot_bb: 10.0,
+            line: vec!["Check".into(), "Check".into()],
+            dealable: vec!["2c".into(), "Ah".into()],
+            ..Default::default()
+        };
+        let terminal_node = TreeNode {
+            player: "terminal".into(),
+            board: vec!["Td".into(), "9d".into(), "6h".into()],
+            pot_bb: 12.0,
+            line: vec!["Bet 2.0bb".into(), "Fold".into()],
+            ..Default::default()
+        };
+        let mut terminal = Terminal::new(TestBackend::new(80, 30)).unwrap();
+        for node in [player, chance, terminal_node] {
+            let grid = build_grid(&node.to_spot());
+            terminal
+                .draw(|f| draw_tree(f, &node, &grid, (0, 0), (1, 2)))
+                .unwrap();
+        }
     }
 
     #[test]
