@@ -113,6 +113,9 @@ goes through it, so a **file-backed** provider (precomputed sims) and, later, a
    minutes (range/hardware-dependent) and ~1 GB RAM. (Multi-position presets and
    preflop/multiway modeling stay out of scope — this exposes the postflop knobs
    solve-gen already has.)
+4. **Commercial parity (planned)** — phases 4–10 (tree sessions, full-hand
+   drills, study browser, aggregate reports, hand-history analysis,
+   nodelocking) are designed in [docs/design/](docs/design/00-overview.md).
 
 ## Licensing
 
