@@ -1,5 +1,5 @@
 {
-  "label": "SRP BTN vs BB, Kh7c2d (dry) — you're BB, facing BTN 33% c-bet: defend?",
+  "label": "SRP BTN vs BB, Kh7c2d — you're BB, facing BTN 33% c-bet: defend?",
   "board": [
     "2d",
     "7c",
@@ -8,6 +8,22 @@
   "pot_bb": 6.0,
   "hero_oop": true,
   "villain_action": "You check, villain bets 2.0bb (33% pot)",
+  "config": {
+    "formation": "srp-btn-bb",
+    "oop_range": "22+,A2s+,K2s+,Q5s+,J7s+,T7s+,96s+,86s+,75s+,64s+,53s+,A2o+,K9o+,Q9o+,J9o+,T9o,98o",
+    "ip_range": "22+,A2s+,K2s+,Q4s+,J6s+,T6s+,96s+,85s+,75s+,64s+,53s+,43s,A2o+,K7o+,Q8o+,J8o+,T8o+,98o",
+    "flop_sizes": "33%, 75%",
+    "turn_sizes": "33%",
+    "river_sizes": "33%",
+    "stack_bb": 97.0,
+    "pot_bb": 6.0,
+    "rake_rate": 0.0,
+    "rake_cap_bb": 0.0
+  },
+  "generator": {
+    "version": "0.1.0",
+    "exploitability_bb": 0.029610781
+  },
   "strategies": [
     {
       "hand": "2h2c",
