@@ -871,16 +871,7 @@ fn flop_context(board: &[String], hand: &str) -> (String, String) {
 
 /// A flop's one-word texture for grouping: paired beats suits.
 fn texture_name(flop: [Card; 3]) -> String {
-    let t = texture::classify(flop);
-    if t.paired {
-        return "paired".into();
-    }
-    match t.suits {
-        SuitPattern::Monotone => "monotone",
-        SuitPattern::TwoTone => "two-tone",
-        SuitPattern::Rainbow => "rainbow",
-    }
-    .into()
+    texture::class(flop).into()
 }
 
 /// Parse a 3-card board (`["6h","9d","Td"]`) into a flop array.

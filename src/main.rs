@@ -1,6 +1,7 @@
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use poker_trainer::solution::{SolveRequest, SpotConfig};
-use poker_trainer::{stats, trainer};
+use poker_trainer::{report, stats, trainer};
+use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(name = "poker-trainer", about = "Post-flop-focused GTO poker trainer")]
@@ -33,6 +34,33 @@ enum Command {
         /// Only consider the last N decisions.
         #[arg(long)]
         last: Option<usize>,
+    },
+    /// Aggregate flop report over the snapshot library (one row per flop/node).
+    Report {
+        /// Only include spots from this formation (e.g. srp-btn-bb).
+        #[arg(long)]
+        formation: Option<String>,
+        /// Only include IP or OOP nodes.
+        #[arg(long, value_enum)]
+        node: Option<report::NodeSide>,
+        /// Row sort order.
+        #[arg(long, value_enum, default_value = "texture")]
+        sort: report::Sort,
+        /// Write rows as CSV to this file instead of a terminal table.
+        #[arg(long)]
+        csv: Option<PathBuf>,
+    },
+    /// Range-vs-range equity on a flop, with a per-range equity histogram.
+    Equity {
+        /// OOP range, e.g. "22+,A2s+,KTo+".
+        #[arg(long)]
+        oop: String,
+        /// IP range.
+        #[arg(long)]
+        ip: String,
+        /// Flop, e.g. Td9d6h.
+        #[arg(long)]
+        board: String,
     },
 }
 
@@ -146,5 +174,12 @@ fn main() {
         }
         Command::Table { solve } => trainer::run_table(solve.into_request()),
         Command::Stats { by, last } => stats::run(by, last),
+        Command::Report {
+            formation,
+            node,
+            sort,
+            csv,
+        } => report::run_report(formation, node, sort, csv.as_deref()),
+        Command::Equity { oop, ip, board } => report::run_equity(&oop, &ip, &board),
     }
 }

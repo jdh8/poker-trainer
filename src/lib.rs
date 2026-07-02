@@ -4,6 +4,7 @@
 pub mod board;
 pub mod eval;
 pub mod range;
+pub mod report;
 pub mod solution;
 pub mod stats;
 pub mod table;

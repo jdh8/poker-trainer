@@ -44,6 +44,20 @@ pub fn classify(flop: [Card; 3]) -> Texture {
     }
 }
 
+/// A flop's one-word texture class for grouping (stats, reports): paired beats
+/// suit pattern. Stable strings — they're grouping keys, not just display.
+pub fn class(flop: [Card; 3]) -> &'static str {
+    let t = classify(flop);
+    if t.paired {
+        return "paired";
+    }
+    match t.suits {
+        SuitPattern::Monotone => "monotone",
+        SuitPattern::TwoTone => "two-tone",
+        SuitPattern::Rainbow => "rainbow",
+    }
+}
+
 /// Three *distinct* ranks that fit inside a single 5-card straight window
 /// (span ≤ 4), counting the ace as either high or low.
 fn straighty(ranks: [Value; 3]) -> bool {

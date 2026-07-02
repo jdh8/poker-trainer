@@ -34,8 +34,8 @@ design doc (`01`–`06`).
 | Browse the **whole game tree** (any line, any runout) | ✅ `table --board` tree browser | — |
 | Range / EV / equity views, filters | ✅ `s/w/e/y` lenses + `f` bucket filter | — |
 | Runouts report (strategy across all turn/river cards) | ✅ `o` runouts view at chance nodes | — |
-| Aggregate flop reports (all flops, sortable by texture) | ❌ | P8 → [03](03-study-mode.md) |
-| Blockers / range-vs-range equity tools | partial (drill-internal MC equity) | P8 → [03](03-study-mode.md) |
+| Aggregate flop reports (all flops, sortable by texture) | ✅ `report` (+`--csv`, texture rollups) | — |
+| Blockers / range-vs-range equity tools | ✅ range-vs-range `equity` (+histogram); blockers pending | P8 → [03](03-study-mode.md) |
 | Single-node drills, EV-loss scoring | ✅ `drill gto` | — |
 | Range-builder drills + leak buckets | ✅ `drill range` | — |
 | **Full-hand practice** (flop→river vs. equilibrium villain) | ✅ `drill hand` (`--board` spots; library sampling needs P6) | — |
@@ -73,7 +73,7 @@ Continues the README's phases 0–3. Sizes are relative (S/M/L).
 | **P5** | Multi-street full-hand drill + persistent stats/leak profile | M | P4 | [04](04-training-mode.md) |
 | **P6** | Library v2: formations, preflop chart files, manifests, rake, config-hash cache keys | M | — (parallel to P4) | [02](02-solution-library.md) |
 | **P7** | Study browser v2: tree walking, range/EV/EQ views, runouts | M | P4 | [03](03-study-mode.md) |
-| **P8** | Aggregate flop reports + equity/blocker tools | M | P6 | [03](03-study-mode.md) |
+| **P8** | Aggregate flop reports + equity/blocker tools (`report`, `equity` done; blocker column pending) | M | P6 | [03](03-study-mode.md) |
 | **P9** | `analyze`: hand-history import, EV-loss + leak report | L | P4, P6 | [05](05-analyze.md) |
 | **P10** | Nodelocking end-to-end (lock, re-solve, compare) | M | P4, P7 | [06](06-solver-capabilities.md) |
 | — | ICM (solver fork), bunching, multiway | research | — | [06](06-solver-capabilities.md) |
