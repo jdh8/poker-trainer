@@ -29,6 +29,11 @@ enum Command {
         /// e.g. "Check,Bet 2.0bb,deal 2c" (as printed by analyze's blunders).
         #[arg(long)]
         line: Option<String>,
+        /// Lock file (written by `S` in the lock editor): if it exists, its
+        /// line + cell locks are replayed on startup; either way it's where
+        /// `S` saves. Needs --board.
+        #[arg(long)]
+        locks: Option<PathBuf>,
     },
     /// Report your recorded drill history as a leak profile.
     Stats {
@@ -197,7 +202,9 @@ fn main() {
                 Mode::Preflop => trainer::run_preflop_drill(),
             }
         }
-        Command::Table { solve, line } => trainer::run_table(solve.into_request(), line),
+        Command::Table { solve, line, locks } => {
+            trainer::run_table(solve.into_request(), line, locks)
+        }
         Command::Stats { by, last } => stats::run(by, last),
         Command::Report {
             formation,

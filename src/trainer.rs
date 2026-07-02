@@ -20,6 +20,7 @@ use rs_poker::core::{Card, Deck, Suit};
 use rs_poker::holdem::RangeParser;
 use std::collections::BTreeMap;
 use std::io::{self, IsTerminal, Write};
+use std::path::PathBuf;
 
 /// A spot's formation id for history records; pre-v2 files carry no config and
 /// were all generated as BTN-vs-BB SRPs.
@@ -486,7 +487,7 @@ fn load_provider() -> Option<FileSolutionProvider> {
 /// without it, it cycles the curated snapshot library exactly as before.
 /// `line` (needs `--board`) descends that action line before the browser opens
 /// — the replay handoff printed by `analyze`'s blunder list (design doc 05).
-pub fn run_table(req: Option<SolveRequest>, line: Option<String>) {
+pub fn run_table(req: Option<SolveRequest>, line: Option<String>, locks: Option<PathBuf>) {
     match req {
         Some(req) => {
             // Bail before the ~30 s solve if there's no terminal to draw on.
@@ -496,15 +497,56 @@ pub fn run_table(req: Option<SolveRequest>, line: Option<String>) {
                 );
                 return;
             }
+            // An existing --locks file is loaded and replayed; a missing one
+            // is just where `S` will save.
+            let mut loaded = match &locks {
+                Some(p) if p.exists() => match crate::table::LockFile::load(p) {
+                    Ok(f) => Some(f),
+                    Err(e) => {
+                        eprintln!("--locks: {e}");
+                        return;
+                    }
+                },
+                _ => None,
+            };
+            if let Some(f) = &loaded {
+                if line.is_some() {
+                    eprintln!("--line and a loaded --locks file both set a line; drop one.");
+                    return;
+                }
+                let flop: String = f.board.iter().take(3).map(String::as_str).collect();
+                if !flop.eq_ignore_ascii_case(&req.flop) {
+                    eprintln!(
+                        "--locks was saved on flop {flop}, not {} — refusing to apply it.",
+                        req.flop
+                    );
+                    return;
+                }
+                if f.config_hash != req.config.hash8() {
+                    eprintln!(
+                        "warning: --locks was saved under config {}, this solve is {} — \
+                         cells may not line up.",
+                        f.config_hash,
+                        req.config.hash8()
+                    );
+                }
+            }
             match crate::tree::TreeSession::start(&req) {
                 Ok((mut session, mut root)) => {
-                    if let Some(spec) = line {
+                    let spec = loaded
+                        .as_ref()
+                        .map(|f| f.line.join(","))
+                        .filter(|s| !s.is_empty())
+                        .or(line);
+                    if let Some(spec) = spec {
                         match descend(&mut session, root, &spec) {
                             Ok(node) => root = node,
                             // Browse from wherever the line stopped matching —
-                            // the solve is too expensive to throw away.
+                            // the solve is too expensive to throw away. Locks
+                            // saved for a deeper node must not apply here.
                             Err(e) => {
-                                eprintln!("--line stopped early: {e}");
+                                eprintln!("line stopped early: {e}");
+                                loaded = None;
                                 match session.node() {
                                     Ok(node) => root = node,
                                     Err(e) => {
@@ -515,7 +557,15 @@ pub fn run_table(req: Option<SolveRequest>, line: Option<String>) {
                             }
                         }
                     }
-                    crate::table::run_tree(session, root)
+                    crate::table::run_tree(
+                        session,
+                        root,
+                        crate::table::LockArgs {
+                            path: locks,
+                            loaded,
+                            config_hash: req.config.hash8(),
+                        },
+                    )
                 }
                 Err(e) => eprintln!("Tree session failed: {e}"),
             }
@@ -523,6 +573,10 @@ pub fn run_table(req: Option<SolveRequest>, line: Option<String>) {
         None => {
             if line.is_some() {
                 eprintln!("--line needs --board (a line only exists in a solved tree).");
+                return;
+            }
+            if locks.is_some() {
+                eprintln!("--locks needs --board (locks live in a solved tree).");
                 return;
             }
             let Some(provider) = load_provider() else {

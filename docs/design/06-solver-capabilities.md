@@ -48,12 +48,15 @@ focused cell to a pure action (a "never raise" / "always call" style lock),
 lock, and re-solves. The grid then switches to a `d` EV-delta lens comparing
 the re-solved EVs against the pre-lock baseline at that node.
 
+Shipped later (P10 M2): lock-mode presets — `o` overfold ×1.5, `n` never
+raise, whole-node cell edits derived from the current mix — and saved lock
+files: `S` writes the line + cell edits as JSON (`--locks` path or an
+auto-named file), and `table --locks <file>` replays them on startup,
+opening on the delta lens.
+
 Deliberately deferred (lazy version shipped, upgrade when wanted):
-- **Fractional / bucket-preset cell edits** ("overfold ×1.5") — today a cell
-  locks to one pure action; the trainer already owns the grid→combo expansion,
-  so richer per-cell mixes are a UI-only add.
-- **Saved lock files** (named JSON of line + cell edits, and the drill
-  "villain persona" reuse in 04).
+- **Drill "villain personas"** — `drill hand` taking a `--locks` file so you
+  practice against the saved exploit profile (04's reuse).
 - **Cross-node EV-delta.** The delta lens is valid at the node you resolved on;
   navigating clears the baseline. A session-wide delta needs `serve` to retain
   the unlocked game alongside the locked one.

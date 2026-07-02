@@ -35,16 +35,16 @@ design doc (`01`–`06`).
 | Range / EV / equity views, filters | ✅ `s/w/e/y` lenses + `f` bucket filter | — |
 | Runouts report (strategy across all turn/river cards) | ✅ `o` runouts view at chance nodes | — |
 | Aggregate flop reports (all flops, sortable by texture) | ✅ `report` (+`--csv`, texture rollups) | — |
-| Blockers / range-vs-range equity tools | ✅ range-vs-range `equity` (+histogram); blockers pending | P8 → [03](03-study-mode.md) |
+| Blockers / range-vs-range equity tools | ✅ range-vs-range `equity` (+histogram) + blocker panel column | — |
 | Single-node drills, EV-loss scoring | ✅ `drill gto` | — |
 | Range-builder drills + leak buckets | ✅ `drill range` | — |
 | **Full-hand practice** (flop→river vs. equilibrium villain) | ✅ `drill hand` (`--board` spots; library sampling needs P6) | — |
 | Persistent session stats, leak trends | ✅ `stats` over `history.jsonl` | — |
-| Preflop charts + preflop drills | partial (charts in `data/ranges/`, 5 formations) | `drill preflop` → [04](04-training-mode.md) |
+| Preflop charts + preflop drills | ✅ `drill preflop` off the charts (accuracy-only, no EV) | — |
 | Formation breadth (positions, 3-bet pots, stack depths, rake) | ✅ config-side (5 formations, rake, manifests); breadth tiers solve locally | data-gen → [02](02-solution-library.md) |
 | Hand-history import & leak analysis | ✅ `analyze` (PS+GG import, EV-loss scoring, blunder replay, `--jsonl`) | — |
 | Custom spot solving (ranges/sizes/stacks) | ✅ `--board` + knobs | — |
-| **Nodelocking** (lock villain, re-solve exploit) | ❌ (solver supports it) | P10 → [06](06-solver-capabilities.md) |
+| **Nodelocking** (lock villain, re-solve exploit) | ✅ lock editor + presets + saved lock files | — |
 | ICM / MTT postflop | ❌ (engine lacks it) | research → [06](06-solver-capabilities.md) |
 | Multiway postflop | ❌ (engine is 2-player) | out of scope → [06](06-solver-capabilities.md) |
 
@@ -75,7 +75,7 @@ Continues the README's phases 0–3. Sizes are relative (S/M/L).
 | **P7** | Study browser v2: tree walking, range/EV/EQ views, runouts | M | P4 | [03](03-study-mode.md) |
 | **P8** | Aggregate flop reports + equity/blocker tools (`report`, `equity` done; blocker column pending) | M | P6 | [03](03-study-mode.md) |
 | **P9** | `analyze`: hand-history import, EV-loss + leak report | L | P4, P6 | [05](05-analyze.md) |
-| **P10** | Nodelocking end-to-end (lock, re-solve, compare) — done; bucket presets + saved-lock files pending | M | P4, P7 | [06](06-solver-capabilities.md) |
+| **P10** | Nodelocking end-to-end (lock, re-solve, compare) + presets + saved-lock files — done | M | P4, P7 | [06](06-solver-capabilities.md) |
 | — | ICM (solver fork), bunching, multiway | research | — | [06](06-solver-capabilities.md) |
 
 P4 and P6 are independent and both unblock most of the rest; do P4 first —

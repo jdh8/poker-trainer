@@ -18,8 +18,10 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph};
 use ratatui::Frame;
 use rs_poker::core::Card;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::IsTerminal;
+use std::path::{Path, PathBuf};
 
 /// Ranks high→low; a card's index into this is its grid row/col (A = 0).
 const RANKS: &[u8] = b"AKQJT98765432";
@@ -934,6 +936,143 @@ struct TreeView {
     /// P8: villain's continue range vs. this node's biggest bet, for the
     /// side panel's blocker line.
     blockers: Option<Blockers>,
+    /// One-line status shown in place of the help row (e.g. "Saved …").
+    notice: Option<String>,
+}
+
+/// A saved nodelock (design doc 06): the line it applies at plus the cell
+/// edits, as written by `S` in the lock editor and loaded by `--locks`.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LockFile {
+    pub v: u32,
+    /// Board at the locked node, e.g. `["Td","9d","6h","2c"]`.
+    pub board: Vec<String>,
+    /// Action labels root → locked node, in `--line` format.
+    pub line: Vec<String>,
+    /// `SpotConfig::hash8` of the solve this was saved from; mismatches warn.
+    pub config_hash: String,
+    pub locks: Vec<LockEntry>,
+}
+
+/// One locked grid cell: `(row, col)` plus its per-action frequencies.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LockEntry {
+    pub row: usize,
+    pub col: usize,
+    pub freqs: Vec<f32>,
+}
+
+impl LockFile {
+    pub fn load(path: &Path) -> std::io::Result<Self> {
+        let s = std::fs::read_to_string(path)?;
+        serde_json::from_str(&s).map_err(|e| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("{}: {e}", path.display()),
+            )
+        })
+    }
+}
+
+/// Lock-file plumbing for [`run_tree`]: where `S` saves, and a file already
+/// loaded (and line-descended) by the caller to apply on startup.
+pub struct LockArgs {
+    pub path: Option<PathBuf>,
+    pub loaded: Option<LockFile>,
+    pub config_hash: String,
+}
+
+/// Default save target when `--locks` wasn't given: board + line slug in cwd.
+fn auto_lock_path(node: &TreeNode) -> PathBuf {
+    let slug: Vec<String> = node
+        .line
+        .iter()
+        .map(|step| {
+            step.chars()
+                .filter(|c| c.is_ascii_alphanumeric() || *c == '.')
+                .collect::<String>()
+                .to_lowercase()
+        })
+        .collect();
+    let board = node.board.join("").to_lowercase();
+    PathBuf::from(if slug.is_empty() {
+        format!("{board}.locks.json")
+    } else {
+        format!("{board}-{}.locks.json", slug.join("-"))
+    })
+}
+
+/// Is this action label a bet/raise (as opposed to check/call/fold)?
+fn is_aggressive(label: &str) -> bool {
+    label.starts_with("Bet") || label.starts_with("Raise") || label.starts_with("All-in")
+}
+
+/// Lock presets (design doc 06): whole-node cell edits derived from each
+/// cell's current mix, reviewed in lock mode and applied by `R` as usual.
+/// `Overfold` scales every cell's fold frequency ×1.5 (capped at 1) and
+/// renormalizes the rest; `NeverRaise` zeroes bet/raise actions and
+/// renormalizes, dumping pure-raise cells on the first passive action.
+#[derive(Clone, Copy)]
+enum Preset {
+    Overfold,
+    NeverRaise,
+}
+
+fn preset_locks(grid: &Grid, preset: Preset) -> CellLocks {
+    let mut out = CellLocks::new();
+    for (r, row) in grid.iter().enumerate() {
+        for (c, cell) in row.iter().enumerate() {
+            let Some(cell) = cell.as_ref() else { continue };
+            let mut freqs = cell.freqs.clone();
+            match preset {
+                Preset::Overfold => {
+                    let Some(fold) = cell.actions.iter().position(|a| a == "Fold") else {
+                        continue;
+                    };
+                    let f = freqs[fold];
+                    if f <= 0.0 {
+                        continue; // never-folding cells have nothing to scale
+                    }
+                    let nf = (f * 1.5).min(1.0);
+                    let scale = if f < 1.0 { (1.0 - nf) / (1.0 - f) } else { 1.0 };
+                    for (i, x) in freqs.iter_mut().enumerate() {
+                        *x = if i == fold { nf } else { *x * scale };
+                    }
+                }
+                Preset::NeverRaise => {
+                    let mass: f32 = cell
+                        .actions
+                        .iter()
+                        .zip(&freqs)
+                        .filter(|(a, _)| is_aggressive(a))
+                        .map(|(_, f)| f)
+                        .sum();
+                    if mass <= 0.0 {
+                        continue; // already never raises
+                    }
+                    for (a, x) in cell.actions.iter().zip(freqs.iter_mut()) {
+                        if is_aggressive(a) {
+                            *x = 0.0;
+                        }
+                    }
+                    let rest = 1.0 - mass;
+                    if rest > 1e-6 {
+                        for x in &mut freqs {
+                            *x /= rest;
+                        }
+                    } else {
+                        // Pure-raise cell: move it to the first passive action.
+                        let Some(p) = cell.actions.iter().position(|a| !is_aggressive(a)) else {
+                            continue;
+                        };
+                        freqs[p] = 1.0;
+                    }
+                }
+            }
+            out.insert((r, c), freqs);
+        }
+    }
+    out
 }
 
 /// Villain's continuing range after hero's biggest aggressive action at the
@@ -975,11 +1114,7 @@ fn villain_continues(
     if node.player != "oop" && node.player != "ip" {
         return Ok(None);
     }
-    let Some(i) = node
-        .actions
-        .iter()
-        .rposition(|a| a.starts_with("Bet") || a.starts_with("Raise") || a.starts_with("All-in"))
-    else {
+    let Some(i) = node.actions.iter().rposition(|a| is_aggressive(a)) else {
         return Ok(None);
     };
     let vnode = session.play(i)?;
@@ -1120,13 +1255,16 @@ fn draw_tree(f: &mut Frame, node: &TreeNode, view: &TreeView) {
         mid[1],
     );
 
-    let help = if node.player == "chance" {
+    let help = if let Some(n) = &view.notice {
+        n.as_str()
+    } else if node.player == "chance" {
         "  ←↑↓→ / hjkl pick   ·   Enter deal   ·   o runouts   ·   u up   r root   ·   q quit"
     } else if view.lock_mode {
-        "  ←↑↓→ / hjkl move   ·   1-9 lock cell to action   ·   c clear   ·   R resolve   ·   L/Esc cancel"
+        "  hjkl move · 1-9 lock cell · o overfold · n no-raise · c clear · S save · R resolve · L/Esc cancel"
     } else {
         "  ←↑↓→ move · 1-9 act · s/w/e/y/d lens · f filter · L lock · u up · r root · q quit"
     };
+    let help = help.to_string();
     f.render_widget(
         Paragraph::new(help).style(Style::default().fg(Color::DarkGray)),
         rows[3],
@@ -1136,10 +1274,43 @@ fn draw_tree(f: &mut Frame, node: &TreeNode, view: &TreeView) {
 /// Walk a solved game tree live: numbered actions descend, `u`/`r` go up, and
 /// chance nodes offer a card picker. The session (and its ~1 GB solver child)
 /// lives for the whole browse; a dead child ends the TUI with its error.
-pub fn run_tree(mut session: TreeSession, mut node: TreeNode) {
+pub fn run_tree(mut session: TreeSession, mut node: TreeNode, mut lock_args: LockArgs) {
     if !std::io::stdout().is_terminal() {
         eprintln!("`table` draws an interactive color grid — run it in a terminal, not piped.");
         return;
+    }
+
+    // A loaded lock file replays the saved edits before the TUI opens: same
+    // flow as `R`, so the browser starts on the delta lens vs. the unlocked
+    // baseline. The caller already descended to the file's line.
+    let (mut init_locks, mut init_baseline, mut init_lens) =
+        (CellLocks::new(), None, Lens::Strategy);
+    if let Some(f) = lock_args.loaded.take() {
+        let cells: CellLocks = f
+            .locks
+            .into_iter()
+            .filter(|e| e.row < 13 && e.col < 13 && e.freqs.len() == node.actions.len())
+            .map(|e| ((e.row, e.col), e.freqs))
+            .collect();
+        if cells.is_empty() {
+            eprintln!("Lock file has no locks applicable at this node — ignoring it.");
+        } else {
+            eprintln!("Applying {} saved cell locks and re-solving…", cells.len());
+            let grid = build_grid_node(&node);
+            let strategy = expand_lock(&node, &cells);
+            match session.lock(&strategy).and_then(|_| session.resolve()) {
+                Ok(next) => {
+                    init_baseline = Some(baseline_map(&grid));
+                    init_locks = cells;
+                    init_lens = Lens::Delta;
+                    node = next;
+                }
+                Err(e) => {
+                    eprintln!("Applying the lock file failed: {e}");
+                    return;
+                }
+            }
+        }
     }
 
     let mut terminal = ratatui::init();
@@ -1147,13 +1318,14 @@ pub fn run_tree(mut session: TreeSession, mut node: TreeNode) {
         grid: build_grid_node(&node),
         cursor: (0, 0),
         pick: (0, 0),
-        lens: Lens::Strategy,
+        lens: init_lens,
         filter: None,
         runouts: None,
         lock_mode: false,
-        locks: CellLocks::new(),
-        baseline_ev: None,
+        locks: init_locks,
+        baseline_ev: init_baseline,
         blockers: villain_continues(&mut session, &node).unwrap_or(None),
+        notice: None,
     };
     let mut died: Option<std::io::Error> = None;
 
@@ -1166,6 +1338,7 @@ pub fn run_tree(mut session: TreeSession, mut node: TreeNode) {
         if key.kind != KeyEventKind::Press {
             continue;
         }
+        view.notice = None;
         let at_chance = node.player == "chance";
         // Cursor keys move the grid cursor, or the card picker at chance nodes.
         let (pos, max) = if at_chance {
@@ -1225,6 +1398,50 @@ pub fn run_tree(mut session: TreeSession, mut node: TreeNode) {
                 if view.lock_mode {
                     view.locks.clear();
                 }
+                None
+            }
+            // Lock-mode presets: whole-node cell edits from the current mix.
+            KeyCode::Char('o') if view.lock_mode => {
+                view.locks = preset_locks(&view.grid, Preset::Overfold);
+                None
+            }
+            KeyCode::Char('n') if view.lock_mode => {
+                view.locks = preset_locks(&view.grid, Preset::NeverRaise);
+                None
+            }
+            KeyCode::Char('S') if view.lock_mode && !view.locks.is_empty() => {
+                let path = lock_args
+                    .path
+                    .clone()
+                    .unwrap_or_else(|| auto_lock_path(&node));
+                let file = LockFile {
+                    v: 1,
+                    board: node.board.clone(),
+                    line: node.line.clone(),
+                    config_hash: lock_args.config_hash.clone(),
+                    locks: view
+                        .locks
+                        .iter()
+                        .map(|(&(row, col), freqs)| LockEntry {
+                            row,
+                            col,
+                            freqs: freqs.clone(),
+                        })
+                        .collect(),
+                };
+                view.notice = Some(
+                    match serde_json::to_string_pretty(&file)
+                        .map_err(std::io::Error::from)
+                        .and_then(|s| std::fs::write(&path, s))
+                    {
+                        Ok(()) => format!(
+                            "  Saved {} cell locks to {} (reload with --locks).",
+                            file.locks.len(),
+                            path.display()
+                        ),
+                        Err(e) => format!("  Saving locks to {} failed: {e}", path.display()),
+                    },
+                );
                 None
             }
             KeyCode::Char('c') if view.lock_mode => {
@@ -1491,6 +1708,88 @@ mod tests {
         assert_eq!(b.blocked(hole("7c2c")), 0.0);
     }
 
+    fn one_cell_grid(actions: &[&str], freqs: &[f32]) -> Grid {
+        let mut g: Grid = std::array::from_fn(|_| std::array::from_fn(|_| None));
+        g[0][0] = Some(Cell {
+            label: "AA".into(),
+            combos: 1,
+            actions: actions.iter().map(|s| s.to_string()).collect(),
+            freqs: freqs.to_vec(),
+            weight: 1.0,
+            equity: 0.5,
+            ev: 0.0,
+            rows: vec![],
+        });
+        g
+    }
+
+    #[test]
+    fn presets_rescale_the_cell_mix() {
+        // Overfold ×1.5: fold .4 -> .6, the rest scaled by (1-.6)/(1-.4).
+        let g = one_cell_grid(&["Fold", "Call", "Raise to 6.0bb"], &[0.4, 0.4, 0.2]);
+        let locks = preset_locks(&g, Preset::Overfold);
+        let f = &locks[&(0, 0)];
+        assert!((f[0] - 0.6).abs() < 1e-6);
+        assert!((f[1] - 0.4 * (2.0 / 3.0)).abs() < 1e-6);
+        assert!((f[2] - 0.2 * (2.0 / 3.0)).abs() < 1e-6);
+
+        // A never-folding cell has nothing to overfold; no Fold action, no locks.
+        assert!(preset_locks(
+            &one_cell_grid(&["Fold", "Call"], &[0.0, 1.0]),
+            Preset::Overfold
+        )
+        .is_empty());
+        assert!(preset_locks(
+            &one_cell_grid(&["Check", "Bet"], &[0.5, 0.5]),
+            Preset::Overfold
+        )
+        .is_empty());
+
+        // Never-raise zeroes aggression and renormalizes the rest.
+        let g = one_cell_grid(&["Fold", "Call", "Bet 2.0bb"], &[0.2, 0.3, 0.5]);
+        let f = &preset_locks(&g, Preset::NeverRaise)[&(0, 0)];
+        assert!((f[0] - 0.4).abs() < 1e-6);
+        assert!((f[1] - 0.6).abs() < 1e-6);
+        assert_eq!(f[2], 0.0);
+
+        // A pure-raise cell dumps onto the first passive action.
+        let g = one_cell_grid(&["Fold", "Call", "Raise to 9.0bb"], &[0.0, 0.0, 1.0]);
+        let f = &preset_locks(&g, Preset::NeverRaise)[&(0, 0)];
+        assert_eq!(f, &vec![1.0, 0.0, 0.0]);
+    }
+
+    #[test]
+    fn lock_file_roundtrips_through_json() {
+        let file = LockFile {
+            v: 1,
+            board: vec!["Td".into(), "9d".into(), "6h".into()],
+            line: vec!["Check".into(), "Bet 2.0bb".into()],
+            config_hash: "f55543b1".into(),
+            locks: vec![LockEntry {
+                row: 0,
+                col: 1,
+                freqs: vec![0.25, 0.75],
+            }],
+        };
+        let json = serde_json::to_string(&file).unwrap();
+        let back: LockFile = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.line, file.line);
+        assert_eq!(back.locks[0].freqs, file.locks[0].freqs);
+    }
+
+    #[test]
+    fn auto_lock_path_slugs_the_line() {
+        let node = TreeNode {
+            board: vec!["Td".into(), "9d".into(), "6h".into(), "2c".into()],
+            line: vec!["Check".into(), "Bet 2.0bb".into(), "deal 2c".into()],
+            ..Default::default()
+        };
+        assert_eq!(
+            auto_lock_path(&node).to_str().unwrap(),
+            "td9d6h2c-check-bet2.0bb-deal2c.locks.json"
+        );
+    }
+
     #[test]
     fn heat_color_hits_the_ramp_ends() {
         assert_eq!(heat_color(0.0), Color::Rgb(200, 60, 50));
@@ -1556,6 +1855,7 @@ mod tests {
                             (hole("QsQd"), 0.0),
                         ],
                     }),
+                    notice: Some("Saved 2 cell locks to spot.locks.json".into()),
                 };
                 terminal.draw(|f| draw_tree(f, &node, &view)).unwrap();
             }
