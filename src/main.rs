@@ -1,6 +1,6 @@
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use poker_trainer::solution::SolveRequest;
-use poker_trainer::trainer;
+use poker_trainer::{stats, trainer};
 
 #[derive(Parser)]
 #[command(name = "poker-trainer", about = "Post-flop-focused GTO poker trainer")]
@@ -24,6 +24,15 @@ enum Command {
     Table {
         #[command(flatten)]
         solve: SolveArgs,
+    },
+    /// Report your recorded drill history as a leak profile.
+    Stats {
+        /// Group decisions by this dimension.
+        #[arg(long, value_enum, default_value = "bucket")]
+        by: stats::GroupBy,
+        /// Only consider the last N decisions.
+        #[arg(long)]
+        last: Option<usize>,
     },
 }
 
@@ -78,6 +87,8 @@ enum Mode {
     Gto,
     /// Assign an action for your whole range; scored with per-bucket leak stats.
     Range,
+    /// Play full hands (flop→river) vs. the equilibrium villain; needs --board.
+    Hand,
 }
 
 fn main() {
@@ -89,8 +100,10 @@ fn main() {
                 Mode::Texture => trainer::run_texture_drill(),
                 Mode::Gto => trainer::run_gto_drill(req),
                 Mode::Range => trainer::run_range_drill(req),
+                Mode::Hand => trainer::run_hand_drill(req),
             }
         }
         Command::Table { solve } => trainer::run_table(solve.into_request()),
+        Command::Stats { by, last } => stats::run(by, last),
     }
 }

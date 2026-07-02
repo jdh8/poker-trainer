@@ -11,11 +11,17 @@ use crate::solution::{
     FileSolutionProvider, LiveSolutionProvider, NodeStrategy, SolutionProvider, SolveRequest,
     SolvedSpot,
 };
+use crate::stats;
 use crate::texture::{self, SuitPattern};
+use crate::tree::{TreeNode, TreeSession};
 use rand::seq::IndexedRandom;
+use rand::RngExt;
 use rs_poker::core::{Card, Deck, Suit};
 use std::collections::BTreeMap;
 use std::io::{self, IsTerminal, Write};
+
+// ponytail: the only formation in the library until P6 adds breadth.
+const FORMATION: &str = "srp-btn-bb";
 
 const POT: f64 = 10.0; // bb, fixed for now
 const BET_FRACTIONS: [f64; 5] = [0.33, 0.5, 0.75, 1.0, 1.5];
@@ -240,9 +246,25 @@ pub fn run_gto_drill(req: Option<SolveRequest>) {
         let ev_loss = ns.ev_loss(chosen);
         played += 1;
         total_ev_loss += ev_loss;
-        if ns.frequencies[chosen] >= 0.05 {
+        if ns.frequencies[chosen] >= stats::GTO_ACTION_FREQ {
             matched += 1;
         }
+
+        let (texture, bucket) = flop_context(&spot.board, &hand.hand);
+        stats::record(&stats::StatRecord {
+            formation: FORMATION.into(),
+            flop: spot.board.join("").to_lowercase(),
+            texture,
+            street: "flop".into(),
+            hand: hand.hand.clone(),
+            bucket,
+            line: vec![spot.villain_action.clone()],
+            chosen: ns.actions[chosen].clone(),
+            best: ns.actions[best].clone(),
+            ev_loss: Some(ev_loss),
+            gto_freq: Some(ns.frequencies[chosen]),
+            ..stats::StatRecord::new("gto")
+        });
 
         println!("\n  GTO mix:");
         for i in 0..ns.actions.len() {
@@ -396,7 +418,26 @@ pub fn run_range_drill(req: Option<SolveRequest>) {
         chosen.insert(sub, pick);
     }
 
-    report_range(&groups, &chosen, actions);
+    let leaks = score_buckets(&groups, &chosen);
+    let (texture, _) = flop_context(&spot.board, "");
+    for l in &leaks {
+        let combos = l.combos.max(1) as f32;
+        // A bucket assignment is one decision: `hand`/`best` stay empty (no
+        // single combo or best action speaks for the whole bucket).
+        stats::record(&stats::StatRecord {
+            formation: FORMATION.into(),
+            flop: spot.board.join("").to_lowercase(),
+            texture: texture.clone(),
+            street: "flop".into(),
+            bucket: l.subrange.bucket.to_string(),
+            line: vec![spot.villain_action.clone()],
+            chosen: actions[l.action].clone(),
+            ev_loss: Some(l.ev_loss / combos),
+            gto_freq: Some(l.freq_sum / combos),
+            ..stats::StatRecord::new("range")
+        });
+    }
+    report_range(&leaks, actions);
 }
 
 /// One sub-bucket's contribution to the range score (all sums are over its combos).
@@ -442,12 +483,7 @@ fn score_buckets(
 }
 
 /// Print the per-sub-bucket leak report.
-fn report_range(
-    groups: &BTreeMap<Subrange, Vec<&NodeStrategy>>,
-    chosen: &BTreeMap<Subrange, usize>,
-    actions: &[String],
-) {
-    let leaks = score_buckets(groups, chosen);
+fn report_range(leaks: &[BucketLeak], actions: &[String]) {
     let combos: usize = leaks.iter().map(|l| l.combos).sum();
     if combos == 0 {
         println!("\nNo combos to score.");
@@ -469,7 +505,7 @@ fn report_range(
         "  {:<12} {:>6}  {:<14} {:>9}  {:>12}",
         "bucket", "combos", "your action", "avg loss", "GTO plays it"
     );
-    for l in &leaks {
+    for l in leaks {
         println!(
             "  {:<12} {:>6}  {:<14} {:>6.2}bb  {:>11.0}%",
             l.subrange.to_string(),
@@ -479,6 +515,344 @@ fn report_range(
             100.0 * (l.freq_sum / l.combos as f32)
         );
     }
+}
+
+/// Entry point for `poker-trainer drill hand` (Phase 5) — play full hands
+/// (flop → river) against the equilibrium villain on a live tree session.
+///
+/// Villain is dealt a hidden hand from its range and plays the solved mix *for
+/// that specific hand*, so runouts stay honest: a villain that check-raises
+/// does so with the right part of its range (design doc 04). Hero decisions
+/// are scored on EV loss but only revealed in the end-of-hand replay, so later
+/// streets aren't played with the answer key open.
+pub fn run_hand_drill(req: Option<SolveRequest>) {
+    let Some(req) = req else {
+        // ponytail: a tree session needs a solve config; sampling curated
+        // spots arrives with the P6 library manifests.
+        eprintln!("`drill hand` needs --board <flop> for now (e.g. --board Td9d6h).");
+        return;
+    };
+    println!("poker-trainer — full-hand drill. Play flop to river; q quits.\n");
+    if let Err(e) = hand_drill_loop(&req) {
+        eprintln!("Tree session failed: {e}");
+    }
+}
+
+fn hand_drill_loop(req: &SolveRequest) -> io::Result<()> {
+    let (mut session, root) = TreeSession::start(req)?;
+    let oop_hands = root.hands.clone();
+    // The node payload only carries the *acting* player's hands, and OOP acts
+    // at the root — one step down any action is an IP node with IP's range.
+    let ip_hands = session.play(0)?.hands;
+
+    let mut rng = rand::rng();
+    let mut hands = 0u32;
+    let mut decisions: Vec<HandDecision> = Vec::new(); // whole session
+
+    loop {
+        let root = session.root()?;
+        let hero_oop = rng.random_bool(0.5);
+        let (hero_seat, hero_range, villain_range) = if hero_oop {
+            ("oop", &oop_hands, &ip_hands)
+        } else {
+            ("ip", &ip_hands, &oop_hands)
+        };
+        // ponytail: uniform over combos — protocol v1 carries no range weights
+        // and every shipped range is unweighted; put weights on the wire
+        // before supporting weighted range strings here.
+        let hero = hero_range
+            .choose(&mut rng)
+            .expect("a solved range is never empty")
+            .clone();
+        let live: Vec<String> = villain_range
+            .iter()
+            .filter(|v| !shares_card(v, &hero))
+            .cloned()
+            .collect();
+        let Some(villain) = live.choose(&mut rng).cloned() else {
+            eprintln!("Villain's whole range is blocked by your hand — ranges too narrow.");
+            return Ok(());
+        };
+
+        hands += 1;
+        println!(
+            "Hand #{hands} — you're {} with {} on {}.",
+            if hero_oop { "BB (OOP)" } else { "BTN (IP)" },
+            fmt_hand_str(&hero),
+            fmt_hand_str(&root.board.join(""))
+        );
+        let outcome = play_hand(&mut session, root, hero_seat, &hero, &villain, &mut rng)?;
+        if !outcome.quit {
+            replay(&outcome, &villain);
+        }
+        decisions.extend(outcome.decisions);
+        if outcome.quit {
+            break;
+        }
+        match prompt("\nEnter for the next hand, q to quit > ") {
+            Some(s) if !matches!(s.as_str(), "q" | "quit") => println!(),
+            _ => break,
+        }
+    }
+
+    if decisions.is_empty() {
+        println!("\nNo decisions scored.");
+    } else {
+        let n = decisions.len();
+        let loss: f32 = decisions.iter().map(|d| d.ev_loss).sum();
+        let matched = decisions
+            .iter()
+            .filter(|d| d.freq >= stats::GTO_ACTION_FREQ)
+            .count();
+        println!(
+            "\nSession: {hands} hands, {n} decisions, {:.0}% on a GTO action, avg EV loss {:.3}bb.",
+            100.0 * matched as f64 / n as f64,
+            loss / n as f32
+        );
+    }
+    Ok(())
+}
+
+/// One scored hero decision, kept for the end-of-hand replay.
+struct HandDecision {
+    street: &'static str,
+    line: String,
+    mix: String,
+    chosen: String,
+    best: String,
+    freq: f32,
+    ev_loss: f32,
+}
+
+struct HandOutcome {
+    decisions: Vec<HandDecision>,
+    quit: bool,
+    final_pot: f32,
+}
+
+/// Walk one hand from the root to a terminal node: hero is prompted, villain
+/// samples the equilibrium mix for its dealt hand, chance deals uniformly from
+/// the cards neither player holds.
+fn play_hand(
+    session: &mut TreeSession,
+    mut node: TreeNode,
+    hero_seat: &str,
+    hero: &str,
+    villain: &str,
+    rng: &mut impl RngExt,
+) -> io::Result<HandOutcome> {
+    let flop = node.board.clone();
+    let mut out = HandOutcome {
+        decisions: Vec::new(),
+        quit: false,
+        final_pot: node.pot_bb,
+    };
+    loop {
+        out.final_pot = node.pot_bb;
+        node = match node.player.as_str() {
+            "terminal" => break,
+            "chance" => {
+                let live: Vec<&String> = node
+                    .dealable
+                    .iter()
+                    .filter(|c| !blocks(hero, c) && !blocks(villain, c))
+                    .collect();
+                let card = (*live.choose(rng).expect("the deck can't run out")).clone();
+                println!(
+                    "  {}: {}",
+                    street_name(node.board.len() + 1),
+                    fmt_hand_str(&card)
+                );
+                session.deal(&card)?
+            }
+            p if p == hero_seat => {
+                let Some((d, action)) = hero_decision(&node, hero) else {
+                    out.quit = true;
+                    break;
+                };
+                record_hand_decision(&flop, hero, &node, &d);
+                out.decisions.push(d);
+                session.play(action)?
+            }
+            _ => {
+                let vi = node
+                    .hands
+                    .iter()
+                    .position(|h| h == villain)
+                    .expect("villain's dealt hand is in its range");
+                let weights: Vec<f32> = node.freqs.iter().map(|f| f[vi]).collect();
+                let action = pick_weighted(&weights, rng.random());
+                println!("  Villain: {}.", node.actions[action]);
+                session.play(action)?
+            }
+        };
+    }
+    Ok(out)
+}
+
+/// Prompt the hero at a decision node, gto-drill style. `None` = quit/EOF; the
+/// GTO mix is *not* revealed here — that waits for the replay.
+fn hero_decision(node: &TreeNode, hero: &str) -> Option<(HandDecision, usize)> {
+    let hi = node
+        .hands
+        .iter()
+        .position(|h| h == hero)
+        .expect("hero's dealt hand is in its range");
+    let ns = NodeStrategy {
+        actions: node.actions.clone(),
+        frequencies: node.freqs.iter().map(|f| f[hi]).collect(),
+        action_ev: node.evs.iter().map(|e| e[hi]).collect(),
+    };
+    let street = street_name(node.board.len());
+    println!(
+        "\n  [{street}] Board: {}   Pot {:.1}bb",
+        fmt_hand_str(&node.board.join("")),
+        node.pot_bb
+    );
+    if !node.line.is_empty() {
+        println!("  Line: {}", node.line.join(" · "));
+    }
+    println!("  Your hand: {}", fmt_hand_str(hero));
+    for (i, label) in ns.actions.iter().enumerate() {
+        println!("    {}) {}", i + 1, label);
+    }
+    let chosen = loop {
+        let input = prompt("  Your action? (number) > ")?;
+        if matches!(input.as_str(), "q" | "quit") {
+            return None;
+        }
+        match input
+            .parse::<usize>()
+            .ok()
+            .filter(|n| (1..=ns.actions.len()).contains(n))
+        {
+            Some(n) => break n - 1,
+            None => println!("    (enter 1..{}, or q to quit)", ns.actions.len()),
+        }
+    };
+    Some((
+        HandDecision {
+            street,
+            line: node.line.join(" · "),
+            mix: fmt_mix(&ns),
+            chosen: ns.actions[chosen].clone(),
+            best: ns.actions[ns.best()].clone(),
+            freq: ns.frequencies[chosen],
+            ev_loss: ns.ev_loss(chosen),
+        },
+        chosen,
+    ))
+}
+
+fn record_hand_decision(flop: &[String], hero: &str, node: &TreeNode, d: &HandDecision) {
+    let (texture, bucket) = flop_context(flop, hero);
+    stats::record(&stats::StatRecord {
+        formation: FORMATION.into(),
+        flop: flop.join("").to_lowercase(),
+        texture,
+        street: d.street.into(),
+        hand: hero.into(),
+        bucket, // the *flop* bucket, whatever the street
+        line: node.line.clone(),
+        chosen: d.chosen.clone(),
+        best: d.best.clone(),
+        ev_loss: Some(d.ev_loss),
+        gto_freq: Some(d.freq),
+        ..stats::StatRecord::new("hand")
+    });
+}
+
+/// Reveal villain and print one line per hero decision (design doc 04).
+fn replay(out: &HandOutcome, villain: &str) {
+    println!(
+        "\n  Hand over — villain had {}. Final pot {:.1}bb.",
+        fmt_hand_str(villain),
+        out.final_pot
+    );
+    for d in &out.decisions {
+        let line = if d.line.is_empty() { "(root)" } else { &d.line };
+        println!(
+            "    {:<5} {:<30} you: {:<14} loss {:>5.2}bb  GTO: {}",
+            d.street, line, d.chosen, d.ev_loss, d.mix
+        );
+    }
+}
+
+/// "Check 55% / Bet 2.0bb 45%" — the actions GTO actually uses (>= 5%).
+fn fmt_mix(ns: &NodeStrategy) -> String {
+    ns.actions
+        .iter()
+        .zip(&ns.frequencies)
+        .filter(|(_, &f)| f >= stats::GTO_ACTION_FREQ)
+        .map(|(a, f)| format!("{a} {:.0}%", f * 100.0))
+        .collect::<Vec<_>>()
+        .join(" / ")
+}
+
+/// The 2-char card chunks of a packed hand string like `"AsKh"`.
+fn card_chunks(s: &str) -> impl Iterator<Item = &str> {
+    (0..s.len() / 2).map(move |i| &s[2 * i..2 * i + 2])
+}
+
+/// Do two packed hand strings share a card?
+fn shares_card(a: &str, b: &str) -> bool {
+    card_chunks(a).any(|c| blocks(b, c))
+}
+
+/// Does the packed hand string hold `card`?
+fn blocks(hand: &str, card: &str) -> bool {
+    card_chunks(hand).any(|c| c == card)
+}
+
+fn street_name(board_len: usize) -> &'static str {
+    match board_len {
+        0..=3 => "flop",
+        4 => "turn",
+        _ => "river",
+    }
+}
+
+/// Index sampled from `weights` by a uniform `roll` in `[0, 1)`. Degenerate
+/// all-zero weights (an unreachable node) fall back to action 0.
+fn pick_weighted(weights: &[f32], roll: f32) -> usize {
+    let total: f32 = weights.iter().sum();
+    if total <= 0.0 {
+        return 0;
+    }
+    let mut acc = 0.0;
+    for (i, w) in weights.iter().enumerate() {
+        acc += w;
+        if roll * total < acc {
+            return i;
+        }
+    }
+    weights.len() - 1
+}
+
+/// `(texture, bucket)` strings for a history record; empty when cards don't
+/// parse (records must never block a drill).
+fn flop_context(board: &[String], hand: &str) -> (String, String) {
+    let flop = board.get(..3).and_then(parse_flop);
+    let texture = flop.map(texture_name).unwrap_or_default();
+    let bucket = flop
+        .zip(parse_hole(hand))
+        .map(|(f, h)| eval::classify_hand(h, f).to_string())
+        .unwrap_or_default();
+    (texture, bucket)
+}
+
+/// A flop's one-word texture for grouping: paired beats suits.
+fn texture_name(flop: [Card; 3]) -> String {
+    let t = texture::classify(flop);
+    if t.paired {
+        return "paired".into();
+    }
+    match t.suits {
+        SuitPattern::Monotone => "monotone",
+        SuitPattern::TwoTone => "two-tone",
+        SuitPattern::Rainbow => "rainbow",
+    }
+    .into()
 }
 
 /// Parse a 3-card board (`["6h","9d","Td"]`) into a flop array.
@@ -722,5 +1096,62 @@ mod tests {
         let (strong, weak) = split_by_median(vec![(0.5, &e), (0.5, &f)]);
         assert_eq!(strong.len(), 2);
         assert_eq!(weak.len(), 0);
+    }
+
+    #[test]
+    fn pick_weighted_maps_rolls_to_cumulative_bins() {
+        let w = [0.25, 0.75];
+        assert_eq!(pick_weighted(&w, 0.0), 0);
+        assert_eq!(pick_weighted(&w, 0.24), 0);
+        assert_eq!(pick_weighted(&w, 0.25), 1);
+        assert_eq!(pick_weighted(&w, 0.99), 1);
+        // Unnormalized weights scale the same way.
+        assert_eq!(pick_weighted(&[1.0, 3.0], 0.24), 0);
+        assert_eq!(pick_weighted(&[1.0, 3.0], 0.26), 1);
+        // Degenerate: all-zero falls back to 0; float tail lands on the last.
+        assert_eq!(pick_weighted(&[0.0, 0.0], 0.5), 0);
+        assert_eq!(pick_weighted(&[0.5, 0.5], 1.0), 1);
+    }
+
+    #[test]
+    fn card_blocking_on_packed_hand_strings() {
+        assert!(shares_card("AsKh", "KhQd"));
+        assert!(!shares_card("AsKh", "QdQc"));
+        assert!(blocks("AsKh", "As"));
+        assert!(!blocks("AsKh", "Ad"));
+    }
+
+    #[test]
+    fn street_names_follow_board_length() {
+        assert_eq!(street_name(3), "flop");
+        assert_eq!(street_name(4), "turn");
+        assert_eq!(street_name(5), "river");
+    }
+
+    #[test]
+    fn fmt_mix_hides_actions_gto_never_uses() {
+        let ns = NodeStrategy {
+            actions: vec!["Fold".into(), "Call".into(), "Raise".into()],
+            frequencies: vec![0.02, 0.68, 0.30],
+            action_ev: vec![0.0, 1.0, 1.0],
+        };
+        assert_eq!(fmt_mix(&ns), "Call 68% / Raise 30%");
+    }
+
+    #[test]
+    fn flop_context_classifies_and_survives_garbage() {
+        let board: Vec<String> = ["Td", "9d", "6h"].map(String::from).to_vec();
+        let (texture, bucket) = flop_context(&board, "Tc2s");
+        assert_eq!(texture, "two-tone");
+        assert_eq!(bucket, "TopPair");
+
+        let paired: Vec<String> = ["8h", "8c", "3d"].map(String::from).to_vec();
+        assert_eq!(flop_context(&paired, "").0, "paired");
+
+        // Unparseable board/hand -> empty strings, never a panic.
+        assert_eq!(
+            flop_context(&["xx".into()], "??"),
+            (String::new(), String::new())
+        );
     }
 }

@@ -38,8 +38,8 @@ design doc (`01`–`06`).
 | Blockers / range-vs-range equity tools | partial (drill-internal MC equity) | P8 → [03](03-study-mode.md) |
 | Single-node drills, EV-loss scoring | ✅ `drill gto` | — |
 | Range-builder drills + leak buckets | ✅ `drill range` | — |
-| **Full-hand practice** (flop→river vs. equilibrium villain) | ❌ | P5 → [04](04-training-mode.md) |
-| Persistent session stats, leak trends | ❌ (per-session only) | P5 → [04](04-training-mode.md) |
+| **Full-hand practice** (flop→river vs. equilibrium villain) | ✅ `drill hand` (`--board` spots; library sampling needs P6) | — |
+| Persistent session stats, leak trends | ✅ `stats` over `history.jsonl` | — |
 | Preflop charts + preflop drills | ❌ (2 hardcoded ranges) | P6 → [02](02-solution-library.md), [04](04-training-mode.md) |
 | Formation breadth (positions, 3-bet pots, stack depths, rake) | ❌ (BTN-vs-BB SRP, 100bb, rake-free) | P6 → [02](02-solution-library.md) |
 | Hand-history import & leak analysis | ❌ | P9 → [05](05-analyze.md) |

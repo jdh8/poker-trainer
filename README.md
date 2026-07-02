@@ -10,9 +10,11 @@ optimal frequency mix.
 > c-bet decision and the BB's defend. Phase 2 (`drill range`) builds on the same
 > solutions: assign an action to your whole range by strength bucket and get
 > per-bucket leak stats. Phase 3 adds on-demand **live solving** of any spot you
-> pass via `--board`. Phase 4 (in progress) keeps the solved game resident in a
+> pass via `--board`. Phase 4 keeps the solved game resident in a
 > `solve-gen serve` subprocess so `table --board` walks the **whole game tree**.
-> See the phased plan below.
+> Phase 5 builds on it: `drill hand` plays **full hands** (flop→river) against
+> the equilibrium villain, and every scored decision lands in a persistent
+> history that `stats` folds into a leak report. See the phased plan below.
 
 ## Build & run
 
@@ -21,7 +23,9 @@ cargo run -- drill pot-odds   # call/fold vs. break-even pot odds (Monte-Carlo e
 cargo run -- drill texture    # classify a flop's board texture
 cargo run -- drill gto        # act vs. a precomputed GTO solution (Phase 1)
 cargo run -- drill range      # assign your whole range by bucket; leak stats (Phase 2)
+cargo run -- drill hand --board Td9d6h   # play full hands vs. the GTO villain (Phase 5)
 cargo run -- table            # browse a solved spot's strategy as a 13×13 grid
+cargo run -- stats            # leak report over your recorded drill history
 ```
 
 The `gto` drill needs solution files; generate them with the (AGPL) solver crate:
@@ -86,7 +90,9 @@ Single binary crate for now, organized into modules:
 | `range`      | weighted hand ranges + `"22+, AKs"` parsing                 |
 | `eval`       | hand evaluation & equity (wraps `rs-poker` / `pokers`)      |
 | `solution`   | **`SolutionProvider` trait** — where GTO answers come from  |
-| `trainer`    | the drill loop + scoring                                    |
+| `trainer`    | the drill loops + scoring                                   |
+| `tree`       | `TreeSession` — walk a live-solved game tree over stdio     |
+| `stats`      | persistent decision history (JSONL) + the leak aggregator   |
 | `table`      | the GTO-Wizard-style 13×13 strategy grid (TUI)              |
 
 The key seam is `solution::SolutionProvider`. Everything that needs a strategy
@@ -121,13 +127,25 @@ goes through it, so a **file-backed** provider (precomputed sims) and, later, a
    minutes (range/hardware-dependent) and ~1 GB RAM. (Multi-position presets and
    preflop/multiway modeling stay out of scope — this exposes the postflop knobs
    solve-gen already has.)
-4. **Tree sessions** — *in progress.* `solve-gen serve` keeps a solved game
+4. **Tree sessions** — *done (core).* `solve-gen serve` keeps a solved game
    resident and answers node queries over line-delimited JSON on stdio
    ([design 01](docs/design/01-tree-protocol.md)); the trainer's `TreeSession`
    drives it, and `table --board` walks the full tree (any line, any runout).
    Remaining: `runouts` op + weights/equity in payloads, config-hash save
    cache, `lock`/`resolve`.
-5. **Commercial parity (planned)** — phases 5–10 (full-hand drills, study
+5. **Full-hand drills + persistent stats** — *done (core).* `drill hand
+   --board <flop>` plays whole hands (flop→river) on a tree session: villain
+   is dealt a hidden hand from its range and plays the solved mix *for that
+   hand*, runouts deal from the unblocked deck, and your decisions are scored
+   on EV loss but only revealed in the end-of-hand replay. Every scored
+   decision in `drill gto`/`range`/`hand` appends a JSONL record to
+   `$XDG_DATA_HOME/poker-trainer/history.jsonl`; `stats [--by
+   formation|street|texture|bucket] [--last N]` reports avg EV loss, accuracy,
+   blunder rate, and a trend, worst groups first
+   ([design 04](docs/design/04-training-mode.md)). Remaining: spot filters +
+   curated-library sampling and `drill preflop`, both blocked on the P6
+   library.
+6. **Commercial parity (planned)** — phases 6–10 (library breadth, study
    browser, aggregate reports, hand-history analysis, nodelocking) are
    designed in [docs/design/](docs/design/00-overview.md).
 
