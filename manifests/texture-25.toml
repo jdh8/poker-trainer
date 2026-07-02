@@ -1,0 +1,29 @@
+# The first breadth drop (design doc 02, milestone 4): 25 texture-spread flops
+# for the two most common formations. ~25×2 solves ≈ hours of CPU — run it
+# with scripts/idle-run.sh on a shared box. Outputs are NOT committed (git
+# policy: only starter-8 stays in the repo).
+#
+#   scripts/idle-run.sh cargo run -p solve-gen --release -- gen --manifest manifests/texture-25.toml
+
+[flopsets]
+texture-25 = [
+    # broadway / ace-high
+    "AsKd5h", "AhQh7c", "As7d2c", "KhQs4d", "KsTs6c",
+    "QhJd9c", "Qc8s3h", "JdTd4s", "Kh7c2d", "AcJc9s",
+    # middling, connected, two-tone
+    "Td9d6h", "9s8s4d", "Th8c6s", "Jh9h5c", "8d7d3c",
+    # low, connected
+    "6h5d4c", "7c5s3d", "5h4h2s", "4s3s2d",
+    # paired
+    "8h8c3d", "KdKh6s", "5c5d9h", "TsTc7d", "AhAd8c",
+    # monotone
+    "Ah8h3h",
+]
+
+[[runs]]
+formation = "srp-btn-bb"
+flops = "texture-25"
+
+[[runs]]
+formation = "3bp-bb-btn"
+flops = "texture-25"

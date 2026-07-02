@@ -1,42 +1,33 @@
 //! Offline GTO solution generator (AGPL — links postflop-solver).
 //!
-//! For each curated spot, solve a single-raised pot to equilibrium, navigate to
-//! the hero's decision (OOP checks, IP c-bets, hero faces the bet), and dump the
-//! per-hand action mix + per-action EV as `data/solutions/<board>.json`. The
-//! trainer reads those files and never links this crate.
+//! Walks a manifest of (formation × flop set) entries, solves each spot to
+//! equilibrium, navigates to the hero decision nodes (OOP checks, IP c-bets,
+//! hero faces the bet), and dumps the per-hand action mix + per-action EV as
+//! `data/solutions/<flop>-<confighash8>-<node>.json` with the full
+//! [`SpotConfig`] and provenance embedded. The trainer reads those files and
+//! never links this crate.
 
 use clap::{Args, Parser, Subcommand};
-use poker_trainer::solution::{HandStrategy, NodeStrategy, SolveRequest, SolvedSpot};
+use poker_trainer::solution::{
+    formation, GenInfo, HandStrategy, NodeStrategy, SolveRequest, SolvedSpot, SpotConfig,
+};
 use poker_trainer::tree::TreeNode;
 use postflop_solver::*;
+use serde::Deserialize;
 use serde_json::{json, Value};
+use std::collections::BTreeMap;
 use std::fs;
 use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
 
 const CHIPS_PER_BB: f32 = 100.0;
 
-// Wide-ish SRP BTN-vs-BB ranges; the defaults for a custom solve.
-const OOP: &str =
-    "22+,A2s+,K2s+,Q5s+,J7s+,T7s+,96s+,86s+,75s+,64s+,53s+,A2o+,K9o+,Q9o+,J9o+,T9o,98o"; // hero = BB
-const IP: &str =
-    "22+,A2s+,K2s+,Q4s+,J6s+,T6s+,96s+,85s+,75s+,64s+,53s+,43s,A2o+,K7o+,Q8o+,J8o+,T8o+,98o";
-const DEFAULT_SIZES: &str = "33%, 75%"; // flop c-bet sizes
-const DEFAULT_STACK_BB: f32 = 97.0;
-const DEFAULT_POT_BB: f32 = 6.0;
-
-/// One spot to solve: a BTN-vs-BB SRP whose flop, ranges, and game knobs are
-/// configurable. One solve yields the BTN c-bet node + one BB defend node per
-/// c-bet size.
+/// One spot to solve: a flop plus the full game config.
+#[derive(Debug)]
 struct Spot {
     label: String,
     flop: String,
-    oop_range: String,
-    ip_range: String,
-    /// Flop c-bet sizes, e.g. `"33%, 75%"` (parsed by postflop-solver).
-    flop_bets: String,
-    stack_bb: f32,
-    pot_bb: f32,
+    config: SpotConfig,
 }
 
 #[derive(Parser)]
@@ -48,12 +39,16 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Regenerate the curated solution library (default).
-    Gen,
+    /// Walk a manifest, solving every spot whose config-hash isn't already in
+    /// the output dir (resumable; default manifest: manifests/starter-8.toml).
+    Gen {
+        #[arg(long)]
+        manifest: Option<PathBuf>,
+    },
     /// Solve one custom spot and write its JSON into the solution dir.
     Solve(SolveArgs),
     /// Tree-session server: solve a spot, keep it resident, and answer
-    /// line-delimited JSON node queries on stdio (protocol v1, design doc 01).
+    /// line-delimited JSON node queries on stdio (protocol v2, design doc 01).
     Serve,
 }
 
@@ -62,57 +57,239 @@ struct SolveArgs {
     /// Flop as rs_poker cards, e.g. `Td9d6h`.
     #[arg(long)]
     flop: String,
-    /// OOP (BB) range string.
-    #[arg(long, default_value = OOP)]
-    oop: String,
-    /// IP (BTN) range string.
-    #[arg(long, default_value = IP)]
-    ip: String,
-    /// Flop c-bet sizes, e.g. `"33%, 75%"`.
-    #[arg(long, default_value = DEFAULT_SIZES)]
-    sizes: String,
+    /// Formation id; supplies seats, default pot/stacks, and the ranges read
+    /// from data/ranges/<formation>/{oop,ip}.txt.
+    #[arg(long, default_value = "srp-btn-bb")]
+    formation: String,
+    /// OOP range override.
+    #[arg(long)]
+    oop: Option<String>,
+    /// IP range override.
+    #[arg(long)]
+    ip: Option<String>,
+    /// Flop bet sizes, e.g. `"33%, 75%"`.
+    #[arg(long)]
+    sizes: Option<String>,
+    /// Turn bet sizes.
+    #[arg(long)]
+    turn_sizes: Option<String>,
+    /// River bet sizes.
+    #[arg(long)]
+    river_sizes: Option<String>,
     /// Effective stack in bb.
-    #[arg(long, default_value_t = DEFAULT_STACK_BB)]
-    stack: f32,
+    #[arg(long)]
+    stack: Option<f32>,
     /// Starting pot in bb.
-    #[arg(long, default_value_t = DEFAULT_POT_BB)]
-    pot: f32,
+    #[arg(long)]
+    pot: Option<f32>,
+    /// Rake rate (0.05 = 5%).
+    #[arg(long)]
+    rake_rate: Option<f32>,
+    /// Rake cap in bb.
+    #[arg(long)]
+    rake_cap: Option<f32>,
     /// Output directory (defaults to the repo's data/solutions).
     #[arg(long)]
     out: Option<PathBuf>,
 }
 
+/// A path relative to the repo root (this crate lives two levels down).
+fn repo_path(rel: &str) -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join(rel)
+}
+
 fn main() {
-    let default_out = || Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/solutions");
-    match Cli::parse().command.unwrap_or(Command::Gen) {
-        Command::Gen => write_all(&curated(), &default_out()),
+    let die = |e: String| -> ! {
+        eprintln!("{e}");
+        std::process::exit(2);
+    };
+    match Cli::parse()
+        .command
+        .unwrap_or(Command::Gen { manifest: None })
+    {
+        Command::Gen { manifest } => {
+            let path = manifest.unwrap_or_else(|| repo_path("manifests/starter-8.toml"));
+            let spots = load_manifest(&path).unwrap_or_else(|e| die(e));
+            write_all(&spots, &repo_path("data/solutions"));
+        }
         Command::Solve(a) => {
-            let out = a.out.clone().unwrap_or_else(default_out);
-            write_all(std::slice::from_ref(&spot_from_args(a)), &out);
+            let out = a.out.clone().unwrap_or_else(|| repo_path("data/solutions"));
+            let spot = spot_from_args(&a).unwrap_or_else(|e| die(e));
+            write_all(std::slice::from_ref(&spot), &out);
         }
         Command::Serve => serve(),
     }
 }
 
-/// A `SolveRequest` from the wire, `None` fields filled with the CLI defaults.
-fn spot_from_request(r: &SolveRequest) -> Spot {
-    Spot {
-        label: format!("Custom BTN vs BB, {}", r.flop),
-        flop: r.flop.clone(),
-        oop_range: r.oop.clone().unwrap_or_else(|| OOP.into()),
-        ip_range: r.ip.clone().unwrap_or_else(|| IP.into()),
-        flop_bets: r.sizes.clone().unwrap_or_else(|| DEFAULT_SIZES.into()),
-        stack_bb: r.stack.unwrap_or(DEFAULT_STACK_BB),
-        pot_bb: r.pot.unwrap_or(DEFAULT_POT_BB),
+/// "SRP BTN vs BB, Td9d6h" — formation label + flop.
+fn spot_label(formation_id: &str, flop: &str) -> String {
+    let label = formation(formation_id).map_or(formation_id, |f| f.label);
+    format!("{label}, {flop}")
+}
+
+/// The formation's seat names for node labels; a config from an unknown
+/// formation (hand-edited files) still solves, just with generic seats.
+fn seats(formation_id: &str) -> (&'static str, &'static str) {
+    formation(formation_id).map_or(("OOP", "IP"), |f| (f.oop_seat, f.ip_seat))
+}
+
+fn spot_from_args(a: &SolveArgs) -> Result<Spot, String> {
+    let mut c = SpotConfig::for_formation(&a.formation, repo_path("data/ranges"))
+        .map_err(|e| e.to_string())?;
+    let overrides = [
+        (&mut c.oop_range, &a.oop),
+        (&mut c.ip_range, &a.ip),
+        (&mut c.flop_sizes, &a.sizes),
+        (&mut c.turn_sizes, &a.turn_sizes),
+        (&mut c.river_sizes, &a.river_sizes),
+    ];
+    for (field, value) in overrides {
+        if let Some(v) = value {
+            *field = v.clone();
+        }
     }
+    if let Some(v) = a.stack {
+        c.stack_bb = v;
+    }
+    if let Some(v) = a.pot {
+        c.pot_bb = v;
+    }
+    if let Some(v) = a.rake_rate {
+        c.rake_rate = v;
+    }
+    if let Some(v) = a.rake_cap {
+        c.rake_cap_bb = v;
+    }
+    Ok(Spot {
+        label: spot_label(&c.formation, &a.flop),
+        flop: a.flop.clone(),
+        config: c,
+    })
+}
+
+/// A manifest: named flop sets plus runs of (formation × flop set ×
+/// config overrides) — design doc 02.
+#[derive(Deserialize)]
+struct Manifest {
+    #[serde(default)]
+    flopsets: BTreeMap<String, Vec<String>>,
+    runs: Vec<Run>,
+}
+
+#[derive(Deserialize)]
+struct Run {
+    formation: String,
+    /// A `[flopsets]` key, or the built-in `"all-iso-flops"`.
+    flops: String,
+    flop_sizes: Option<String>,
+    turn_sizes: Option<String>,
+    river_sizes: Option<String>,
+    stack_bb: Option<f32>,
+    pot_bb: Option<f32>,
+    rake_rate: Option<f32>,
+    rake_cap_bb: Option<f32>,
+}
+
+fn load_manifest(path: &Path) -> Result<Vec<Spot>, String> {
+    let text = fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    let m: Manifest = toml::from_str(&text).map_err(|e| format!("{}: {e}", path.display()))?;
+    manifest_spots(&m)
+}
+
+fn manifest_spots(m: &Manifest) -> Result<Vec<Spot>, String> {
+    let mut spots = Vec::new();
+    for run in &m.runs {
+        let mut c = SpotConfig::for_formation(&run.formation, repo_path("data/ranges"))
+            .map_err(|e| e.to_string())?;
+        let overrides = [
+            (&mut c.flop_sizes, &run.flop_sizes),
+            (&mut c.turn_sizes, &run.turn_sizes),
+            (&mut c.river_sizes, &run.river_sizes),
+        ];
+        for (field, value) in overrides {
+            if let Some(v) = value {
+                *field = v.clone();
+            }
+        }
+        if let Some(v) = run.stack_bb {
+            c.stack_bb = v;
+        }
+        if let Some(v) = run.pot_bb {
+            c.pot_bb = v;
+        }
+        if let Some(v) = run.rake_rate {
+            c.rake_rate = v;
+        }
+        if let Some(v) = run.rake_cap_bb {
+            c.rake_cap_bb = v;
+        }
+        let flops = if run.flops == "all-iso-flops" {
+            iso_flops()
+        } else {
+            m.flopsets
+                .get(&run.flops)
+                .ok_or_else(|| format!("unknown flop set {:?}", run.flops))?
+                .clone()
+        };
+        for flop in flops {
+            spots.push(Spot {
+                label: spot_label(&c.formation, &flop),
+                flop,
+                config: c.clone(),
+            });
+        }
+    }
+    Ok(spots)
+}
+
+/// All 1,755 suit-isomorphic flops (22,100 raw flops / suit symmetry), as
+/// solver-ready strings like `"2c2d2h"`. Canonical form = the smallest card-id
+/// triple under the 24 suit permutations.
+fn iso_flops() -> Vec<String> {
+    let mut perms: Vec<[u8; 4]> = Vec::new();
+    for a in 0..4u8 {
+        for b in 0..4u8 {
+            for c in 0..4u8 {
+                for d in 0..4u8 {
+                    if a != b && a != c && a != d && b != c && b != d && c != d {
+                        perms.push([a, b, c, d]);
+                    }
+                }
+            }
+        }
+    }
+    let mut seen = std::collections::BTreeSet::new();
+    for x in 0..52u8 {
+        for y in (x + 1)..52 {
+            for z in (y + 1)..52 {
+                let canon = perms
+                    .iter()
+                    .map(|p| {
+                        let mut f = [x, y, z].map(|c| (c & !3) | p[(c & 3) as usize]);
+                        f.sort_unstable();
+                        f
+                    })
+                    .min()
+                    .unwrap();
+                seen.insert(canon);
+            }
+        }
+    }
+    seen.into_iter()
+        .map(|f| f.map(|c| card_to_string(c).unwrap()).join(""))
+        .collect()
 }
 
 /// The solved game held by `serve`, plus what the game doesn't track for us:
-/// the display labels of the line walked so far.
+/// the display labels of the line walked so far and the snapshot provenance.
 struct ServeSession {
     game: PostFlopGame,
     starting_pot: i32,
     labels: Vec<String>,
+    config: SpotConfig,
+    generator: GenInfo,
 }
 
 /// `serve`: one JSON request per stdin line, one JSON response per stdout line.
@@ -160,19 +337,25 @@ fn handle_op(sess: &mut Option<ServeSession>, req: &Value) -> Result<Value, Stri
         "quit" => return Ok(json!({"ok": true})),
         "solve" => {
             if let Some(v) = req.get("v").and_then(Value::as_u64) {
-                if v != 1 {
-                    return Err(format!("unsupported protocol v{v}; this serve speaks v1"));
+                if v != 2 {
+                    return Err(format!("unsupported protocol v{v}; this serve speaks v2"));
                 }
             }
             let config = req.get("config").ok_or("solve needs \"config\"")?;
             let r: SolveRequest =
                 serde_json::from_value(config.clone()).map_err(|e| format!("bad config: {e}"))?;
-            let spot = spot_from_request(&r);
-            let game = build_and_solve(&spot)?;
+            let spot = Spot {
+                label: spot_label(&r.config.formation, &r.flop),
+                flop: r.flop,
+                config: r.config,
+            };
+            let (game, exploitability) = build_and_solve(&spot)?;
             let s = sess.insert(ServeSession {
                 game,
-                starting_pot: (spot.pot_bb * CHIPS_PER_BB) as i32,
+                starting_pot: (spot.config.pot_bb * CHIPS_PER_BB) as i32,
                 labels: Vec::new(),
+                config: spot.config,
+                generator: gen_info(exploitability),
             });
             return Ok(node_payload(s));
         }
@@ -242,6 +425,7 @@ fn handle_op(sess: &mut Option<ServeSession>, req: &Value) -> Result<Value, Stri
                 .unwrap_or_else(|| node.line.join(" · "));
             let hero_oop = s.game.current_player() == 0;
             let villain_action = s.labels.last().cloned().unwrap_or_default();
+            let (config, generator) = (s.config.clone(), s.generator.clone());
             let spot = extract(
                 &mut s.game,
                 label,
@@ -249,6 +433,8 @@ fn handle_op(sess: &mut Option<ServeSession>, req: &Value) -> Result<Value, Stri
                 node.pot_bb,
                 hero_oop,
                 villain_action,
+                &config,
+                &generator,
             );
             return Ok(serde_json::to_value(spot).unwrap());
         }
@@ -323,52 +509,20 @@ fn node_payload_parts(s: &mut ServeSession) -> TreeNode {
     }
 }
 
-fn spot_from_args(a: SolveArgs) -> Spot {
-    Spot {
-        label: format!("Custom BTN vs BB, {}", a.flop),
-        flop: a.flop,
-        oop_range: a.oop,
-        ip_range: a.ip,
-        flop_bets: a.sizes,
-        stack_bb: a.stack,
-        pot_bb: a.pot,
-    }
-}
-
-/// The curated, texture-spread library. Defaults match the v1 hardcoded config
-/// so regenerating produces byte-identical files.
-fn curated() -> Vec<Spot> {
-    [
-        ("SRP BTN vs BB, Td9d6h (wet)", "Td9d6h"),
-        ("SRP BTN vs BB, Kh7c2d (dry)", "Kh7c2d"),
-        ("SRP BTN vs BB, Ah8h3h (monotone)", "Ah8h3h"),
-        ("SRP BTN vs BB, 8h8c3d (paired)", "8h8c3d"),
-        ("SRP BTN vs BB, QhJd9c (broadway)", "QhJd9c"),
-        ("SRP BTN vs BB, As7d2c (ace-high dry)", "As7d2c"),
-        ("SRP BTN vs BB, 6h5d4c (low connected)", "6h5d4c"),
-        ("SRP BTN vs BB, 9s8s4d (two-tone mid)", "9s8s4d"),
-    ]
-    .into_iter()
-    .map(|(label, flop)| Spot {
-        label: label.into(),
-        flop: flop.into(),
-        oop_range: OOP.into(),
-        ip_range: IP.into(),
-        flop_bets: DEFAULT_SIZES.into(),
-        stack_bb: DEFAULT_STACK_BB,
-        pot_bb: DEFAULT_POT_BB,
-    })
-    .collect()
-}
-
 fn write_all(spots: &[Spot], out_dir: &Path) {
     fs::create_dir_all(out_dir).unwrap();
     for spot in spots {
+        let stem = format!("{}-{}", spot.flop.to_lowercase(), spot.config.hash8());
+        // Resumable: a run that died mid-manifest picks up where it left off.
+        if out_dir.join(format!("{stem}-ip.json")).exists() {
+            println!("Cached, skipping: {} ({stem})", spot.label);
+            continue;
+        }
         println!("Solving: {}", spot.label);
         // One solved game yields the IP c-bet node plus one OOP defend node per
         // c-bet size; solve_spot hands back each with its own file stem.
-        for (stem, solved) in solve_spot(spot) {
-            let file = out_dir.join(format!("{stem}.json"));
+        for (file_stem, solved) in solve_spot(spot, &stem) {
+            let file = out_dir.join(format!("{file_stem}.json"));
             fs::write(&file, serde_json::to_string_pretty(&solved).unwrap()).unwrap();
             println!(
                 "  -> {} ({} hero hands)",
@@ -379,31 +533,38 @@ fn write_all(spots: &[Spot], out_dir: &Path) {
     }
 }
 
+fn gen_info(exploitability_chips: f32) -> GenInfo {
+    GenInfo {
+        version: env!("CARGO_PKG_VERSION").into(),
+        exploitability_bb: exploitability_chips / CHIPS_PER_BB,
+    }
+}
+
 /// Build and solve one spot's game. Errors are strings from the solver's own
 /// validation (bad range/size/flop), so `serve` can report them over the
-/// protocol instead of dying. Progress prints on stderr.
-fn build_and_solve(spot: &Spot) -> Result<PostFlopGame, String> {
-    let starting_pot = (spot.pot_bb * CHIPS_PER_BB) as i32;
+/// protocol instead of dying. Progress prints on stderr. Returns the solved
+/// game and the exploitability reached, in chips.
+fn build_and_solve(spot: &Spot) -> Result<(PostFlopGame, f32), String> {
+    let c = &spot.config;
+    let starting_pot = (c.pot_bb * CHIPS_PER_BB) as i32;
     let card_config = CardConfig {
-        range: [spot.oop_range.parse()?, spot.ip_range.parse()?],
+        range: [c.oop_range.parse()?, c.ip_range.parse()?],
         flop: flop_from_str(&spot.flop)?,
         turn: NOT_DEALT,
         river: NOT_DEALT,
     };
-    // Configurable flop c-bet sizes so the c-bet node is a real size-mix.
-    // ponytail: turn/river stay single-size to bound tree growth (one size was
-    // applied to every street before) — widen them too if you train later nodes.
-    let flop_bets = BetSizeOptions::try_from((spot.flop_bets.as_str(), "2.5x"))?;
-    let later_bets = BetSizeOptions::try_from(("33%", "2.5x"))?;
+    let flop_bets = BetSizeOptions::try_from((c.flop_sizes.as_str(), "2.5x"))?;
+    let turn_bets = BetSizeOptions::try_from((c.turn_sizes.as_str(), "2.5x"))?;
+    let river_bets = BetSizeOptions::try_from((c.river_sizes.as_str(), "2.5x"))?;
     let tree_config = TreeConfig {
         initial_state: BoardState::Flop,
         starting_pot,
-        effective_stack: (spot.stack_bb * CHIPS_PER_BB) as i32,
-        rake_rate: 0.0,
-        rake_cap: 0.0,
-        flop_bet_sizes: [flop_bets.clone(), flop_bets.clone()],
-        turn_bet_sizes: [later_bets.clone(), later_bets.clone()],
-        river_bet_sizes: [later_bets.clone(), later_bets.clone()],
+        effective_stack: (c.stack_bb * CHIPS_PER_BB) as i32,
+        rake_rate: f64::from(c.rake_rate),
+        rake_cap: f64::from(c.rake_cap_bb * CHIPS_PER_BB),
+        flop_bet_sizes: [flop_bets.clone(), flop_bets],
+        turn_bet_sizes: [turn_bets.clone(), turn_bets],
+        river_bet_sizes: [river_bets.clone(), river_bets],
         turn_donk_sizes: None,
         river_donk_sizes: None,
         add_allin_threshold: 1.5,
@@ -421,13 +582,16 @@ fn build_and_solve(spot: &Spot) -> Result<PostFlopGame, String> {
         exploitability,
         exploitability / CHIPS_PER_BB
     );
-    Ok(game)
+    Ok((game, exploitability))
 }
 
-fn solve_spot(spot: &Spot) -> Vec<(String, SolvedSpot)> {
-    let mut game = build_and_solve(spot).expect("spot must solve");
-    let starting_pot = (spot.pot_bb * CHIPS_PER_BB) as i32;
+fn solve_spot(spot: &Spot, stem: &str) -> Vec<(String, SolvedSpot)> {
+    let (game, exploitability) = build_and_solve(spot).expect("spot must solve");
+    let mut game = game;
+    let generator = gen_info(exploitability);
+    let starting_pot = (spot.config.pot_bb * CHIPS_PER_BB) as i32;
     let pot_bb = starting_pot as f32 / CHIPS_PER_BB;
+    let (oop_seat, ip_seat) = seats(&spot.config.formation);
     let board: Vec<String> = flop_from_str(&spot.flop)
         .unwrap()
         .iter()
@@ -435,9 +599,8 @@ fn solve_spot(spot: &Spot) -> Vec<(String, SolvedSpot)> {
         .collect();
 
     // All decision nodes come from this one solved game. Navigate: OOP checks,
-    // IP decides whether to c-bet (hero = BTN), then OOP faces each c-bet size
-    // (hero = BB) — one defend node per size for a symmetric library.
-    let stem = spot.flop.to_lowercase();
+    // IP decides whether to c-bet, then OOP faces each c-bet size — one defend
+    // node per size for a symmetric library.
     let to_cbet = |game: &mut PostFlopGame| {
         game.back_to_root();
         assert_eq!(game.current_player(), 0, "root should be OOP");
@@ -451,7 +614,7 @@ fn solve_spot(spot: &Spot) -> Vec<(String, SolvedSpot)> {
 
     let mut out = Vec::new();
 
-    // Node 1: hero is IP (BTN), villain (BB) has checked — c-bet or check back?
+    // Node 1: hero is IP, villain has checked — c-bet or check back?
     to_cbet(&mut game);
     let bet_indices: Vec<usize> = game
         .available_actions()
@@ -461,19 +624,23 @@ fn solve_spot(spot: &Spot) -> Vec<(String, SolvedSpot)> {
         .map(|(i, _)| i)
         .collect();
     assert!(
-        bet_indices.len() >= 2,
-        "c-bet node should offer >=2 sizes, got {} (bet-size config didn't widen?)",
-        bet_indices.len()
+        !bet_indices.is_empty(),
+        "c-bet node offers no bet (bet-size config too narrow?)"
     );
     out.push((
         format!("{stem}-ip"),
         extract(
             &mut game,
-            format!("{} — you're BTN, BB checks: c-bet?", spot.label),
+            format!(
+                "{} — you're {ip_seat}, {oop_seat} checks: c-bet?",
+                spot.label
+            ),
             board.clone(),
             pot_bb,
             false,
-            "Villain (BB) checks to you".to_string(),
+            format!("Villain ({oop_seat}) checks to you"),
+            &spot.config,
+            &generator,
         ),
     ));
 
@@ -492,13 +659,15 @@ fn solve_spot(spot: &Spot) -> Vec<(String, SolvedSpot)> {
             extract(
                 &mut game,
                 format!(
-                    "{} — you're BB, facing BTN {pct}% c-bet: defend?",
+                    "{} — you're {oop_seat}, facing {ip_seat} {pct}% c-bet: defend?",
                     spot.label
                 ),
                 board.clone(),
                 pot_bb,
                 true,
                 format!("You check, villain bets {bet_bb:.1}bb ({pct}% pot)"),
+                &spot.config,
+                &generator,
             ),
         ));
         to_cbet(&mut game); // reset to the c-bet node for the next size
@@ -510,6 +679,7 @@ fn solve_spot(spot: &Spot) -> Vec<(String, SolvedSpot)> {
 /// Build a [`SolvedSpot`] from the game positioned at the hero's decision node.
 /// Node-specific bits (`label`, `hero_oop`, `villain_action`) are passed in; the
 /// strategy/EV read off `current_player()` is the same for any node.
+#[allow(clippy::too_many_arguments)] // a plain constructor; a params struct would just rename these
 fn extract(
     game: &mut PostFlopGame,
     label: String,
@@ -517,6 +687,8 @@ fn extract(
     pot_bb: f32,
     hero_oop: bool,
     villain_action: String,
+    config: &SpotConfig,
+    generator: &GenInfo,
 ) -> SolvedSpot {
     game.cache_normalized_weights();
     let hero = game.current_player();
@@ -549,6 +721,8 @@ fn extract(
         pot_bb,
         hero_oop,
         villain_action,
+        config: Some(config.clone()),
+        generator: Some(generator.clone()),
         strategies,
     }
 }
@@ -578,30 +752,60 @@ fn fmt_action(a: &Action) -> String {
 mod tests {
     use super::*;
 
-    /// The curated library must keep solving with the v1 game config, or
-    /// regenerating would silently rewrite the committed JSON.
+    /// The committed starter manifest must keep resolving to the v1 curated
+    /// spots (8 flops, the default srp-btn-bb config), or regenerating would
+    /// silently rewrite the library.
     #[test]
-    fn curated_uses_the_committed_defaults() {
-        let spots = curated();
+    fn starter_manifest_matches_committed_defaults() {
+        let spots = load_manifest(&repo_path("manifests/starter-8.toml")).unwrap();
         assert_eq!(spots.len(), 8);
+        let expected = SpotConfig::for_formation("srp-btn-bb", repo_path("data/ranges")).unwrap();
         for s in &spots {
-            assert_eq!(s.oop_range, OOP);
-            assert_eq!(s.ip_range, IP);
-            assert_eq!(s.flop_bets, "33%, 75%");
-            assert_eq!(s.stack_bb, 97.0);
-            assert_eq!(s.pot_bb, 6.0);
+            assert_eq!(s.config, expected);
+            assert!(s.label.starts_with("SRP BTN vs BB"));
         }
+        assert!(spots.iter().any(|s| s.flop == "Td9d6h"));
     }
 
     #[test]
-    fn spot_from_request_fills_defaults() {
-        let mut r = SolveRequest::new("Td9d6h");
-        r.sizes = Some("50%".into());
-        let spot = spot_from_request(&r);
-        assert_eq!(spot.flop, "Td9d6h");
-        assert_eq!(spot.flop_bets, "50%");
-        assert_eq!(spot.oop_range, OOP);
-        assert_eq!(spot.stack_bb, DEFAULT_STACK_BB);
+    fn manifest_overrides_and_unknown_flopsets() {
+        let m: Manifest = toml::from_str(
+            r#"
+            [flopsets]
+            tiny = ["Td9d6h"]
+
+            [[runs]]
+            formation = "srp-btn-bb"
+            flops = "tiny"
+            stack_bb = 40.0
+            rake_rate = 0.05
+            rake_cap_bb = 3.0
+            "#,
+        )
+        .unwrap();
+        let spots = manifest_spots(&m).unwrap();
+        assert_eq!(spots.len(), 1);
+        assert_eq!(spots[0].config.stack_bb, 40.0);
+        assert_eq!(spots[0].config.rake_rate, 0.05);
+        // The override must land in the cache key.
+        let default_ = SpotConfig::for_formation("srp-btn-bb", repo_path("data/ranges")).unwrap();
+        assert_ne!(spots[0].config.hash8(), default_.hash8());
+
+        let bad: Manifest =
+            toml::from_str("[[runs]]\nformation = \"srp-btn-bb\"\nflops = \"nope\"\n").unwrap();
+        assert!(manifest_spots(&bad)
+            .unwrap_err()
+            .contains("unknown flop set"));
+    }
+
+    #[test]
+    fn iso_flops_is_the_standard_1755() {
+        let flops = iso_flops();
+        assert_eq!(flops.len(), 1755);
+        // Spot-check: strings parse as flops and are unique.
+        assert!(flop_from_str(&flops[0]).is_ok());
+        let set: std::collections::BTreeSet<&String> = flops.iter().collect();
+        assert_eq!(set.len(), 1755);
     }
 
     /// Protocol dispatch without a solve: errors are responses, never panics,
@@ -621,14 +825,24 @@ mod tests {
         let (resp, _) = respond(&mut sess, r#"{"op":"warp"}"#);
         assert!(resp["error"].as_str().unwrap().contains("unknown op"));
 
+        // v1 (and anything else that isn't v2) is rejected before config parse.
+        for v in [1, 9] {
+            let (resp, _) = respond(
+                &mut sess,
+                &format!(r#"{{"v":{v},"op":"solve","config":{{"flop":"Td9d6h"}}}}"#),
+            );
+            assert!(resp["error"]
+                .as_str()
+                .unwrap()
+                .contains("unsupported protocol"));
+        }
+
+        // Right version, malformed config: a protocol error, not a panic.
         let (resp, _) = respond(
             &mut sess,
-            r#"{"v":9,"op":"solve","config":{"flop":"Td9d6h"}}"#,
+            r#"{"v":2,"op":"solve","config":{"flop":"Td9d6h"}}"#,
         );
-        assert!(resp["error"]
-            .as_str()
-            .unwrap()
-            .contains("unsupported protocol"));
+        assert!(resp["error"].as_str().unwrap().contains("bad config"));
 
         let (resp, quit) = respond(&mut sess, r#"{"op":"quit"}"#);
         assert_eq!(resp["ok"], true);
@@ -636,16 +850,17 @@ mod tests {
     }
 
     #[test]
-    fn solve_flag_maps_to_spot_with_defaults_for_the_rest() {
+    fn solve_flags_override_formation_defaults() {
         let cli = Cli::parse_from(["solve-gen", "solve", "--flop", "Td9d6h", "--sizes", "50%"]);
         let Some(Command::Solve(a)) = cli.command else {
             panic!("expected solve subcommand")
         };
-        let spot = spot_from_args(a);
+        let spot = spot_from_args(&a).unwrap();
         assert_eq!(spot.flop, "Td9d6h");
-        assert_eq!(spot.flop_bets, "50%"); // overridden
-        assert_eq!(spot.oop_range, OOP); // defaulted
-        assert_eq!(spot.pot_bb, 6.0); // defaulted
+        assert_eq!(spot.config.flop_sizes, "50%"); // overridden
+        assert_eq!(spot.config.turn_sizes, "33%"); // defaulted
+        assert_eq!(spot.config.pot_bb, 6.0); // defaulted
+        assert!(!spot.config.oop_range.is_empty()); // read from data/ranges
         assert!(spot.label.contains("Td9d6h"));
     }
 }

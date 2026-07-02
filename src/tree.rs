@@ -12,8 +12,10 @@ use serde_json::json;
 use std::io::{self, BufRead, BufReader, Write};
 use std::process::{Child, ChildStdin, ChildStdout, Stdio};
 
-/// Protocol version sent with `op:solve`; serve rejects versions it can't speak.
-pub const PROTOCOL_V: u32 = 1;
+/// Protocol version sent with `op:solve`; serve rejects versions it can't
+/// speak. v2: the solve body is a full [`SolveRequest`] (flop + `SpotConfig`)
+/// instead of v1's sparse overrides.
+pub const PROTOCOL_V: u32 = 2;
 
 /// One node of the solved tree, as served by `solve-gen serve`.
 ///
@@ -69,6 +71,8 @@ impl TreeNode {
             pot_bb: self.pot_bb,
             hero_oop: self.player == "oop",
             villain_action: self.line.last().cloned().unwrap_or_default(),
+            config: None,
+            generator: None,
             strategies,
         }
     }
@@ -231,10 +235,21 @@ mod tests {
     #[test]
     #[ignore]
     fn tree_session_walks_a_tiny_solve() {
-        let mut req = SolveRequest::new("Td9d6h");
-        req.oop = Some("AA,KK".into());
-        req.ip = Some("QQ,JJ".into());
-        req.sizes = Some("50%".into());
+        let req = SolveRequest {
+            flop: "Td9d6h".into(),
+            config: crate::solution::SpotConfig {
+                formation: "srp-btn-bb".into(),
+                oop_range: "AA,KK".into(),
+                ip_range: "QQ,JJ".into(),
+                flop_sizes: "50%".into(),
+                turn_sizes: "33%".into(),
+                river_sizes: "33%".into(),
+                stack_bb: 97.0,
+                pot_bb: 6.0,
+                rake_rate: 0.0,
+                rake_cap_bb: 0.0,
+            },
+        };
         let (mut s, root) = TreeSession::start(&req).unwrap();
         assert_eq!(root.player, "oop");
         assert_eq!(root.board, vec!["6h", "9d", "Td"]); // solver-sorted

@@ -1,0 +1,19 @@
+# The committed curated library: 8 texture-spread flops, default BTN-vs-BB SRP
+# config. `solve-gen gen` (no flags) walks this; already-solved config-hashes
+# are skipped, so re-running is cheap and a killed run resumes.
+
+[flopsets]
+starter-8 = [
+    "Td9d6h", # wet
+    "Kh7c2d", # dry
+    "Ah8h3h", # monotone
+    "8h8c3d", # paired
+    "QhJd9c", # broadway
+    "As7d2c", # ace-high dry
+    "6h5d4c", # low connected
+    "9s8s4d", # two-tone mid
+]
+
+[[runs]]
+formation = "srp-btn-bb"
+flops = "starter-8"

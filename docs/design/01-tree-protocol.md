@@ -21,14 +21,15 @@ Why stdio JSON: zero new dependencies (`serde_json` is on both sides), no
 ports/sockets, trivially debuggable (`echo '{"op":"node",...}' | solve-gen
 serve …`), and it keeps invariant #1 by construction.
 
-### Protocol (v1)
+### Protocol (v2)
 
 One JSON object per line each way. Every response echoes `"id"` if given.
-Errors: `{"error": "message"}`.
+Errors: `{"error": "message"}`. (v1 was the pre-P6 shape whose solve body
+carried sparse overrides instead of a full `SpotConfig`; serve rejects it.)
 
 ```jsonc
 // trainer -> solver
-{"v":1, "op":"solve", "config": {SpotConfig}}      // solve (or load cached), hold in memory
+{"v":2, "op":"solve", "config": {flop, SpotConfig}}   // solve (or load cached), hold in memory
 {"op":"node"}                                       // payload for the current node
 {"op":"play", "action": 2}                          // descend by action index
 {"op":"deal", "card": "7h"}                         // descend a chance node

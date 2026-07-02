@@ -592,6 +592,8 @@ mod tests {
             pot_bb: 6.0,
             hero_oop: false,
             villain_action: "x".into(),
+            config: None,
+            generator: None,
             strategies: vec![mk("AsKs", vec![0.2, 0.8]), mk("AhKh", vec![0.4, 0.6])],
         };
         let grid = build_grid(&spot);
@@ -678,6 +680,8 @@ mod tests {
             pot_bb: 6.0,
             hero_oop: false,
             villain_action: "checks".into(),
+            config: None,
+            generator: None,
             strategies: vec![mk("AsKs"), mk("AhKh"), mk("2c2d")],
         };
         let grid = build_grid(&spot);

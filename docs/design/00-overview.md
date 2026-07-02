@@ -40,8 +40,8 @@ design doc (`01`–`06`).
 | Range-builder drills + leak buckets | ✅ `drill range` | — |
 | **Full-hand practice** (flop→river vs. equilibrium villain) | ✅ `drill hand` (`--board` spots; library sampling needs P6) | — |
 | Persistent session stats, leak trends | ✅ `stats` over `history.jsonl` | — |
-| Preflop charts + preflop drills | ❌ (2 hardcoded ranges) | P6 → [02](02-solution-library.md), [04](04-training-mode.md) |
-| Formation breadth (positions, 3-bet pots, stack depths, rake) | ❌ (BTN-vs-BB SRP, 100bb, rake-free) | P6 → [02](02-solution-library.md) |
+| Preflop charts + preflop drills | partial (charts in `data/ranges/`, 5 formations) | `drill preflop` → [04](04-training-mode.md) |
+| Formation breadth (positions, 3-bet pots, stack depths, rake) | ✅ config-side (5 formations, rake, manifests); breadth tiers solve locally | data-gen → [02](02-solution-library.md) |
 | Hand-history import & leak analysis | ❌ | P9 → [05](05-analyze.md) |
 | Custom spot solving (ranges/sizes/stacks) | ✅ `--board` + knobs | — |
 | **Nodelocking** (lock villain, re-solve exploit) | ❌ (solver supports it) | P10 → [06](06-solver-capabilities.md) |

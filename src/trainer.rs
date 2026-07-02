@@ -20,8 +20,14 @@ use rs_poker::core::{Card, Deck, Suit};
 use std::collections::BTreeMap;
 use std::io::{self, IsTerminal, Write};
 
-// ponytail: the only formation in the library until P6 adds breadth.
-const FORMATION: &str = "srp-btn-bb";
+/// A spot's formation id for history records; pre-v2 files carry no config and
+/// were all generated as BTN-vs-BB SRPs.
+fn spot_formation(spot: &SolvedSpot) -> String {
+    spot.config
+        .as_ref()
+        .map(|c| c.formation.clone())
+        .unwrap_or_else(|| "srp-btn-bb".into())
+}
 
 const POT: f64 = 10.0; // bb, fixed for now
 const BET_FRACTIONS: [f64; 5] = [0.33, 0.5, 0.75, 1.0, 1.5];
@@ -252,7 +258,7 @@ pub fn run_gto_drill(req: Option<SolveRequest>) {
 
         let (texture, bucket) = flop_context(&spot.board, &hand.hand);
         stats::record(&stats::StatRecord {
-            formation: FORMATION.into(),
+            formation: spot_formation(spot),
             flop: spot.board.join("").to_lowercase(),
             texture,
             street: "flop".into(),
@@ -425,7 +431,7 @@ pub fn run_range_drill(req: Option<SolveRequest>) {
         // A bucket assignment is one decision: `hand`/`best` stay empty (no
         // single combo or best action speaks for the whole bucket).
         stats::record(&stats::StatRecord {
-            formation: FORMATION.into(),
+            formation: spot_formation(spot),
             flop: spot.board.join("").to_lowercase(),
             texture: texture.clone(),
             street: "flop".into(),
@@ -539,6 +545,9 @@ pub fn run_hand_drill(req: Option<SolveRequest>) {
 }
 
 fn hand_drill_loop(req: &SolveRequest) -> io::Result<()> {
+    let (oop_seat, ip_seat) = crate::solution::formation(&req.config.formation)
+        .map(|f| (f.oop_seat, f.ip_seat))
+        .unwrap_or(("OOP", "IP"));
     let (mut session, root) = TreeSession::start(req)?;
     let oop_hands = root.hands.clone();
     // The node payload only carries the *acting* player's hands, and OOP acts
@@ -577,11 +586,23 @@ fn hand_drill_loop(req: &SolveRequest) -> io::Result<()> {
         hands += 1;
         println!(
             "Hand #{hands} — you're {} with {} on {}.",
-            if hero_oop { "BB (OOP)" } else { "BTN (IP)" },
+            if hero_oop {
+                format!("{oop_seat} (OOP)")
+            } else {
+                format!("{ip_seat} (IP)")
+            },
             fmt_hand_str(&hero),
             fmt_hand_str(&root.board.join(""))
         );
-        let outcome = play_hand(&mut session, root, hero_seat, &hero, &villain, &mut rng)?;
+        let outcome = play_hand(
+            &mut session,
+            root,
+            hero_seat,
+            &hero,
+            &villain,
+            &req.config.formation,
+            &mut rng,
+        )?;
         if !outcome.quit {
             replay(&outcome, &villain);
         }
@@ -639,6 +660,7 @@ fn play_hand(
     hero_seat: &str,
     hero: &str,
     villain: &str,
+    formation: &str,
     rng: &mut impl RngExt,
 ) -> io::Result<HandOutcome> {
     let flop = node.board.clone();
@@ -670,7 +692,7 @@ fn play_hand(
                     out.quit = true;
                     break;
                 };
-                record_hand_decision(&flop, hero, &node, &d);
+                record_hand_decision(&flop, hero, formation, &node, &d);
                 out.decisions.push(d);
                 session.play(action)?
             }
@@ -744,10 +766,16 @@ fn hero_decision(node: &TreeNode, hero: &str) -> Option<(HandDecision, usize)> {
     ))
 }
 
-fn record_hand_decision(flop: &[String], hero: &str, node: &TreeNode, d: &HandDecision) {
+fn record_hand_decision(
+    flop: &[String],
+    hero: &str,
+    formation: &str,
+    node: &TreeNode,
+    d: &HandDecision,
+) {
     let (texture, bucket) = flop_context(flop, hero);
     stats::record(&stats::StatRecord {
-        formation: FORMATION.into(),
+        formation: formation.into(),
         flop: flop.join("").to_lowercase(),
         texture,
         street: d.street.into(),

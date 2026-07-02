@@ -1,5 +1,5 @@
 use clap::{Args, Parser, Subcommand, ValueEnum};
-use poker_trainer::solution::SolveRequest;
+use poker_trainer::solution::{SolveRequest, SpotConfig};
 use poker_trainer::{stats, trainer};
 
 #[derive(Parser)]
@@ -36,44 +36,85 @@ enum Command {
     },
 }
 
-/// The live-solve knobs shared by `drill gto`/`drill range`/`table`. With
-/// `--board` set they live-solve that flop (and `--oop/--ip/…` forward straight
-/// to solve-gen); without it, the curated library is used. Ignored by
-/// `drill pot-odds`/`drill texture`.
+/// The live-solve knobs shared by `drill gto`/`drill range`/`drill hand`/
+/// `table`. With `--board` set they live-solve that flop under `--formation`'s
+/// config (ranges from data/ranges/, overridable per flag); without it, the
+/// curated library is used. Ignored by `drill pot-odds`/`drill texture`.
 #[derive(Args)]
 struct SolveArgs {
     /// Live-solve this flop (e.g. Td9d6h) instead of a curated spot. Expect
-    /// ~30 s, ~1 GB RAM. Cached in data/solutions.
+    /// ~30 s, ~1 GB RAM. Cached in data/solutions, keyed by config hash.
     #[arg(long)]
     board: Option<String>,
-    /// OOP (BB) range for --board (defaults to solve-gen's wide range).
+    /// Formation for --board: seats, default pot/stacks, and the ranges read
+    /// from data/ranges/<formation>/{oop,ip}.txt.
+    #[arg(long, default_value = "srp-btn-bb")]
+    formation: String,
+    /// OOP range override for --board.
     #[arg(long)]
     oop: Option<String>,
-    /// IP (BTN) range for --board.
+    /// IP range override for --board.
     #[arg(long)]
     ip: Option<String>,
-    /// Flop c-bet sizes for --board, e.g. "33%, 75%".
+    /// Flop bet sizes for --board, e.g. "33%, 75%".
     #[arg(long)]
     sizes: Option<String>,
+    /// Turn bet sizes for --board.
+    #[arg(long)]
+    turn_sizes: Option<String>,
+    /// River bet sizes for --board.
+    #[arg(long)]
+    river_sizes: Option<String>,
     /// Effective stack in bb for --board.
     #[arg(long)]
     stack: Option<f32>,
     /// Starting pot in bb for --board.
     #[arg(long)]
     pot: Option<f32>,
+    /// Rake rate for --board (0.05 = 5%).
+    #[arg(long)]
+    rake_rate: Option<f32>,
+    /// Rake cap in bb for --board.
+    #[arg(long)]
+    rake_cap: Option<f32>,
 }
 
 impl SolveArgs {
     /// `Some(request)` when `--board` is given, else `None` (use the library).
+    /// A bad formation or missing range file prints and exits — there's
+    /// nothing to drill without a config.
     fn into_request(self) -> Option<SolveRequest> {
-        self.board.map(|flop| SolveRequest {
-            flop,
-            oop: self.oop,
-            ip: self.ip,
-            sizes: self.sizes,
-            stack: self.stack,
-            pot: self.pot,
-        })
+        let flop = self.board?;
+        let mut config =
+            SpotConfig::for_formation(&self.formation, "data/ranges").unwrap_or_else(|e| {
+                eprintln!("{e}");
+                std::process::exit(2);
+            });
+        let overrides = [
+            (&mut config.oop_range, self.oop),
+            (&mut config.ip_range, self.ip),
+            (&mut config.flop_sizes, self.sizes),
+            (&mut config.turn_sizes, self.turn_sizes),
+            (&mut config.river_sizes, self.river_sizes),
+        ];
+        for (field, value) in overrides {
+            if let Some(v) = value {
+                *field = v;
+            }
+        }
+        if let Some(v) = self.stack {
+            config.stack_bb = v;
+        }
+        if let Some(v) = self.pot {
+            config.pot_bb = v;
+        }
+        if let Some(v) = self.rake_rate {
+            config.rake_rate = v;
+        }
+        if let Some(v) = self.rake_cap {
+            config.rake_cap_bb = v;
+        }
+        Some(SolveRequest { flop, config })
     }
 }
 

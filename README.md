@@ -14,7 +14,9 @@ optimal frequency mix.
 > `solve-gen serve` subprocess so `table --board` walks the **whole game tree**.
 > Phase 5 builds on it: `drill hand` plays **full hands** (flop→river) against
 > the equilibrium villain, and every scored decision lands in a persistent
-> history that `stats` folds into a leak report. See the phased plan below.
+> history that `stats` folds into a leak report. Phase 6 rebuilds the library:
+> **formations** (`--formation`, 3-bet pots, SB/CO), ranges as data files,
+> rake, TOML manifests, and config-hash cache keys. See the phased plan below.
 
 ## Build & run
 
@@ -28,33 +30,46 @@ cargo run -- table            # browse a solved spot's strategy as a 13×13 grid
 cargo run -- stats            # leak report over your recorded drill history
 ```
 
-The `gto` drill needs solution files; generate them with the (AGPL) solver crate:
+The `gto` drill needs solution files; generate them with the (AGPL) solver
+crate, which walks a **manifest** of (formation × flop set) entries and skips
+anything already solved (resumable — pair long runs with
+[`scripts/idle-run.sh`](scripts/idle-run.sh)):
 
 ```sh
-cargo run -p solve-gen        # writes the curated library to data/solutions/*.json
+cargo run -p solve-gen        # walks manifests/starter-8.toml into data/solutions/
+cargo run -p solve-gen --release -- gen --manifest manifests/texture-25.toml  # first breadth tier
 ```
 
 ### Live solving a custom spot (Phase 3)
 
-Pass `--board` to `drill gto`/`drill range` to solve any flop on demand instead
-of drilling a curated one. It's **CPU-saturating and takes tens of seconds to a
-few minutes** (the wide default ranges run ~4 min on an 8-core box) and ~1 GB
-RAM. The result is cached in `data/solutions/` and reused (and so also joins the
-random pool of plain `drill gto`/`range`).
+Pass `--board` to `drill gto`/`drill range`/`drill hand` to solve any flop on
+demand instead of drilling a curated one. It's **CPU-saturating and takes tens
+of seconds to a few minutes** (the wide default ranges run ~4 min on an 8-core
+box) and ~1 GB RAM. The result is cached in `data/solutions/`, keyed by a hash
+of the full config, and reused (and so also joins the random pool of plain
+`drill gto`/`range`).
 
 ```sh
 cargo run -- drill gto --board 7c5d2h      # solve this flop, then drill it
 cargo run -- drill range --board Td9d6h    # same, range-builder mode
 ```
 
-Optional overrides (forwarded straight to the solver; any of them forces a
-re-solve even if the flop is cached):
+`--formation` picks the preflop story — seats, default pot/stacks, and the
+ranges read from `data/ranges/<formation>/{oop,ip}.txt` (edit those files to
+taste; they're plain solver range strings). Everything else can be overridden
+per flag; a changed config gets its own cache entry instead of overwriting the
+curated one:
 
 ```sh
+cargo run -- drill hand --board Td9d6h --formation 3bp-bb-btn   # 3-bet pot, 18bb
 cargo run -- drill gto --board Td9d6h \
   --oop "22+,A2s+,..." --ip "22+,A2s+,..." \
-  --sizes "33%, 75%" --stack 100 --pot 6
+  --sizes "33%, 75%" --turn-sizes "50%" --stack 100 --pot 6 \
+  --rake-rate 0.05 --rake-cap 3
 ```
+
+Formations: `srp-btn-bb`, `srp-co-bb`, `srp-sb-bb` (single-raised) and
+`3bp-bb-btn`, `3bp-btn-co` (3-bet pots).
 
 The trainer never links the solver: `--board` shells out to the `solve-gen`
 binary. In-tree it falls back to `cargo run -p solve-gen`; set
@@ -145,9 +160,23 @@ goes through it, so a **file-backed** provider (precomputed sims) and, later, a
    ([design 04](docs/design/04-training-mode.md)). Remaining: spot filters +
    curated-library sampling and `drill preflop`, both blocked on the P6
    library.
-6. **Commercial parity (planned)** — phases 6–10 (library breadth, study
-   browser, aggregate reports, hand-history analysis, nodelocking) are
-   designed in [docs/design/](docs/design/00-overview.md).
+6. **Library v2** — *done (core).* One `SpotConfig` struct is the CLI's
+   resolved knobs, the serve request body, the cache key (stable FNV-1a hash →
+   `<flop>-<hash8>-<node>.json`, so custom solves never clobber curated
+   files), and the provenance embedded in every snapshot (old files keep
+   parsing). Ranges live in `data/ranges/<formation>/{oop,ip}.txt` with
+   hand-curated charts for five formations (BTN/CO/SB single-raised pots and
+   two 3-bet pots); rake and per-street bet sizes plumb through end to end.
+   `solve-gen gen --manifest manifests/<name>.toml` walks (formation × flop
+   set × overrides) lists resumably — `starter-8` is the committed library,
+   `texture-25` the first regenerate-locally tier, `all-iso-flops` the
+   enumerated 1,755-flop ceiling ([design 02](docs/design/02-solution-library.md)).
+   Remaining: actually solving the breadth tiers (CPU-bound, see
+   [docs/shared-machine-data-gen.md](docs/shared-machine-data-gen.md)) and
+   `drill preflop` off the chart files.
+7. **Commercial parity (planned)** — phases 7–10 (study browser, aggregate
+   reports, hand-history analysis, nodelocking) are designed in
+   [docs/design/](docs/design/00-overview.md).
 
 ## Licensing
 

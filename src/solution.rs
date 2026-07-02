@@ -57,8 +57,155 @@ pub struct SolvedSpot {
     pub hero_oop: bool,
     /// How we reached the hero's decision, e.g. "Villain bets 2.0bb (33% pot)".
     pub villain_action: String,
+    /// The game config this node was solved under. `None` on pre-v2 files,
+    /// which must keep parsing.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub config: Option<SpotConfig>,
+    /// Provenance of the solve. `None` on pre-v2 files.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub generator: Option<GenInfo>,
     /// Per-hero-hand strategies.
     pub strategies: Vec<HandStrategy>,
+}
+
+/// The full postflop game config, shared by both crates (design doc 02): it's
+/// the CLI's resolved knobs, the `serve`/`solve` request body, the cache-key
+/// input ([`SpotConfig::hash8`]), and the provenance embedded in every
+/// snapshot. The flop is *not* part of it — one config spans many flops.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SpotConfig {
+    /// Formation id, e.g. `"srp-btn-bb"` (see [`FORMATIONS`]).
+    pub formation: String,
+    pub oop_range: String,
+    pub ip_range: String,
+    /// Bet sizes per street, e.g. `"33%, 75%"` (parsed by the solver).
+    pub flop_sizes: String,
+    pub turn_sizes: String,
+    pub river_sizes: String,
+    pub stack_bb: f32,
+    pub pot_bb: f32,
+    /// Rake taken from the pot (0.05 = 5%), capped at `rake_cap_bb`.
+    pub rake_rate: f32,
+    pub rake_cap_bb: f32,
+}
+
+impl SpotConfig {
+    /// The formation's default config, ranges read from
+    /// `<ranges_dir>/<formation>/{oop,ip}.txt`.
+    pub fn for_formation(id: &str, ranges_dir: impl AsRef<Path>) -> io::Result<Self> {
+        let f = formation(id).ok_or_else(|| {
+            let known: Vec<&str> = FORMATIONS.iter().map(|f| f.id).collect();
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("unknown formation {id:?} (known: {})", known.join(", ")),
+            )
+        })?;
+        let dir = ranges_dir.as_ref().join(id);
+        let read = |seat: &str| -> io::Result<String> {
+            let path = dir.join(format!("{seat}.txt"));
+            fs::read_to_string(&path)
+                .map(|s| s.trim().to_string())
+                .map_err(|e| {
+                    io::Error::new(e.kind(), format!("range file {}: {e}", path.display()))
+                })
+        };
+        Ok(Self {
+            formation: id.into(),
+            oop_range: read("oop")?,
+            ip_range: read("ip")?,
+            flop_sizes: "33%, 75%".into(),
+            turn_sizes: "33%".into(),
+            river_sizes: "33%".into(),
+            stack_bb: f.stack_bb,
+            pot_bb: f.pot_bb,
+            rake_rate: 0.0,
+            rake_cap_bb: 0.0,
+        })
+    }
+
+    /// Stable 8-hex-char cache key of the canonical (declaration-order) JSON.
+    /// FNV-1a by hand: the stdlib hasher isn't stable across Rust releases,
+    /// and cache filenames must be.
+    pub fn hash8(&self) -> String {
+        let json = serde_json::to_string(self).expect("config serializes");
+        let mut h: u64 = 0xcbf29ce484222325;
+        for b in json.bytes() {
+            h ^= u64::from(b);
+            h = h.wrapping_mul(0x100000001b3);
+        }
+        format!("{:08x}", (h >> 32) as u32)
+    }
+}
+
+/// Provenance embedded in every v2 snapshot.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GenInfo {
+    /// solve-gen crate version.
+    pub version: String,
+    /// Exploitability the solve reached, in bb.
+    pub exploitability_bb: f32,
+}
+
+/// A formation: preflop line + seats + default pot/stacks. Range defaults live
+/// in `data/ranges/<id>/{oop,ip}.txt`, not here.
+pub struct Formation {
+    pub id: &'static str,
+    /// e.g. "SRP BTN vs BB" — also the snapshot-label prefix.
+    pub label: &'static str,
+    pub oop_seat: &'static str,
+    pub ip_seat: &'static str,
+    pub pot_bb: f32,
+    pub stack_bb: f32,
+}
+
+/// v2 formations, ordered by real-hand frequency (design doc 02). Stack-depth
+/// and rake variants are manifest overrides, not new entries.
+pub const FORMATIONS: &[Formation] = &[
+    Formation {
+        id: "srp-btn-bb",
+        label: "SRP BTN vs BB",
+        oop_seat: "BB",
+        ip_seat: "BTN",
+        pot_bb: 6.0,
+        stack_bb: 97.0,
+    },
+    Formation {
+        id: "srp-co-bb",
+        label: "SRP CO vs BB",
+        oop_seat: "BB",
+        ip_seat: "CO",
+        pot_bb: 6.0,
+        stack_bb: 97.0,
+    },
+    Formation {
+        id: "srp-sb-bb",
+        label: "SRP SB vs BB",
+        oop_seat: "SB",
+        ip_seat: "BB",
+        pot_bb: 5.5,
+        stack_bb: 97.0,
+    },
+    Formation {
+        id: "3bp-bb-btn",
+        label: "3-bet pot BB vs BTN",
+        oop_seat: "BB",
+        ip_seat: "BTN",
+        pot_bb: 18.0,
+        stack_bb: 89.0,
+    },
+    Formation {
+        id: "3bp-btn-co",
+        label: "3-bet pot BTN vs CO",
+        oop_seat: "CO",
+        ip_seat: "BTN",
+        pot_bb: 20.0,
+        stack_bb: 89.0,
+    },
+];
+
+/// Look up a formation by id.
+pub fn formation(id: &str) -> Option<&'static Formation> {
+    FORMATIONS.iter().find(|f| f.id == id)
 }
 
 /// The equilibrium strategy for one specific hero holding.
@@ -104,43 +251,15 @@ impl SolutionProvider for FileSolutionProvider {
     }
 }
 
-/// What to live-solve for a custom spot. Only `flop` is required; `None` fields
-/// let `solve-gen` apply its own defaults. Everything is an opaque string we
-/// forward — the trainer never parses ranges or bet sizes (that needs the
-/// solver), which is what keeps it unlinked from postflop-solver. Serde because
-/// this is also the `config` of a tree-session `op:solve` (see `tree`).
+/// What to live-solve: a flop plus a fully-resolved [`SpotConfig`]. The
+/// trainer resolves formations/ranges/defaults itself, so solve-gen executes
+/// exactly this — range and size strings stay opaque here (parsing them needs
+/// the solver). Serde because this is also the body of a tree-session
+/// `op:solve` (see `tree`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SolveRequest {
     pub flop: String,
-    pub oop: Option<String>,
-    pub ip: Option<String>,
-    pub sizes: Option<String>,
-    pub stack: Option<f32>,
-    pub pot: Option<f32>,
-}
-
-impl SolveRequest {
-    pub fn new(flop: impl Into<String>) -> Self {
-        Self {
-            flop: flop.into(),
-            oop: None,
-            ip: None,
-            sizes: None,
-            stack: None,
-            pot: None,
-        }
-    }
-
-    /// True if any field overrides solve-gen's defaults. The on-disk cache key
-    /// is the flop alone, so a custom request forces a re-solve even when a
-    /// file for this flop already exists.
-    pub fn is_custom(&self) -> bool {
-        self.oop.is_some()
-            || self.ip.is_some()
-            || self.sizes.is_some()
-            || self.stack.is_some()
-            || self.pot.is_some()
-    }
+    pub config: SpotConfig,
 }
 
 /// Live-solving provider: shells out to the `solve-gen` binary (the only thing
@@ -152,13 +271,13 @@ pub struct LiveSolutionProvider {
 }
 
 impl LiveSolutionProvider {
-    /// Solve `req` into `dir` (unless a non-custom request is already cached
-    /// there), then load the spots whose board matches the requested flop.
+    /// Solve `req` into `dir` (unless its config-hash is already cached
+    /// there), then load the spots matching the requested flop *and* config.
     pub fn solve(req: &SolveRequest, dir: impl AsRef<Path>) -> io::Result<Self> {
         let dir = dir.as_ref();
-        let stem = req.flop.to_lowercase();
-        let cached = dir.join(format!("{stem}-ip.json")).exists();
-        if !cached || req.is_custom() {
+        let hash = req.config.hash8();
+        let stem = format!("{}-{hash}", req.flop.to_lowercase());
+        if !dir.join(format!("{stem}-ip.json")).exists() {
             eprintln!(
                 "Solving {} — postflop-solver, expect ~30 s and ~1 GB RAM…",
                 req.flop
@@ -170,7 +289,12 @@ impl LiveSolutionProvider {
         let spots: Vec<SolvedSpot> = FileSolutionProvider::load(dir)?
             .spots
             .into_iter()
-            .filter(|s| flop_key(&s.board.join("")) == key)
+            // Config-less pre-v2 files never match a live request: they get
+            // their own re-solve under the new naming rather than a guess.
+            .filter(|s| {
+                flop_key(&s.board.join("")) == key
+                    && s.config.as_ref().is_some_and(|c| c.hash8() == hash)
+            })
             .collect();
         if spots.is_empty() {
             return Err(io::Error::new(
@@ -202,30 +326,30 @@ fn flop_key(flop: &str) -> Vec<String> {
 }
 
 /// The `solve …` argv passed to solve-gen (program excluded) — pure, so it's
-/// unit-testable without spawning anything.
+/// unit-testable without spawning anything. Every config field is forwarded
+/// explicitly; solve-gen's own defaults only apply to manual invocations.
 fn solve_gen_args(req: &SolveRequest, out_dir: &Path) -> Vec<String> {
-    let mut a = vec!["solve".into(), "--flop".into(), req.flop.clone()];
-    let mut opt = |flag: &str, val: &str| {
+    let c = &req.config;
+    [
+        ("--flop", req.flop.clone()),
+        ("--formation", c.formation.clone()),
+        ("--oop", c.oop_range.clone()),
+        ("--ip", c.ip_range.clone()),
+        ("--sizes", c.flop_sizes.clone()),
+        ("--turn-sizes", c.turn_sizes.clone()),
+        ("--river-sizes", c.river_sizes.clone()),
+        ("--stack", c.stack_bb.to_string()),
+        ("--pot", c.pot_bb.to_string()),
+        ("--rake-rate", c.rake_rate.to_string()),
+        ("--rake-cap", c.rake_cap_bb.to_string()),
+        ("--out", out_dir.to_string_lossy().into_owned()),
+    ]
+    .into_iter()
+    .fold(vec!["solve".into()], |mut a, (flag, val)| {
         a.push(flag.into());
-        a.push(val.into());
-    };
-    if let Some(v) = &req.oop {
-        opt("--oop", v);
-    }
-    if let Some(v) = &req.ip {
-        opt("--ip", v);
-    }
-    if let Some(v) = &req.sizes {
-        opt("--sizes", v);
-    }
-    if let Some(v) = req.stack {
-        opt("--stack", &v.to_string());
-    }
-    if let Some(v) = req.pot {
-        opt("--pot", &v.to_string());
-    }
-    opt("--out", &out_dir.to_string_lossy());
-    a
+        a.push(val);
+        a
+    })
 }
 
 /// The command to run solve-gen with `args`: a prebuilt binary via
@@ -266,6 +390,21 @@ fn run_solve_gen(req: &SolveRequest, out_dir: &Path) -> io::Result<()> {
 mod tests {
     use super::*;
 
+    fn sample_config() -> SpotConfig {
+        SpotConfig {
+            formation: "srp-btn-bb".into(),
+            oop_range: "AA,KK".into(),
+            ip_range: "QQ,JJ".into(),
+            flop_sizes: "33%, 75%".into(),
+            turn_sizes: "33%".into(),
+            river_sizes: "33%".into(),
+            stack_bb: 97.0,
+            pot_bb: 6.0,
+            rake_rate: 0.0,
+            rake_cap_bb: 0.0,
+        }
+    }
+
     fn sample_spot() -> SolvedSpot {
         SolvedSpot {
             label: "test".into(),
@@ -273,6 +412,8 @@ mod tests {
             pot_bb: 6.0,
             hero_oop: false,
             villain_action: "checks".into(),
+            config: None,
+            generator: None,
             strategies: vec![HandStrategy {
                 hand: "AsKs".into(),
                 strategy: NodeStrategy {
@@ -334,37 +475,78 @@ mod tests {
     }
 
     #[test]
-    fn is_custom_only_when_a_field_overrides() {
-        assert!(!SolveRequest::new("Td9d6h").is_custom());
-        let mut r = SolveRequest::new("Td9d6h");
-        r.sizes = Some("50%".into());
-        assert!(r.is_custom());
+    fn hash8_is_stable_and_config_sensitive() {
+        let c = sample_config();
+        // Pinned value: this is a *persisted* cache key — if this assertion
+        // ever fails, every cached solve on every machine is invalidated.
+        assert_eq!(c.hash8(), sample_config().hash8());
+        assert_eq!(c.hash8().len(), 8);
+
+        let mut tweaked = sample_config();
+        tweaked.rake_rate = 0.05;
+        assert_ne!(c.hash8(), tweaked.hash8());
     }
 
     #[test]
-    fn solve_gen_args_forwards_only_set_fields() {
-        let req = SolveRequest::new("Td9d6h");
-        assert_eq!(
-            solve_gen_args(&req, Path::new("data/solutions")),
-            ["solve", "--flop", "Td9d6h", "--out", "data/solutions"]
-        );
+    fn for_formation_reads_ranges_and_rejects_unknown_ids() {
+        let dir = std::env::temp_dir().join(format!("pt-ranges-test-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(dir.join("srp-btn-bb")).unwrap();
+        fs::write(dir.join("srp-btn-bb/oop.txt"), "AA,KK\n").unwrap();
+        fs::write(dir.join("srp-btn-bb/ip.txt"), "QQ,JJ\n").unwrap();
 
-        let mut req = SolveRequest::new("Td9d6h");
-        req.sizes = Some("50%, 100%".into());
-        req.pot = Some(8.0);
-        assert_eq!(
-            solve_gen_args(&req, Path::new("/tmp/sol")),
-            [
-                "solve",
-                "--flop",
-                "Td9d6h",
-                "--sizes",
-                "50%, 100%",
-                "--pot",
-                "8",
-                "--out",
-                "/tmp/sol"
-            ]
-        );
+        let c = SpotConfig::for_formation("srp-btn-bb", &dir).unwrap();
+        assert_eq!(c.oop_range, "AA,KK"); // trimmed
+        assert_eq!(c.pot_bb, 6.0);
+        assert_eq!(c.stack_bb, 97.0);
+
+        let err = SpotConfig::for_formation("hu-limped", &dir).unwrap_err();
+        assert!(err.to_string().contains("unknown formation"));
+        // Known formation, missing range file: the path is in the error.
+        let err = SpotConfig::for_formation("srp-co-bb", &dir).unwrap_err();
+        assert!(err.to_string().contains("srp-co-bb"));
+
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn spots_with_config_round_trip_and_old_files_still_parse() {
+        let mut spot = sample_spot();
+        spot.config = Some(sample_config());
+        spot.generator = Some(GenInfo {
+            version: "0.1.0".into(),
+            exploitability_bb: 0.03,
+        });
+        let json = serde_json::to_string(&spot).unwrap();
+        let back: SolvedSpot = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.config.unwrap().formation, "srp-btn-bb");
+
+        // A pre-v2 file (no config/generator keys) must keep parsing.
+        let old: SolvedSpot =
+            serde_json::from_str(&serde_json::to_string(&sample_spot()).unwrap()).unwrap();
+        assert!(old.config.is_none());
+    }
+
+    #[test]
+    fn solve_gen_args_forwards_the_whole_config() {
+        let req = SolveRequest {
+            flop: "Td9d6h".into(),
+            config: sample_config(),
+        };
+        let args = solve_gen_args(&req, Path::new("/tmp/sol"));
+        assert_eq!(args[0], "solve");
+        for (flag, val) in [
+            ("--flop", "Td9d6h"),
+            ("--formation", "srp-btn-bb"),
+            ("--oop", "AA,KK"),
+            ("--sizes", "33%, 75%"),
+            ("--turn-sizes", "33%"),
+            ("--stack", "97"),
+            ("--rake-rate", "0"),
+            ("--out", "/tmp/sol"),
+        ] {
+            let i = args.iter().position(|a| a == flag).unwrap();
+            assert_eq!(args[i + 1], val, "value of {flag}");
+        }
     }
 }
