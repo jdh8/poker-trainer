@@ -574,6 +574,7 @@ fn detail_lines(
     grid: &Grid,
     cursor: (usize, usize),
     locks: Option<&CellLocks>,
+    blockers: Option<&Blockers>,
 ) -> Vec<Line<'static>> {
     let Some(cell) = grid[cursor.0][cursor.1].as_ref() else {
         return vec![Line::from("(no combos on this board)")];
@@ -612,6 +613,19 @@ fn detail_lines(
             cell.ev
         )));
     }
+    // P8 blocker column: mean over the cell's combos of the villain continue
+    // mass each blocks (vs. this node's biggest bet).
+    let row_blocked = |row: &ComboRow| Some(blockers?.blocked(parse_hole(&row.hand)?));
+    if let Some(b) = blockers {
+        let blocked: Vec<f32> = cell.rows.iter().filter_map(row_blocked).collect();
+        if !blocked.is_empty() {
+            lines.push(Line::from(format!(
+                "blocks {:>2.0}% of villain's continues vs {}",
+                blocked.iter().sum::<f32>() / blocked.len() as f32 * 100.0,
+                b.action
+            )));
+        }
+    }
     for (i, action) in cell.actions.iter().enumerate() {
         lines.push(Line::from(vec![
             Span::styled(
@@ -632,6 +646,9 @@ fn detail_lines(
                 row.equity * 100.0,
                 row.ev
             )));
+            if let Some(blk) = row_blocked(row) {
+                spans.push(Span::raw(format!("  blk {:>2.0}%", blk * 100.0)));
+            }
             lines.push(Line::from(spans));
         }
     }
@@ -704,7 +721,7 @@ fn draw(
     let mid =
         Layout::horizontal([Constraint::Percentage(55), Constraint::Percentage(45)]).split(rows[2]);
     f.render_widget(
-        Paragraph::new(detail_lines(grid, cursor, None))
+        Paragraph::new(detail_lines(grid, cursor, None, None))
             .block(Block::default().borders(Borders::ALL).title(" hand ")),
         mid[0],
     );
@@ -914,6 +931,79 @@ struct TreeView {
     locks: CellLocks,
     /// Pre-resolve per-cell EVs, for the delta lens after `R`.
     baseline_ev: Option<HashMap<(usize, usize), f32>>,
+    /// P8: villain's continue range vs. this node's biggest bet, for the
+    /// side panel's blocker line.
+    blockers: Option<Blockers>,
+}
+
+/// Villain's continuing range after hero's biggest aggressive action at the
+/// current node: each villain combo with its continue mass
+/// (reach × (1 − fold frequency)).
+pub struct Blockers {
+    /// The hero action villain is responding to, e.g. `"Bet 4.5bb"`.
+    pub action: String,
+    pub mass: Vec<([Card; 2], f32)>,
+}
+
+impl Blockers {
+    /// Fraction of villain's continue mass that `hero` blocks by card removal.
+    pub fn blocked(&self, hero: [Card; 2]) -> f32 {
+        let total: f32 = self.mass.iter().map(|(_, m)| m).sum();
+        if total <= 0.0 {
+            return 0.0;
+        }
+        let dead: f32 = self
+            .mass
+            .iter()
+            .filter(|(v, _)| v.contains(&hero[0]) || v.contains(&hero[1]))
+            .map(|(_, m)| m)
+            .sum();
+        dead / total
+    }
+}
+
+/// Fetch the villain response to hero's biggest bet/raise via two protocol
+/// calls (design doc 03): `play` the action, read the villain node, `back`.
+/// `None` when the node has no aggressive action or no villain decision
+/// follows it; errors mean the session itself died.
+// ponytail: "continue" is defined vs. the biggest bet only; a per-action
+// blocker readout would fetch one villain node per size.
+fn villain_continues(
+    session: &mut TreeSession,
+    node: &TreeNode,
+) -> std::io::Result<Option<Blockers>> {
+    if node.player != "oop" && node.player != "ip" {
+        return Ok(None);
+    }
+    let Some(i) = node
+        .actions
+        .iter()
+        .rposition(|a| a.starts_with("Bet") || a.starts_with("Raise") || a.starts_with("All-in"))
+    else {
+        return Ok(None);
+    };
+    let vnode = session.play(i)?;
+    let result = if vnode.player == "oop" || vnode.player == "ip" {
+        let fold = vnode.actions.iter().position(|a| a == "Fold");
+        let mass = vnode
+            .hands
+            .iter()
+            .enumerate()
+            .filter_map(|(j, hand)| {
+                let reach = vnode.weights.get(j).copied().unwrap_or(1.0);
+                let cont = fold.map_or(1.0, |f| 1.0 - vnode.freqs[f][j]);
+                parse_hole(hand).map(|h| (h, reach * cont))
+            })
+            .collect();
+        Some(Blockers {
+            action: node.actions[i].clone(),
+            mass,
+        })
+    } else {
+        None
+    };
+    session.back()?;
+    Ok(result)
 }
 
 /// The numbered action bar for a player node: `1 Check   2 Bet 3.3bb   …`.
@@ -1016,6 +1106,7 @@ fn draw_tree(f: &mut Frame, node: &TreeNode, view: &TreeView) {
                 &view.grid,
                 view.cursor,
                 view.lock_mode.then_some(&view.locks),
+                view.blockers.as_ref(),
             ),
             legend_lines(&view.grid),
         ),
@@ -1062,6 +1153,7 @@ pub fn run_tree(mut session: TreeSession, mut node: TreeNode) {
         lock_mode: false,
         locks: CellLocks::new(),
         baseline_ev: None,
+        blockers: villain_continues(&mut session, &node).unwrap_or(None),
     };
     let mut died: Option<std::io::Error> = None;
 
@@ -1152,6 +1244,13 @@ pub fn run_tree(mut session: TreeSession, mut node: TreeNode) {
                         view.lens = Lens::Delta;
                         view.lock_mode = false;
                         view.runouts = None;
+                        match villain_continues(&mut session, &node) {
+                            Ok(b) => view.blockers = b,
+                            Err(e) => {
+                                died = Some(e);
+                                break;
+                            }
+                        }
                     }
                     Err(e) => {
                         died = Some(e);
@@ -1209,6 +1308,13 @@ pub fn run_tree(mut session: TreeSession, mut node: TreeNode) {
                 view.baseline_ev = None;
                 if view.lens == Lens::Delta {
                     view.lens = Lens::Strategy;
+                }
+                match villain_continues(&mut session, &node) {
+                    Ok(b) => view.blockers = b,
+                    Err(e) => {
+                        died = Some(e);
+                        break;
+                    }
                 }
             }
             Some(Err(e)) => {
@@ -1367,6 +1473,25 @@ mod tests {
     }
 
     #[test]
+    fn blocked_is_the_dead_share_of_continue_mass() {
+        let b = Blockers {
+            action: "Bet 2.0bb".into(),
+            // Continue mass 1.0 + 0.5; QQ folds always so it carries none.
+            mass: vec![
+                (hole("AhAd"), 1.0),
+                (hole("KsKd"), 0.5),
+                (hole("QsQd"), 0.0),
+            ],
+        };
+        // AhKs blocks both live combos -> 100%.
+        assert!((b.blocked(hole("AhKs")) - 1.0).abs() < 1e-6);
+        // KdQs blocks only KsKd -> 0.5 / 1.5.
+        assert!((b.blocked(hole("KdQs")) - 0.5 / 1.5).abs() < 1e-6);
+        // 7c2c blocks nothing.
+        assert_eq!(b.blocked(hole("7c2c")), 0.0);
+    }
+
+    #[test]
     fn heat_color_hits_the_ramp_ends() {
         assert_eq!(heat_color(0.0), Color::Rgb(200, 60, 50));
         assert_eq!(heat_color(1.0), Color::Rgb(60, 165, 90));
@@ -1423,6 +1548,14 @@ mod tests {
                     lock_mode,
                     locks: locks.clone(),
                     baseline_ev: Some(baseline.clone()),
+                    blockers: Some(Blockers {
+                        action: "Bet 2.0bb".into(),
+                        mass: vec![
+                            (hole("AhAd"), 1.0),
+                            (hole("KsKd"), 0.5),
+                            (hole("QsQd"), 0.0),
+                        ],
+                    }),
                 };
                 terminal.draw(|f| draw_tree(f, &node, &view)).unwrap();
             }
