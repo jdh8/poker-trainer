@@ -31,9 +31,9 @@ design doc (`01`–`06`).
 | GTO Wizard capability | Today | Plan |
 |---|---|---|
 | Browse strategy grid (13×13) per node | ✅ `table`, 3 nodes/flop | — |
-| Browse the **whole game tree** (any line, any runout) | ❌ | P4 → [01](01-tree-protocol.md), P7 → [03](03-study-mode.md) |
-| Range / EV / equity views, filters | ❌ (strategy colors only) | P7 → [03](03-study-mode.md) |
-| Runouts report (strategy across all turn/river cards) | ❌ | P7 → [03](03-study-mode.md) |
+| Browse the **whole game tree** (any line, any runout) | ✅ `table --board` tree browser | — |
+| Range / EV / equity views, filters | ✅ `s/w/e/y` lenses + `f` bucket filter | — |
+| Runouts report (strategy across all turn/river cards) | ✅ `o` runouts view at chance nodes | — |
 | Aggregate flop reports (all flops, sortable by texture) | ❌ | P8 → [03](03-study-mode.md) |
 | Blockers / range-vs-range equity tools | partial (drill-internal MC equity) | P8 → [03](03-study-mode.md) |
 | Single-node drills, EV-loss scoring | ✅ `drill gto` | — |

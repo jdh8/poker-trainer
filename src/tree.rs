@@ -42,6 +42,22 @@ pub struct TreeNode {
     pub freqs: Vec<Vec<f32>>,
     #[serde(default)]
     pub evs: Vec<Vec<f32>>,
+    /// Reach weight per hand (combo mass at this node), parallel to `hands`.
+    #[serde(default)]
+    pub weights: Vec<f32>,
+    /// Equity vs. the villain's reaching range, parallel to `hands`.
+    #[serde(default)]
+    pub equity: Vec<f32>,
+}
+
+/// One dealable card's summary from the `runouts` op: the next player's
+/// reach-weighted aggregate action mix and EV after that card falls.
+#[derive(Debug, Clone, Deserialize)]
+pub struct RunoutSummary {
+    pub card: String,
+    pub actions: Vec<String>,
+    pub freqs: Vec<f32>,
+    pub ev_bb: f32,
 }
 
 impl TreeNode {
@@ -133,8 +149,20 @@ impl TreeSession {
         self.request(json!({"op": "root"}))
     }
 
+    /// At a chance node: per dealable card, the next node's aggregate mix + EV.
+    pub fn runouts(&mut self) -> io::Result<Vec<RunoutSummary>> {
+        let v = self.round_trip(json!({"op": "runouts"}))?;
+        serde_json::from_value(v["runouts"].clone())
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+    }
+
     /// One request/response round trip.
     fn request(&mut self, req: serde_json::Value) -> io::Result<TreeNode> {
+        let v = self.round_trip(req)?;
+        serde_json::from_value(v).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+    }
+
+    fn round_trip(&mut self, req: serde_json::Value) -> io::Result<serde_json::Value> {
         writeln!(self.stdin, "{req}")?;
         self.stdin.flush()?;
         let mut line = String::new();
@@ -156,14 +184,14 @@ impl Drop for TreeSession {
     }
 }
 
-/// Parse one response line: a `TreeNode`, or `{"error": …}` mapped to an error.
-fn parse_response(line: &str) -> io::Result<TreeNode> {
+/// Parse one response line into JSON, mapping `{"error": …}` to an error.
+fn parse_response(line: &str) -> io::Result<serde_json::Value> {
     let v: serde_json::Value =
         serde_json::from_str(line).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
     if let Some(msg) = v.get("error").and_then(|m| m.as_str()) {
         return Err(io::Error::new(io::ErrorKind::InvalidData, msg.to_string()));
     }
-    serde_json::from_value(v).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+    Ok(v)
 }
 
 #[cfg(test)]
@@ -219,14 +247,32 @@ mod tests {
                 .to_string(),
             "no game"
         );
-        // Unknown fields (a v2 serve) and absent optional fields must parse.
-        let node = parse_response(
-            "{\"player\":\"chance\",\"board\":[],\"pot_bb\":6.0,\"line\":[],\"actions\":[],\
-             \"dealable\":[\"2c\"],\"weights\":[0.5]}",
+        // Unknown fields (a future serve) and absent optional fields must parse.
+        let node: TreeNode = serde_json::from_value(
+            parse_response(
+                "{\"player\":\"chance\",\"board\":[],\"pot_bb\":6.0,\"line\":[],\"actions\":[],\
+                 \"dealable\":[\"2c\"],\"weights\":[0.5],\"someday\":1}",
+            )
+            .unwrap(),
         )
         .unwrap();
         assert_eq!(node.dealable, vec!["2c"]);
+        assert_eq!(node.weights, vec![0.5]);
         assert!(node.hands.is_empty());
+    }
+
+    #[test]
+    fn runouts_response_parses() {
+        let v = parse_response(
+            "{\"runouts\":[{\"card\":\"2c\",\"actions\":[\"Check\",\"Bet 5.0bb\"],\
+             \"freqs\":[0.6,0.4],\"ev_bb\":1.2}]}",
+        )
+        .unwrap();
+        let runouts: Vec<RunoutSummary> = serde_json::from_value(v["runouts"].clone()).unwrap();
+        assert_eq!(runouts.len(), 1);
+        assert_eq!(runouts[0].card, "2c");
+        assert_eq!(runouts[0].freqs, vec![0.6, 0.4]);
+        assert!((runouts[0].ev_bb - 1.2).abs() < 1e-6);
     }
 
     /// End-to-end: solve a tiny spot through `solve-gen serve` and walk the
@@ -254,6 +300,9 @@ mod tests {
         assert_eq!(root.player, "oop");
         assert_eq!(root.board, vec!["6h", "9d", "Td"]); // solver-sorted
         assert!(root.line.is_empty());
+        // At the root every combo reaches, so raw weights are all positive.
+        assert_eq!(root.weights.len(), root.hands.len());
+        assert!(root.weights.iter().all(|&w| w > 0.0));
 
         let check = root.actions.iter().position(|a| a == "Check").unwrap();
         let node = s.play(check).unwrap();
@@ -261,6 +310,10 @@ mod tests {
         assert_eq!(node.line, vec!["Check"]);
         assert_eq!(node.freqs.len(), node.actions.len());
         assert_eq!(node.freqs[0].len(), node.hands.len());
+        // P7: payloads carry per-hand reach weights and equity.
+        assert_eq!(node.weights.len(), node.hands.len());
+        assert_eq!(node.equity.len(), node.hands.len());
+        assert!(node.equity.iter().all(|&e| (0.0..=1.0).contains(&e)));
 
         // Check through to the turn: a chance node with unblocked cards only.
         let check = node.actions.iter().position(|a| a == "Check").unwrap();
@@ -268,6 +321,14 @@ mod tests {
         assert_eq!(chance.player, "chance");
         assert!(!chance.dealable.contains(&"Td".to_string()));
         assert!(chance.dealable.contains(&"2c".to_string()));
+
+        // P7: runouts summarizes every dealable card without moving the node.
+        let runouts = s.runouts().unwrap();
+        assert_eq!(runouts.len(), chance.dealable.len());
+        let r = runouts.iter().find(|r| r.card == "2c").unwrap();
+        assert_eq!(r.actions.len(), r.freqs.len());
+        assert!((r.freqs.iter().sum::<f32>() - 1.0).abs() < 1e-3);
+        assert_eq!(s.node().unwrap().player, "chance");
 
         let turn = s.deal("2c").unwrap();
         assert_eq!(turn.board.last().unwrap(), "2c");

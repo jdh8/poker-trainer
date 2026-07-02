@@ -361,12 +361,13 @@ fn handle_op(sess: &mut Option<ServeSession>, req: &Value) -> Result<Value, Stri
         }
         // Validate the op name before requiring a game, so an unknown op is
         // reported as such even before the first solve.
-        "node" | "play" | "deal" | "back" | "root" | "snapshot" => {}
+        "node" | "play" | "deal" | "back" | "root" | "snapshot" | "runouts" => {}
         other => return Err(format!("unknown op {other:?}")),
     }
     let s = sess.as_mut().ok_or("no game held — send op:solve first")?;
     match op {
         "node" => {}
+        "runouts" => return runouts_payload(s),
         "play" => {
             let i = req
                 .get("action")
@@ -505,8 +506,49 @@ fn node_payload_parts(s: &mut ServeSession) -> TreeNode {
                     .collect()
             })
             .collect(),
+        weights: game.normalized_weights(player).to_vec(),
+        equity: game.equity(player),
         ..base
     }
+}
+
+/// The `runouts` op: per dealable card at a chance node, deal it, read the
+/// next player's reach-weighted aggregate action mix and EV, and step back.
+fn runouts_payload(s: &mut ServeSession) -> Result<Value, String> {
+    if !s.game.is_chance_node() {
+        return Err("not a chance node".into());
+    }
+    let history = s.game.history().to_vec();
+    let mask = s.game.possible_cards();
+    let mut list = Vec::new();
+    for card in (0u8..52).filter(|&c| mask & (1u64 << c) != 0) {
+        s.game.play(card as usize);
+        s.game.cache_normalized_weights();
+        let player = s.game.current_player();
+        let weights = s.game.normalized_weights(player);
+        let strat = s.game.strategy(); // [action * n + hand]
+        let evs = s.game.expected_values(player); // chips, per hand
+        let n = weights.len();
+        // Zero-reach line (nothing check-checks here, say): fall back to the
+        // plain mean so the runout still shows the strategy's shape.
+        let wsum: f32 = weights.iter().sum();
+        let reached = wsum > 1e-9;
+        let w = |j: usize| if reached { weights[j] } else { 1.0 };
+        let div = if reached { wsum } else { n.max(1) as f32 };
+        let actions: Vec<String> = s.game.available_actions().iter().map(fmt_action).collect();
+        let freqs: Vec<f32> = (0..actions.len())
+            .map(|a| (0..n).map(|j| w(j) * strat[a * n + j]).sum::<f32>() / div)
+            .collect();
+        let ev_bb = (0..n).map(|j| w(j) * evs[j]).sum::<f32>() / div / CHIPS_PER_BB;
+        list.push(json!({
+            "card": card_to_string(card).unwrap(),
+            "actions": actions,
+            "freqs": freqs,
+            "ev_bb": ev_bb,
+        }));
+        s.game.apply_history(&history);
+    }
+    Ok(json!({ "runouts": list }))
 }
 
 fn write_all(spots: &[Spot], out_dir: &Path) {
@@ -824,6 +866,10 @@ mod tests {
 
         let (resp, _) = respond(&mut sess, r#"{"op":"warp"}"#);
         assert!(resp["error"].as_str().unwrap().contains("unknown op"));
+
+        // runouts is a known op, so before a solve it fails with "no game".
+        let (resp, _) = respond(&mut sess, r#"{"op":"runouts"}"#);
+        assert!(resp["error"].as_str().unwrap().contains("op:solve first"));
 
         // v1 (and anything else that isn't v2) is rejected before config parse.
         for v in [1, 9] {
