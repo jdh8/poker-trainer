@@ -6,3 +6,8 @@
 
 # Solved sims can get large; ignore the cache dir, ship a curated set elsewhere.
 /sims_cache
+
+# Only the starter-8 curated library is committed (design 02); bigger tiers
+# regenerate locally via `solve-gen gen --manifest`. Already-tracked starter-8
+# files are unaffected; `git add -f` if that curated set ever grows.
+/data/solutions/*.json

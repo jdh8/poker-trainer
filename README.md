@@ -26,6 +26,7 @@ cargo run -- drill texture    # classify a flop's board texture
 cargo run -- drill gto        # act vs. a precomputed GTO solution (Phase 1)
 cargo run -- drill range      # assign your whole range by bucket; leak stats (Phase 2)
 cargo run -- drill hand --board Td9d6h   # play full hands vs. the GTO villain (Phase 5)
+cargo run -- drill preflop    # open/defend/3-bet decisions scored vs. chart files (Phase 6)
 cargo run -- table            # browse a solved spot's strategy as a 13×13 grid
 cargo run -- stats            # leak report over your recorded drill history
 cargo run -- report           # aggregate flop report over the library (Phase 8)
@@ -160,9 +161,8 @@ goes through it, so a **file-backed** provider (precomputed sims) and, later, a
    formation|street|texture|bucket] [--last N]` reports avg EV loss, accuracy,
    blunder rate, and a trend, worst groups first
    ([design 04](docs/design/04-training-mode.md)). Remaining: spot filters +
-   curated-library sampling and `drill preflop`, both blocked on the P6
-   library.
-6. **Library v2** — *done (core).* One `SpotConfig` struct is the CLI's
+   curated-library sampling, blocked on the P6 library.
+6. **Library v2** — *done.* One `SpotConfig` struct is the CLI's
    resolved knobs, the serve request body, the cache key (stable FNV-1a hash →
    `<flop>-<hash8>-<node>.json`, so custom solves never clobber curated
    files), and the provenance embedded in every snapshot (old files keep
@@ -171,11 +171,9 @@ goes through it, so a **file-backed** provider (precomputed sims) and, later, a
    two 3-bet pots); rake and per-street bet sizes plumb through end to end.
    `solve-gen gen --manifest manifests/<name>.toml` walks (formation × flop
    set × overrides) lists resumably — `starter-8` is the committed library,
-   `texture-25` the first regenerate-locally tier, `all-iso-flops` the
-   enumerated 1,755-flop ceiling ([design 02](docs/design/02-solution-library.md)).
-   Remaining: actually solving the breadth tiers (CPU-bound, see
-   [docs/shared-machine-data-gen.md](docs/shared-machine-data-gen.md)) and
-   `drill preflop` off the chart files.
+   `texture-25` the first regenerate-locally tier (solved locally, kept out of
+   git per policy above), `all-iso-flops` the enumerated 1,755-flop ceiling
+   ([design 02](docs/design/02-solution-library.md)).
 7. **Commercial parity** — designed in [docs/design/](docs/design/00-overview.md).
    Phases 7–8 *done*: study browser v2 (lenses, bucket filter, runouts) and the
    aggregate `report` + range-vs-range `equity` tools. Phase 9 *done*:
