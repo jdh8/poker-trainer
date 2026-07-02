@@ -25,6 +25,10 @@ enum Command {
     Table {
         #[command(flatten)]
         solve: SolveArgs,
+        /// With --board: descend this action line before the browser opens,
+        /// e.g. "Check,Bet 2.0bb,deal 2c" (as printed by analyze's blunders).
+        #[arg(long)]
+        line: Option<String>,
     },
     /// Report your recorded drill history as a leak profile.
     Stats {
@@ -50,8 +54,8 @@ enum Command {
         #[arg(long)]
         csv: Option<PathBuf>,
     },
-    /// Import PokerStars hand histories, match them against the solution
-    /// library, and report coverage (EV scoring lands with P9 milestone 2).
+    /// Import PokerStars/GGPoker hand histories, score your decisions against
+    /// the library equilibrium, and report EV-loss leaks + top blunders.
     Analyze {
         /// Hand-history text files.
         #[arg(required = true)]
@@ -59,6 +63,13 @@ enum Command {
         /// Parse + match only — coverage stats without touching a solver.
         #[arg(long)]
         dry_run: bool,
+        /// Wall-clock budget for solving spots, e.g. "10m", "45s"; spots
+        /// beyond it (least-frequent first) are reported as unscored.
+        #[arg(long, default_value = "10m")]
+        solve_budget: String,
+        /// Also write every scored decision as JSONL to this file.
+        #[arg(long)]
+        jsonl: Option<PathBuf>,
     },
     /// Range-vs-range equity on a flop, with a per-range equity histogram.
     Equity {
@@ -182,7 +193,7 @@ fn main() {
                 Mode::Hand => trainer::run_hand_drill(req),
             }
         }
-        Command::Table { solve } => trainer::run_table(solve.into_request()),
+        Command::Table { solve, line } => trainer::run_table(solve.into_request(), line),
         Command::Stats { by, last } => stats::run(by, last),
         Command::Report {
             formation,
@@ -190,7 +201,12 @@ fn main() {
             sort,
             csv,
         } => report::run_report(formation, node, sort, csv.as_deref()),
-        Command::Analyze { files, dry_run } => analyze::run(&files, dry_run),
+        Command::Analyze {
+            files,
+            dry_run,
+            solve_budget,
+            jsonl,
+        } => analyze::run(&files, dry_run, &solve_budget, jsonl.as_deref()),
         Command::Equity { oop, ip, board } => report::run_equity(&oop, &ip, &board),
     }
 }

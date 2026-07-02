@@ -42,7 +42,7 @@ design doc (`01`–`06`).
 | Persistent session stats, leak trends | ✅ `stats` over `history.jsonl` | — |
 | Preflop charts + preflop drills | partial (charts in `data/ranges/`, 5 formations) | `drill preflop` → [04](04-training-mode.md) |
 | Formation breadth (positions, 3-bet pots, stack depths, rake) | ✅ config-side (5 formations, rake, manifests); breadth tiers solve locally | data-gen → [02](02-solution-library.md) |
-| Hand-history import & leak analysis | partial (`analyze --dry-run` import + coverage) | P9 scoring → [05](05-analyze.md) |
+| Hand-history import & leak analysis | ✅ `analyze` (PS+GG import, EV-loss scoring, blunder replay, `--jsonl`) | — |
 | Custom spot solving (ranges/sizes/stacks) | ✅ `--board` + knobs | — |
 | **Nodelocking** (lock villain, re-solve exploit) | ❌ (solver supports it) | P10 → [06](06-solver-capabilities.md) |
 | ICM / MTT postflop | ❌ (engine lacks it) | research → [06](06-solver-capabilities.md) |

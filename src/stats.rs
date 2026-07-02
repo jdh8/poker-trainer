@@ -29,8 +29,10 @@ pub struct StatRecord {
     pub v: u32,
     /// Unix seconds.
     pub ts: u64,
-    /// Which drill scored it: `"gto"`, `"range"`, `"hand"`, …
+    /// Which drill scored it: `"gto"`, `"range"`, `"hand"`, `"analyze"`, …
     pub drill: String,
+    /// Source hand-history id (`analyze` records only; drills leave it empty).
+    pub hand_id: String,
     pub formation: String,
     /// Packed lowercase flop, e.g. `"td9d6h"`.
     pub flop: String,
@@ -154,7 +156,7 @@ pub fn aggregate(records: &[StatRecord], by: GroupBy) -> Vec<GroupStats> {
     out
 }
 
-fn summarize(key: &str, rs: &[&StatRecord]) -> GroupStats {
+pub(crate) fn summarize(key: &str, rs: &[&StatRecord]) -> GroupStats {
     let evs: Vec<f32> = rs.iter().filter_map(|r| r.ev_loss).collect();
     GroupStats {
         key: if key.is_empty() { "(none)" } else { key }.into(),
@@ -170,6 +172,26 @@ fn summarize(key: &str, rs: &[&StatRecord]) -> GroupStats {
             .count() as f64
             / rs.len().max(1) as f64,
         blunders: evs.iter().filter(|&&e| e > BLUNDER_BB).count(),
+    }
+}
+
+/// Print one `--by` group table over records (shared with `analyze`).
+pub(crate) fn print_by(records: &[StatRecord], by: GroupBy) {
+    let header = format!("{by:?}").to_lowercase();
+    println!(
+        "  {:<14} {:>6}  {:>9}  {:>9}  {:>9}  band",
+        header, "count", "avg loss", "accuracy", "blunders"
+    );
+    for g in aggregate(records, by) {
+        println!(
+            "  {:<14} {:>6}  {:>7.3}bb  {:>8.0}%  {:>8.0}%  {}",
+            g.key,
+            g.count,
+            g.avg_ev_loss,
+            100.0 * g.accuracy,
+            100.0 * g.blunders as f64 / g.count as f64,
+            band(g.avg_ev_loss)
+        );
     }
 }
 
@@ -236,22 +258,7 @@ pub fn run(by: GroupBy, last: Option<usize>) {
         100.0 * all.blunders as f64 / all.count as f64
     );
 
-    let header = format!("{by:?}").to_lowercase();
-    println!(
-        "  {:<14} {:>6}  {:>9}  {:>9}  {:>9}  band",
-        header, "count", "avg loss", "accuracy", "blunders"
-    );
-    for g in aggregate(&records, by) {
-        println!(
-            "  {:<14} {:>6}  {:>7.3}bb  {:>8.0}%  {:>8.0}%  {}",
-            g.key,
-            g.count,
-            g.avg_ev_loss,
-            100.0 * g.accuracy,
-            100.0 * g.blunders as f64 / g.count as f64,
-            band(g.avg_ev_loss)
-        );
-    }
+    print_by(&records, by);
 
     match trend(&records) {
         Some((prior, recent)) => println!(

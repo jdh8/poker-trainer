@@ -28,6 +28,8 @@ cargo run -- drill range      # assign your whole range by bucket; leak stats (P
 cargo run -- drill hand --board Td9d6h   # play full hands vs. the GTO villain (Phase 5)
 cargo run -- table            # browse a solved spot's strategy as a 13×13 grid
 cargo run -- stats            # leak report over your recorded drill history
+cargo run -- report           # aggregate flop report over the library (Phase 8)
+cargo run -- analyze hh/*.txt # score your real hands vs. equilibrium (Phase 9)
 ```
 
 The `gto` drill needs solution files; generate them with the (AGPL) solver
@@ -174,9 +176,15 @@ goes through it, so a **file-backed** provider (precomputed sims) and, later, a
    Remaining: actually solving the breadth tiers (CPU-bound, see
    [docs/shared-machine-data-gen.md](docs/shared-machine-data-gen.md)) and
    `drill preflop` off the chart files.
-7. **Commercial parity (planned)** — phases 7–10 (study browser, aggregate
-   reports, hand-history analysis, nodelocking) are designed in
-   [docs/design/](docs/design/00-overview.md).
+7. **Commercial parity** — designed in [docs/design/](docs/design/00-overview.md).
+   Phases 7–8 *done*: study browser v2 (lenses, bucket filter, runouts) and the
+   aggregate `report` + range-vs-range `equity` tools. Phase 9 *done*:
+   `analyze <hh files…>` imports PokerStars/GGPoker hand histories, matches
+   them onto library formations, replays each hand through a tree session
+   (`--solve-budget` caps the solving; most frequent spots first), and reports
+   EV-loss leaks, a blunder list with a `table --line` replay command per
+   entry, and `--jsonl` export ([design 05](docs/design/05-analyze.md)).
+   Remaining: nodelocking (P10).
 
 ## Licensing
 

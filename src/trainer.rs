@@ -335,7 +335,9 @@ fn load_provider() -> Option<FileSolutionProvider> {
 /// as a GTO-Wizard-style 13×13 grid. With `--board` it live-solves into a
 /// [`TreeSession`] and walks the whole game tree (any line, any runout);
 /// without it, it cycles the curated snapshot library exactly as before.
-pub fn run_table(req: Option<SolveRequest>) {
+/// `line` (needs `--board`) descends that action line before the browser opens
+/// — the replay handoff printed by `analyze`'s blunder list (design doc 05).
+pub fn run_table(req: Option<SolveRequest>, line: Option<String>) {
     match req {
         Some(req) => {
             // Bail before the ~30 s solve if there's no terminal to draw on.
@@ -346,17 +348,66 @@ pub fn run_table(req: Option<SolveRequest>) {
                 return;
             }
             match crate::tree::TreeSession::start(&req) {
-                Ok((session, root)) => crate::table::run_tree(session, root),
+                Ok((mut session, mut root)) => {
+                    if let Some(spec) = line {
+                        match descend(&mut session, root, &spec) {
+                            Ok(node) => root = node,
+                            // Browse from wherever the line stopped matching —
+                            // the solve is too expensive to throw away.
+                            Err(e) => {
+                                eprintln!("--line stopped early: {e}");
+                                match session.node() {
+                                    Ok(node) => root = node,
+                                    Err(e) => {
+                                        eprintln!("Tree session failed: {e}");
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    crate::table::run_tree(session, root)
+                }
                 Err(e) => eprintln!("Tree session failed: {e}"),
             }
         }
         None => {
+            if line.is_some() {
+                eprintln!("--line needs --board (a line only exists in a solved tree).");
+                return;
+            }
             let Some(provider) = load_provider() else {
                 return;
             };
             crate::table::run(provider.spots());
         }
     }
+}
+
+/// Descend a comma-separated label line, e.g. `"Check,Bet 2.0bb,deal 2c"` —
+/// action labels as the tree prints them, `deal <card>` at chance nodes.
+fn descend(session: &mut TreeSession, mut node: TreeNode, spec: &str) -> io::Result<TreeNode> {
+    for step in spec.split(',').map(str::trim).filter(|s| !s.is_empty()) {
+        node = if let Some(card) = step.strip_prefix("deal ") {
+            session.deal(card.trim())?
+        } else {
+            let i = node
+                .actions
+                .iter()
+                .position(|a| a.eq_ignore_ascii_case(step))
+                .ok_or_else(|| {
+                    io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!(
+                            "no action {step:?} at this node (available: {})",
+                            node.actions.join(", ")
+                        ),
+                    )
+                })?;
+            session.play(i)?
+        };
+    }
+    Ok(node)
 }
 
 /// Entry point for `poker-trainer drill range` (Phase 2).
@@ -832,7 +883,7 @@ fn blocks(hand: &str, card: &str) -> bool {
     card_chunks(hand).any(|c| c == card)
 }
 
-fn street_name(board_len: usize) -> &'static str {
+pub(crate) fn street_name(board_len: usize) -> &'static str {
     match board_len {
         0..=3 => "flop",
         4 => "turn",
@@ -859,7 +910,7 @@ fn pick_weighted(weights: &[f32], roll: f32) -> usize {
 
 /// `(texture, bucket)` strings for a history record; empty when cards don't
 /// parse (records must never block a drill).
-fn flop_context(board: &[String], hand: &str) -> (String, String) {
+pub(crate) fn flop_context(board: &[String], hand: &str) -> (String, String) {
     let flop = board.get(..3).and_then(parse_flop);
     let texture = flop.map(texture_name).unwrap_or_default();
     let bucket = flop
@@ -1155,6 +1206,42 @@ mod tests {
             action_ev: vec![0.0, 1.0, 1.0],
         };
         assert_eq!(fmt_mix(&ns), "Call 68% / Raise 30%");
+    }
+
+    /// End-to-end: `--line` descends a live tree by labels (analyze's replay
+    /// handoff). Spawns a real (tiny) solve: `cargo test -- --ignored`.
+    #[test]
+    #[ignore]
+    fn descend_follows_labels_and_reports_bad_steps() {
+        let req = SolveRequest {
+            flop: "Td9d6h".into(),
+            config: crate::solution::SpotConfig {
+                formation: "srp-btn-bb".into(),
+                oop_range: "AA,KK".into(),
+                ip_range: "QQ,JJ".into(),
+                flop_sizes: "50%".into(),
+                turn_sizes: "33%".into(),
+                river_sizes: "33%".into(),
+                stack_bb: 97.0,
+                pot_bb: 6.0,
+                rake_rate: 0.0,
+                rake_cap_bb: 0.0,
+            },
+        };
+        let (mut session, root) = TreeSession::start(&req).unwrap();
+        // Labels exactly as analyze records them: actions and `deal <card>`.
+        let node = descend(&mut session, root, "Check, Bet 3.0bb, Call, deal 2c").unwrap();
+        assert_eq!(node.board.last().unwrap(), "2c");
+        assert_eq!(
+            node.line,
+            ["Check", "Bet 3.0bb", "Call", "deal 2c"].map(String::from)
+        );
+
+        // A label the node doesn't offer: a clear error, session still alive.
+        let node2 = session.node().unwrap();
+        let err = descend(&mut session, node2, "Bet 99.0bb").unwrap_err();
+        assert!(err.to_string().contains("no action"));
+        assert!(session.node().is_ok());
     }
 
     #[test]

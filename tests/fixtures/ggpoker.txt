@@ -1,0 +1,65 @@
+Poker Hand #HD2001: Hold'em No Limit ($0.50/$1) - 2026/06/20 21:00:00
+Table 'NLHGold7' 6-max Seat #3 is the button
+Seat 1: 1a2b3c4d ($100 in chips)
+Seat 2: 5e6f7a8b ($120 in chips)
+Seat 3: Hero ($100 in chips)
+1a2b3c4d: posts small blind $0.50
+5e6f7a8b: posts big blind $1
+*** HOLE CARDS ***
+Dealt to Hero [Ah Kd]
+Hero: raises $1.50 to $2.50
+1a2b3c4d: folds
+5e6f7a8b: calls $1.50
+*** FLOP *** [Td 9d 6h]
+5e6f7a8b: checks
+Hero: bets $2
+5e6f7a8b: folds
+Uncalled bet ($2) returned to Hero
+Hero collected $5.25 from pot
+*** SUMMARY ***
+Total pot $5.5 | Rake $0.25
+Board [Td 9d 6h]
+Seat 3: Hero collected ($5.25)
+
+Poker Hand #TM3002: Tournament #98765432, Bounty Hunters $5.00 Hold'em No Limit - Level5(150/300) - 2026/06/20 22:00:00
+Table '18' 8-max Seat #1 is the button
+Seat 1: Hero (15000 in chips)
+Seat 2: 9c8d7e6f (22000 in chips)
+Hero: posts small blind 150
+9c8d7e6f: posts big blind 300
+*** HOLE CARDS ***
+Dealt to Hero [2c 2d]
+Hero: folds
+Uncalled bet (150) returned to 9c8d7e6f
+9c8d7e6f collected 450 from pot
+*** SUMMARY ***
+
+Poker Hand #HD2003: Hold'em No Limit ($0.50/$1) - 2026/06/20 23:00:00
+Table 'NLHGold7' 6-max Seat #3 is the button
+Seat 2: 5e6f7a8b ($110 in chips)
+Seat 3: Hero ($100 in chips)
+Seat 5: 9g0h1i2j ($95 in chips)
+5e6f7a8b: posts small blind $0.50
+9g0h1i2j: posts big blind $1
+*** HOLE CARDS ***
+Dealt to Hero [Qs Qc]
+Hero: raises $1.50 to $2.50
+5e6f7a8b: folds
+9g0h1i2j: calls $1.50
+*** FLOP *** [Td 9d 6h]
+9g0h1i2j: checks
+Hero: bets $1.75
+9g0h1i2j: calls $1.75
+*** TURN *** [Td 9d 6h] [2c]
+9g0h1i2j: checks
+Hero: checks
+*** RIVER *** [Td 9d 6h 2c] [7s]
+9g0h1i2j: checks
+Hero: checks
+*** SHOWDOWN ***
+9g0h1i2j: shows [Ad Td] (a pair of Tens)
+Hero: shows [Qs Qc] (a pair of Queens)
+Hero collected $9.50 from pot
+*** SUMMARY ***
+Total pot $10 | Rake $0.50
+Board [Td 9d 6h 2c 7s]

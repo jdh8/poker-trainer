@@ -120,8 +120,14 @@ impl TreeSession {
             stdin,
             stdout,
         };
-        let root = session.request(json!({"v": PROTOCOL_V, "op": "solve", "config": req}))?;
+        let root = session.solve(req)?;
         Ok((session, root))
+    }
+
+    /// Solve another spot on the same serve process, replacing the held game
+    /// (P9 analyze scores many spots without respawning the solver).
+    pub fn solve(&mut self, req: &SolveRequest) -> io::Result<TreeNode> {
+        self.request(json!({"v": PROTOCOL_V, "op": "solve", "config": req}))
     }
 
     /// Current node's payload.
