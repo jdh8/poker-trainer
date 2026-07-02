@@ -48,6 +48,7 @@ carried sparse overrides instead of a full `SpotConfig`; serve rejects it.)
   "pot_bb": 10.0,
   "line": ["Check", "Bet 2.0bb", "Call", "deal 2c"],   // labels, for display
   "actions": ["Check", "Bet 3.3bb"],                    // empty for chance/terminal
+  "dealable": ["2c", "2d", ...],   // chance nodes only: cards that can fall
   "hands": ["2c2d", ...],          // acting player's combos
   "weights": [0.97, ...],          // reach probability (normalized)
   "equity": [0.55, ...],           // vs. villain's reaching range
@@ -69,12 +70,16 @@ drill dealing logic stays testable; `deal` just navigates.
 ```rust
 pub struct TreeSession { child: Child, stdin: ..., stdout: ... }
 impl TreeSession {
-    pub fn start(config: &SpotConfig) -> io::Result<Self>;  // spawns, sends solve, waits ready
+    pub fn start(req: &SolveRequest) -> io::Result<(Self, TreeNode)>; // spawn + solve, root node back
+    pub fn solve(&mut self, req: &SolveRequest) -> io::Result<TreeNode>; // new spot, same process (05)
     pub fn node(&mut self) -> io::Result<TreeNode>;
     pub fn play(&mut self, action: usize) -> io::Result<TreeNode>;
     pub fn deal(&mut self, card: &str) -> io::Result<TreeNode>;
     pub fn back(&mut self) -> io::Result<TreeNode>;
+    pub fn root(&mut self) -> io::Result<TreeNode>;
     pub fn runouts(&mut self) -> io::Result<Vec<RunoutSummary>>;
+    pub fn lock(&mut self, strategy: &[Vec<f32>]) -> io::Result<TreeNode>;   // P10
+    pub fn resolve(&mut self) -> io::Result<TreeNode>;                        // P10
 }
 ```
 
@@ -90,7 +95,8 @@ Key = hash of the canonical `SpotConfig` JSON (also fixes today's bug-shaped
 limitation: custom `--board` solves overwrite the curated flop's snapshot
 files — see 02). Store solver-native saves via the solver's `bincode` feature
 (`save_data_to_file`, verified present at the pinned rev) under
-`~/.cache/poker-trainer/solves/<hash>.bin`. Cache files are an **AGPL-side
+`~/.cache/poker-trainer/solves/<flop>-<hash8>.bin` (the flop isn't part of
+`SpotConfig`, so it rides in the filename). Cache files are an **AGPL-side
 implementation detail** — the trainer never reads them, so invariant #2 holds.
 
 The bincode-rc pin is sorted: solve-gen pins `bincode =2.0.0-rc.3` **and**

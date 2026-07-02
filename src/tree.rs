@@ -3,8 +3,8 @@
 //! A [`TreeSession`] holds a long-lived `solve-gen serve` subprocess with the
 //! solved game resident in memory, and navigates it over line-delimited JSON on
 //! stdio. The [`TreeNode`] payload defined here — not the solver's own tree
-//! format — is the wire format (protocol v1), which keeps the AGPL solver
-//! behind a process boundary exactly like the snapshot path.
+//! format — is the wire format (protocol v2, see [`PROTOCOL_V`]), which keeps
+//! the AGPL solver behind a process boundary exactly like the snapshot path.
 
 use crate::solution::{solve_gen_command, HandStrategy, NodeStrategy, SolveRequest, SolvedSpot};
 use serde::{Deserialize, Serialize};
