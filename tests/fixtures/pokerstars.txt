@@ -1,0 +1,224 @@
+PokerStars Hand #1001: Hold'em No Limit ($0.50/$1.00 USD) - 2026/01/15 20:11:23 ET
+Table 'Synthetic I' 6-max Seat #3 is the button
+Seat 1: utg_player ($100 in chips)
+Seat 2: hj player ($85.50 in chips)
+Seat 3: Hero ($100 in chips)
+Seat 4: sb_villain ($120.25 in chips)
+Seat 5: bb_villain ($100 in chips)
+Seat 6: co (fish) ($43 in chips) is sitting out
+sb_villain: posts small blind $0.50
+bb_villain: posts big blind $1
+*** HOLE CARDS ***
+Dealt to Hero [As Kh]
+utg_player: folds
+hj player: folds
+Hero: raises $1.50 to $2.50
+sb_villain: folds
+bb_villain: calls $1.50
+*** FLOP *** [Td 9d 6h]
+bb_villain: checks
+Hero: bets $1.75
+bb_villain: calls $1.75
+*** TURN *** [Td 9d 6h] [2c]
+bb_villain: checks
+Hero: checks
+*** RIVER *** [Td 9d 6h 2c] [7s]
+bb_villain: bets $4.50
+Hero: folds
+Uncalled bet ($4.50) returned to bb_villain
+bb_villain collected $10.25 from pot
+bb_villain: doesn't show hand
+*** SUMMARY ***
+Total pot $10.75 | Rake $0.50
+Board [Td 9d 6h 2c 7s]
+Seat 3: Hero (button) folded on the River
+Seat 5: bb_villain collected ($10.25)
+
+PokerStars Zoom Hand #1002: Hold'em No Limit ($0.50/$1.00) - 2026/01/15 20:15:00 ET
+Table 'Synthetic II' 6-max Seat #1 is the button
+Seat 1: btn_villain ($105 in chips)
+Seat 2: small ($99 in chips)
+Seat 3: Hero ($102.75 in chips)
+small: posts small blind $0.50
+Hero: posts big blind $1
+*** HOLE CARDS ***
+Dealt to Hero [Qs Qc]
+btn_villain: raises $1.50 to $2.50
+small: folds
+Hero: raises $6.50 to $9
+btn_villain: calls $6.50
+*** FLOP *** [Ah 7c 2d]
+Hero: bets $8
+btn_villain: folds
+Uncalled bet ($8) returned to Hero
+Hero collected $18 from pot
+*** SUMMARY ***
+Total pot $18.50 | Rake $0.50
+
+PokerStars Hand #1003: Hold'em No Limit ($0.50/$1.00 USD) - 2026/01/15 22:00:00 ET
+Table 'Synthetic III' 6-max Seat #2 is the button
+Seat 1: mp_call ($100 in chips)
+Seat 2: btn_open ($100 in chips)
+Seat 3: sb_fold ($100 in chips)
+Seat 4: Hero ($100 in chips)
+sb_fold: posts small blind $0.50
+Hero: posts big blind $1
+*** HOLE CARDS ***
+Dealt to Hero [7h 7s]
+mp_call: calls $1
+btn_open: raises $2 to $3
+sb_fold: folds
+Hero: calls $2
+mp_call: calls $2
+*** FLOP *** [Kc 8d 3s]
+Hero: checks
+mp_call: checks
+btn_open: bets $5
+Hero: folds
+mp_call: folds
+*** SUMMARY ***
+
+PokerStars Hand #1004: Hold'em No Limit ($0.50/$1.00 USD) - 2026/01/15 22:15:00 ET
+Table 'Synthetic IV' 6-max Seat #4 is the button
+Seat 4: btn_guy ($100 in chips)
+Seat 5: sb_guy ($100 in chips)
+Seat 6: Hero ($100 in chips)
+sb_guy: posts small blind $0.50
+Hero: posts big blind $1
+*** HOLE CARDS ***
+Dealt to Hero [9c 8c]
+btn_guy: folds
+sb_guy: calls $0.50
+Hero: checks
+*** FLOP *** [Jd 8h 3c]
+sb_guy: checks
+Hero: checks
+*** TURN *** [Jd 8h 3c] [Qh]
+sb_guy: bets $1
+Hero: folds
+*** SUMMARY ***
+
+PokerStars Hand #1005: Tournament #3100000000, $5.00+$0.50 USD Hold'em No Limit - Level V (30/60) - 2026/01/15 22:30:00 ET
+Table '3100000000 12' 9-max Seat #5 is the button
+Seat 5: Hero (1500 in chips)
+Seat 8: tv_reg (2900 in chips)
+Hero: posts small blind 30
+tv_reg: posts big blind 60
+*** HOLE CARDS ***
+Dealt to Hero [2c 2d]
+Hero: folds
+Uncalled bet (30) returned to tv_reg
+tv_reg collected 90 from pot
+*** SUMMARY ***
+
+PokerStars Hand #1006: Hold'em No Limit ($0.50/$1.00 USD) - 2026/01/15 23:00:00 ET
+Table 'Synthetic VI' 6-max Seat #1 is the button
+Seat 1: p1 ($100 in chips)
+Seat 2: p2 ($100 in chips)
+Seat 3: p3 ($100 in chips)
+p2: posts small blind $0.50
+p3: posts big blind $1
+*** HOLE CARDS ***
+p1: raises $1.50 to $2.50
+p2: folds
+p3: calls $1.50
+*** FLOP *** [Qh Jh 4c]
+p3: checks
+p1: checks
+*** TURN *** [Qh Jh 4c] [8d]
+p3: bets $3
+p1: folds
+*** SUMMARY ***
+
+PokerStars Hand #1007: Hold'em No Limit ($0.50/$1.00 USD) - 2026/01/15 23:30:00 ET
+Table 'Synthetic VII' 6-max Seat #1 is the button
+Seat 1: btn7 ($100 in chips)
+Seat 2: sb7 ($100 in chips)
+Seat 3: Hero ($100 in chips)
+sb7: posts small blind $0.50
+Hero: posts big blind $1
+*** HOLE CARDS ***
+Dealt to Hero [Ah Kd]
+btn7: folds
+sb7: folds
+Hero collected $1 from pot
+*** SUMMARY ***
+
+PokerStars Hand #1008: Hold'em No Limit ($0.50/$1.00 USD) - 2026/01/16 00:30:00 ET
+Table 'Synthetic VIII' 6-max Seat #1 is the button
+Seat 1: Hero ($100 in chips)
+Seat 2: sb_call ($100 in chips)
+Seat 3: bb_def ($100 in chips)
+Seat 4: opener ($100 in chips)
+sb_call: posts small blind $0.50
+bb_def: posts big blind $1
+*** HOLE CARDS ***
+Dealt to Hero [7d 2c]
+opener: raises $1.50 to $2.50
+Hero: folds
+sb_call: folds
+bb_def: calls $1.50
+*** FLOP *** [9h 6h 2s]
+bb_def: checks
+opener: bets $2
+bb_def: folds
+*** SUMMARY ***
+
+PokerStars Hand #1009: Hold'em No Limit ($0.50/$1.00 USD) - 2026/01/16 00:45:00 ET
+Table 'Synthetic IX' 6-max Seat #3 is the button
+Seat 3: Hero ($30 in chips)
+Seat 4: sb30 ($100 in chips)
+Seat 5: bb30 ($100 in chips)
+sb30: posts small blind $0.50
+bb30: posts big blind $1
+*** HOLE CARDS ***
+Dealt to Hero [Js Ts]
+Hero: raises $1.50 to $2.50
+sb30: folds
+bb30: calls $1.50
+*** FLOP *** [Th 8s 2c]
+bb30: checks
+Hero: bets $2
+bb30: folds
+*** SUMMARY ***
+
+PokerStars Hand #1010: Hold'em No Limit ($0.50/$1.00 USD) - 2026/01/16 01:00:00 ET
+Table 'Synthetic X' 6-max Seat #2 is the button
+Seat 1: co_open ($100 in chips)
+Seat 2: btn_fold ($100 in chips)
+Seat 3: Hero ($100 in chips)
+Seat 4: bb_fold ($100 in chips)
+Hero: posts small blind $0.50
+bb_fold: posts big blind $1
+*** HOLE CARDS ***
+Dealt to Hero [Kd Qd]
+co_open: raises $1.50 to $2.50
+btn_fold: folds
+Hero: calls $2
+bb_fold: folds
+*** FLOP *** [Ac 5c 5d]
+Hero: checks
+co_open: bets $3
+Hero: folds
+*** SUMMARY ***
+
+PokerStars Hand #1011: Hold'em No Limit ($0.50/$1.00 USD) - 2026/01/16 01:15:00 ET
+Table 'Synthetic XI' 6-max Seat #3 is the button
+Seat 3: Hero ($100 in chips)
+Seat 4: sb11 ($100 in chips)
+Seat 5: bb11 ($100 in chips)
+sb11: posts small blind $0.50
+bb11: posts big blind $1
+*** HOLE CARDS ***
+Dealt to Hero [Ad Qd]
+Hero: raises $5 to $6
+sb11: folds
+bb11: calls $5
+*** FLOP *** [Qs 7h 3d]
+bb11: checks
+Hero: bets $6
+bb11: folds
+*** SUMMARY ***
+
+PokerStars Hand #9999: Hold'em No Limit
+this block is deliberately truncated garbage with no stakes header

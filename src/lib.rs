@@ -1,6 +1,7 @@
 // Scaffold: some modules carry intentionally-unused stubs while phases fill in.
 #![allow(dead_code)]
 
+pub mod analyze;
 pub mod board;
 pub mod eval;
 pub mod range;

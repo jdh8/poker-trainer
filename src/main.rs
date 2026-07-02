@@ -1,6 +1,6 @@
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use poker_trainer::solution::{SolveRequest, SpotConfig};
-use poker_trainer::{report, stats, trainer};
+use poker_trainer::{analyze, report, stats, trainer};
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -49,6 +49,16 @@ enum Command {
         /// Write rows as CSV to this file instead of a terminal table.
         #[arg(long)]
         csv: Option<PathBuf>,
+    },
+    /// Import PokerStars hand histories, match them against the solution
+    /// library, and report coverage (EV scoring lands with P9 milestone 2).
+    Analyze {
+        /// Hand-history text files.
+        #[arg(required = true)]
+        files: Vec<PathBuf>,
+        /// Parse + match only — coverage stats without touching a solver.
+        #[arg(long)]
+        dry_run: bool,
     },
     /// Range-vs-range equity on a flop, with a per-range equity histogram.
     Equity {
@@ -180,6 +190,7 @@ fn main() {
             sort,
             csv,
         } => report::run_report(formation, node, sort, csv.as_deref()),
+        Command::Analyze { files, dry_run } => analyze::run(&files, dry_run),
         Command::Equity { oop, ip, board } => report::run_equity(&oop, &ip, &board),
     }
 }
