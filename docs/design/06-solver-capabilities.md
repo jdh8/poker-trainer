@@ -39,6 +39,27 @@ free: drill against a session with a saved lock applied.
 Re-solve cost is a fraction of a fresh solve (warm start from the locked
 strategy); still seconds-to-minutes, honestly reported.
 
+### Shipped (P10 M1)
+
+The `lock`/`resolve` protocol ops, `TreeSession::lock`/`resolve`, and a
+`table` lock-edit mode: `L` toggles it at a player node, `1`–`9` set the
+focused cell to a pure action (a "never raise" / "always call" style lock),
+`c` clears it, `R` expands the cell edits to per-combo frequencies, sends the
+lock, and re-solves. The grid then switches to a `d` EV-delta lens comparing
+the re-solved EVs against the pre-lock baseline at that node.
+
+Deliberately deferred (lazy version shipped, upgrade when wanted):
+- **Fractional / bucket-preset cell edits** ("overfold ×1.5") — today a cell
+  locks to one pure action; the trainer already owns the grid→combo expansion,
+  so richer per-cell mixes are a UI-only add.
+- **Saved lock files** (named JSON of line + cell edits, and the drill
+  "villain persona" reuse in 04).
+- **Cross-node EV-delta.** The delta lens is valid at the node you resolved on;
+  navigating clears the baseline. A session-wide delta needs `serve` to retain
+  the unlocked game alongside the locked one.
+- **Warm-start re-solve.** `resolve` re-solves from a fresh allocation, so it
+  costs about a full solve rather than a fraction.
+
 ## Bunching (config option, low priority)
 
 `BunchingData` conditions the deal on folded players' ranges (e.g. UTG/MP

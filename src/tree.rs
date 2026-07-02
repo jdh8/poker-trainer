@@ -155,6 +155,20 @@ impl TreeSession {
         self.request(json!({"op": "root"}))
     }
 
+    /// Lock the current player node's strategy (P10, design doc 06). `strategy`
+    /// is `[action][hand]` parallel to the node's `freqs`; a hand whose actions
+    /// are all `0.0` is left free for the re-solve. Locks accumulate across
+    /// nodes and take effect on the next [`resolve`](Self::resolve).
+    pub fn lock(&mut self, strategy: &[Vec<f32>]) -> io::Result<TreeNode> {
+        self.request(json!({"op": "lock", "strategy": strategy}))
+    }
+
+    /// Re-solve holding every lock, returning the node at the current position.
+    /// As costly as a fresh solve (seconds-to-minutes), reported on stderr.
+    pub fn resolve(&mut self) -> io::Result<TreeNode> {
+        self.request(json!({"op": "resolve"}))
+    }
+
     /// At a chance node: per dealable card, the next node's aggregate mix + EV.
     pub fn runouts(&mut self) -> io::Result<Vec<RunoutSummary>> {
         let v = self.round_trip(json!({"op": "runouts"}))?;
@@ -345,6 +359,22 @@ mod tests {
         let root2 = s.root().unwrap();
         assert!(root2.line.is_empty());
         assert_eq!(root2.player, "oop");
+
+        // P10: lock the root (OOP) to always-check, re-solve, and confirm the
+        // forced strategy took. `strategy` is [action][hand]; the Check row is
+        // all 1.0, every other action 0.0.
+        let root = s.root().unwrap();
+        let check = root.actions.iter().position(|a| a == "Check").unwrap();
+        let n = root.hands.len();
+        let strategy: Vec<Vec<f32>> = (0..root.actions.len())
+            .map(|a| vec![if a == check { 1.0 } else { 0.0 }; n])
+            .collect();
+        s.lock(&strategy).unwrap();
+        let resolved = s.resolve().unwrap();
+        assert_eq!(resolved.player, "oop");
+        assert!(resolved.freqs[check]
+            .iter()
+            .all(|&f| (f - 1.0).abs() < 1e-2));
 
         // Errors are protocol errors, not a dead child.
         assert!(s.play(99).is_err());

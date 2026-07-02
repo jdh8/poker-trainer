@@ -290,6 +290,10 @@ struct ServeSession {
     labels: Vec<String>,
     config: SpotConfig,
     generator: GenInfo,
+    /// P10 node locks: `(node history, action-major strategy)`. `resolve`
+    /// re-applies the whole set on a fresh allocation, so it stays the source of
+    /// truth regardless of what `allocate_memory` does to prior locks.
+    locks: Vec<(Vec<usize>, Vec<f32>)>,
 }
 
 /// `serve`: one JSON request per stdin line, one JSON response per stdout line.
@@ -356,12 +360,14 @@ fn handle_op(sess: &mut Option<ServeSession>, req: &Value) -> Result<Value, Stri
                 labels: Vec::new(),
                 config: spot.config,
                 generator: gen_info(exploitability),
+                locks: Vec::new(),
             });
             return Ok(node_payload(s));
         }
         // Validate the op name before requiring a game, so an unknown op is
         // reported as such even before the first solve.
-        "node" | "play" | "deal" | "back" | "root" | "snapshot" | "runouts" => {}
+        "node" | "play" | "deal" | "back" | "root" | "snapshot" | "runouts" | "lock"
+        | "resolve" => {}
         other => return Err(format!("unknown op {other:?}")),
     }
     let s = sess.as_mut().ok_or("no game held — send op:solve first")?;
@@ -413,6 +419,62 @@ fn handle_op(sess: &mut Option<ServeSession>, req: &Value) -> Result<Value, Stri
         "root" => {
             s.game.back_to_root();
             s.labels.clear();
+        }
+        "lock" => {
+            // Record the current player node's forced strategy; `resolve`
+            // applies it. Trainer sends `[action][hand]` (parallel to a node's
+            // `freqs`); the solver wants action-major flat, so flattening the
+            // rows in order is exactly `lock_current_strategy`'s layout.
+            if s.game.is_terminal_node() || s.game.is_chance_node() {
+                return Err("lock needs a player node".into());
+            }
+            let player = s.game.current_player();
+            let n_actions = s.game.available_actions().len();
+            let n_hands = s.game.private_cards(player).len();
+            let rows = req
+                .get("strategy")
+                .and_then(Value::as_array)
+                .ok_or("lock needs \"strategy\": [action][hand]")?;
+            if rows.len() != n_actions {
+                return Err(format!(
+                    "strategy has {} action rows, node has {n_actions}",
+                    rows.len()
+                ));
+            }
+            let mut flat = Vec::with_capacity(n_actions * n_hands);
+            for row in rows {
+                let vals = row.as_array().ok_or("strategy rows must be arrays")?;
+                if vals.len() != n_hands {
+                    return Err(format!(
+                        "strategy row has {} hands, node has {n_hands}",
+                        vals.len()
+                    ));
+                }
+                for v in vals {
+                    flat.push(v.as_f64().ok_or("strategy values must be numbers")? as f32);
+                }
+            }
+            let hist = s.game.history().to_vec();
+            s.locks.retain(|(h, _)| h != &hist); // one lock per node; replace
+            s.locks.push((hist, flat));
+        }
+        "resolve" => {
+            // Re-solve from scratch with every lock held. Not a warm start
+            // (allocate_memory zeros the strategy) — honest re-solve, ~as costly
+            // as the original. ponytail: warm-start if resolve latency bites.
+            let here = s.game.history().to_vec();
+            let target = s.starting_pot as f32 * 0.005;
+            let locks = s.locks.clone(); // borrow s.game mutably in the loop
+            s.game.allocate_memory(false);
+            for (hist, strat) in &locks {
+                s.game.apply_history(hist);
+                s.game.lock_current_strategy(strat);
+                s.game.back_to_root();
+            }
+            eprintln!("resolving with {} lock(s)…", locks.len());
+            let exploitability = solve(&mut s.game, 1000, target, false);
+            s.generator = gen_info(exploitability);
+            s.game.apply_history(&here); // back to where the user was
         }
         "snapshot" => {
             if s.game.is_terminal_node() || s.game.is_chance_node() {
@@ -870,6 +932,12 @@ mod tests {
         // runouts is a known op, so before a solve it fails with "no game".
         let (resp, _) = respond(&mut sess, r#"{"op":"runouts"}"#);
         assert!(resp["error"].as_str().unwrap().contains("op:solve first"));
+
+        // lock/resolve (P10) are known ops too: no game yet, so "solve first".
+        for op in ["lock", "resolve"] {
+            let (resp, _) = respond(&mut sess, &format!(r#"{{"op":"{op}"}}"#));
+            assert!(resp["error"].as_str().unwrap().contains("op:solve first"));
+        }
 
         // v1 (and anything else that isn't v2) is rejected before config parse.
         for v in [1, 9] {

@@ -75,7 +75,7 @@ Continues the README's phases 0–3. Sizes are relative (S/M/L).
 | **P7** | Study browser v2: tree walking, range/EV/EQ views, runouts | M | P4 | [03](03-study-mode.md) |
 | **P8** | Aggregate flop reports + equity/blocker tools (`report`, `equity` done; blocker column pending) | M | P6 | [03](03-study-mode.md) |
 | **P9** | `analyze`: hand-history import, EV-loss + leak report | L | P4, P6 | [05](05-analyze.md) |
-| **P10** | Nodelocking end-to-end (lock, re-solve, compare) | M | P4, P7 | [06](06-solver-capabilities.md) |
+| **P10** | Nodelocking end-to-end (lock, re-solve, compare) — done; bucket presets + saved-lock files pending | M | P4, P7 | [06](06-solver-capabilities.md) |
 | — | ICM (solver fork), bunching, multiway | research | — | [06](06-solver-capabilities.md) |
 
 P4 and P6 are independent and both unblock most of the rest; do P4 first —

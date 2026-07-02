@@ -18,6 +18,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph};
 use ratatui::Frame;
 use rs_poker::core::Card;
+use std::collections::HashMap;
 use std::io::IsTerminal;
 
 /// Ranks high→low; a card's index into this is its grid row/col (A = 0).
@@ -234,14 +235,72 @@ pub fn build_grid_node(node: &TreeNode) -> Grid {
     grid
 }
 
+/// Per-cell locked action frequencies, keyed by grid `(row, col)` (P10).
+pub type CellLocks = HashMap<(usize, usize), Vec<f32>>;
+
+/// Expand cell-granular locks to the node's full `[action][hand]` strategy for
+/// the `lock` op: every combo in a locked cell gets that cell's frequencies,
+/// and every other hand stays all-`0.0` (left free for the re-solve).
+pub fn expand_lock(node: &TreeNode, locks: &CellLocks) -> Vec<Vec<f32>> {
+    let n = node.actions.len();
+    let mut strat = vec![vec![0.0; node.hands.len()]; n];
+    for (j, hand) in node.hands.iter().enumerate() {
+        let Some((_, r, c)) = parse_hole(hand).as_ref().and_then(canonical) else {
+            continue;
+        };
+        if let Some(freqs) = locks.get(&(r, c)) {
+            for (a, f) in freqs.iter().enumerate().take(n) {
+                strat[a][j] = *f;
+            }
+        }
+    }
+    strat
+}
+
+/// Snapshot each cell's best-action EV, for the EV-delta lens after a re-solve.
+fn baseline_map(grid: &Grid) -> HashMap<(usize, usize), f32> {
+    let mut m = HashMap::new();
+    for (r, row) in grid.iter().enumerate() {
+        for (c, cell) in row.iter().enumerate() {
+            if let Some(cell) = cell {
+                m.insert((r, c), cell.ev);
+            }
+        }
+    }
+    m
+}
+
+/// EV-delta color: green as EV rises, red as it falls, gray near zero, scaled
+/// by the grid's largest absolute change so the ramp always spans the data.
+fn delta_color(d: f32, scale: f32) -> Color {
+    let m = if scale > 1e-9 {
+        (d.abs() / scale).clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    let gray = [70.0, 70.0, 70.0];
+    let end = if d >= 0.0 {
+        [60.0, 165.0, 90.0]
+    } else {
+        [200.0, 60.0, 50.0]
+    };
+    Color::Rgb(
+        (gray[0] + (end[0] - gray[0]) * m) as u8,
+        (gray[1] + (end[1] - gray[1]) * m) as u8,
+        (gray[2] + (end[2] - gray[2]) * m) as u8,
+    )
+}
+
 /// Which per-cell reduction the grid shows, toggled by key (design doc 03):
-/// `s` strategy, `w` range mass, `e` EV, `y` equity.
+/// `s` strategy, `w` range mass, `e` EV, `y` equity, `d` EV-delta (P10, vs. the
+/// pre-resolve baseline).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Lens {
     Strategy,
     Range,
     Ev,
     Equity,
+    Delta,
 }
 
 /// Low→high color ramp for the scalar lenses: red → yellow → green, reusing
@@ -344,10 +403,22 @@ fn segment_widths(freqs: &[f32], w: usize) -> Vec<usize> {
 
 /// A scalar lens's `(background, text)` colors for one cell; `None` means the
 /// strategy bar draws instead.
-fn scalar_colors(cell: &Cell, lens: Lens, ev_lo_hi: (f32, f32)) -> Option<(Color, Color)> {
+fn scalar_colors(
+    cell: &Cell,
+    lens: Lens,
+    ev_lo_hi: (f32, f32),
+    delta: Option<f32>,
+    delta_scale: f32,
+) -> Option<(Color, Color)> {
     let dark = (Color::Rgb(30, 30, 30), Color::DarkGray);
     let t = match lens {
         Lens::Strategy => return None,
+        Lens::Delta => {
+            return Some(match delta.filter(|d| d.is_finite()) {
+                Some(d) => (delta_color(d, delta_scale), Color::Black),
+                None => dark,
+            })
+        }
         Lens::Range => {
             let t = cell.weight.clamp(0.0, 1.0);
             let v = (25.0 + 205.0 * t) as u8;
@@ -383,13 +454,15 @@ fn cell_spans(
     lens: Lens,
     ev_lo_hi: (f32, f32),
     dimmed: bool,
+    delta: Option<f32>,
+    delta_scale: f32,
 ) -> Vec<Span<'static>> {
     let mut bg = [Color::Rgb(40, 40, 40); CELL_W]; // unfilled remainder, dark
     let mut fg = Color::White;
     if dimmed {
         bg = [Color::Rgb(25, 25, 25); CELL_W];
         fg = Color::DarkGray;
-    } else if let Some((color, text)) = scalar_colors(cell, lens, ev_lo_hi) {
+    } else if let Some((color, text)) = scalar_colors(cell, lens, ev_lo_hi, delta, delta_scale) {
         bg = [color; CELL_W];
         fg = text;
     } else {
@@ -426,9 +499,26 @@ fn grid_lines(
     cursor: (usize, usize),
     lens: Lens,
     filter: Option<Bucket>,
+    baseline: Option<&HashMap<(usize, usize), f32>>,
 ) -> Vec<Line<'static>> {
     let dim = Style::default().fg(Color::DarkGray);
     let ev_lo_hi = ev_range(grid);
+    // For the delta lens: each cell's EV change and the grid's largest |change|.
+    let cell_delta = |r: usize, c: usize, cell: &Cell| {
+        baseline.and_then(|b| b.get(&(r, c))).map(|&e| cell.ev - e)
+    };
+    let delta_scale = match (lens, baseline) {
+        (Lens::Delta, Some(_)) => grid
+            .iter()
+            .enumerate()
+            .flat_map(|(r, row)| {
+                row.iter().enumerate().filter_map(move |(c, cell)| {
+                    cell.as_ref().and_then(|cell| cell_delta(r, c, cell))
+                })
+            })
+            .fold(0.0_f32, |m, d| m.max(d.abs())),
+        _ => 1.0,
+    };
     let mut lines = Vec::with_capacity(14);
 
     let mut header = vec![Span::raw("   ")]; // gutter under the row-rank column
@@ -443,7 +533,16 @@ fn grid_lines(
             match cell {
                 Some(cell) => {
                     let dimmed = filter.is_some_and(|b| bucket_frac(cell, b) < 0.5);
-                    spans.extend(cell_spans(cell, cursor == (r, c), lens, ev_lo_hi, dimmed));
+                    let delta = cell_delta(r, c, cell);
+                    spans.extend(cell_spans(
+                        cell,
+                        cursor == (r, c),
+                        lens,
+                        ev_lo_hi,
+                        dimmed,
+                        delta,
+                        delta_scale,
+                    ));
                 }
                 None => spans.push(Span::raw(" ".repeat(CELL_W))),
             }
@@ -471,7 +570,11 @@ fn freq_bar(actions: &[String], freqs: &[f32], w: usize) -> Vec<Span<'static>> {
 /// The detail panel for the focused cell: hand, combo count, exact mix — and,
 /// when the source carries reach/equity (tree mode), the cell aggregates plus
 /// one row per suit combo instead of the average.
-fn detail_lines(grid: &Grid, cursor: (usize, usize)) -> Vec<Line<'static>> {
+fn detail_lines(
+    grid: &Grid,
+    cursor: (usize, usize),
+    locks: Option<&CellLocks>,
+) -> Vec<Line<'static>> {
     let Some(cell) = grid[cursor.0][cursor.1].as_ref() else {
         return vec![Line::from("(no combos on this board)")];
     };
@@ -486,6 +589,21 @@ fn detail_lines(grid: &Grid, cursor: (usize, usize)) -> Vec<Line<'static>> {
             if cell.combos == 1 { "" } else { "s" }
         )),
     ])];
+    if let Some(freqs) = locks.and_then(|l| l.get(&cursor)) {
+        // Named the dominant locked action (the UI sets pure locks).
+        if let Some((i, f)) = freqs.iter().enumerate().max_by(|a, b| a.1.total_cmp(b.1)) {
+            lines.push(Line::from(Span::styled(
+                format!(
+                    "LOCK → {} {:.0}%",
+                    cell.actions.get(i).cloned().unwrap_or_default(),
+                    f * 100.0
+                ),
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            )));
+        }
+    }
     if cell.equity.is_finite() {
         lines.push(Line::from(format!(
             "reach {:>3.0}%   eq {:>3.0}%   ev {:+.2}bb",
@@ -579,14 +697,14 @@ fn draw(
     )));
     f.render_widget(header, rows[0]);
 
-    let grid_widget = Paragraph::new(grid_lines(grid, cursor, Lens::Strategy, None))
+    let grid_widget = Paragraph::new(grid_lines(grid, cursor, Lens::Strategy, None, None))
         .block(Block::default().borders(Borders::ALL).title(" strategy "));
     f.render_widget(grid_widget, rows[1]);
 
     let mid =
         Layout::horizontal([Constraint::Percentage(55), Constraint::Percentage(45)]).split(rows[2]);
     f.render_widget(
-        Paragraph::new(detail_lines(grid, cursor))
+        Paragraph::new(detail_lines(grid, cursor, None))
             .block(Block::default().borders(Borders::ALL).title(" hand ")),
         mid[0],
     );
@@ -774,6 +892,7 @@ fn lens_title(lens: Lens, filter: Option<Bucket>, grid: &Grid) -> String {
             format!(" ev · {lo:+.1} … {hi:+.1}bb ")
         }
         Lens::Equity => " equity · red 0% … green 100% ".to_string(),
+        Lens::Delta => " ev Δ vs. baseline · red down … green up ".to_string(),
     };
     match filter {
         Some(b) => format!("{base}· filter {b} "),
@@ -789,6 +908,12 @@ struct TreeView {
     lens: Lens,
     filter: Option<Bucket>,
     runouts: Option<Vec<RunoutSummary>>,
+    /// P10: `L` toggles lock-edit mode; number keys then set the focused cell.
+    lock_mode: bool,
+    /// Pending per-cell locks for the current node (applied on `R` resolve).
+    locks: CellLocks,
+    /// Pre-resolve per-cell EVs, for the delta lens after `R`.
+    baseline_ev: Option<HashMap<(usize, usize), f32>>,
 }
 
 /// The numbered action bar for a player node: `1 Check   2 Bet 3.3bb   …`.
@@ -854,8 +979,21 @@ fn draw_tree(f: &mut Frame, node: &TreeNode, view: &TreeView) {
             " end of line ".to_string(),
         ),
         _ => (
-            grid_lines(&view.grid, view.cursor, view.lens, view.filter),
-            lens_title(view.lens, view.filter, &view.grid),
+            grid_lines(
+                &view.grid,
+                view.cursor,
+                view.lens,
+                view.filter,
+                view.baseline_ev.as_ref(),
+            ),
+            if view.lock_mode {
+                format!(
+                    " LOCK EDIT · {} cell(s) · 1-9 set, c clear, R resolve ",
+                    view.locks.len()
+                )
+            } else {
+                lens_title(view.lens, view.filter, &view.grid)
+            },
         ),
     };
     f.render_widget(
@@ -874,7 +1012,11 @@ fn draw_tree(f: &mut Frame, node: &TreeNode, view: &TreeView) {
             ),
         ),
         _ => (
-            detail_lines(&view.grid, view.cursor),
+            detail_lines(
+                &view.grid,
+                view.cursor,
+                view.lock_mode.then_some(&view.locks),
+            ),
             legend_lines(&view.grid),
         ),
     };
@@ -889,8 +1031,10 @@ fn draw_tree(f: &mut Frame, node: &TreeNode, view: &TreeView) {
 
     let help = if node.player == "chance" {
         "  ←↑↓→ / hjkl pick   ·   Enter deal   ·   o runouts   ·   u up   r root   ·   q quit"
+    } else if view.lock_mode {
+        "  ←↑↓→ / hjkl move   ·   1-9 lock cell to action   ·   c clear   ·   R resolve   ·   L/Esc cancel"
     } else {
-        "  ←↑↓→ / hjkl move   ·   1-9 act   ·   s/w/e/y lens   f filter   ·   u up   r root   ·   q quit"
+        "  ←↑↓→ move · 1-9 act · s/w/e/y/d lens · f filter · L lock · u up · r root · q quit"
     };
     f.render_widget(
         Paragraph::new(help).style(Style::default().fg(Color::DarkGray)),
@@ -915,6 +1059,9 @@ pub fn run_tree(mut session: TreeSession, mut node: TreeNode) {
         lens: Lens::Strategy,
         filter: None,
         runouts: None,
+        lock_mode: false,
+        locks: CellLocks::new(),
+        baseline_ev: None,
     };
     let mut died: Option<std::io::Error> = None;
 
@@ -935,7 +1082,16 @@ pub fn run_tree(mut session: TreeSession, mut node: TreeNode) {
             (&mut view.cursor, (12, 12))
         };
         let nav = match key.code {
-            KeyCode::Char('q') | KeyCode::Esc => break,
+            KeyCode::Char('q') => break,
+            // Esc backs out of lock-edit mode first; otherwise it quits.
+            KeyCode::Esc => {
+                if view.lock_mode {
+                    view.lock_mode = false;
+                    None
+                } else {
+                    break;
+                }
+            }
             KeyCode::Up | KeyCode::Char('k') => {
                 pos.0 = pos.0.saturating_sub(1);
                 None
@@ -958,9 +1114,55 @@ pub fn run_tree(mut session: TreeSession, mut node: TreeNode) {
                 let card = picker_card(view.pick);
                 node.dealable.contains(&card).then(|| session.deal(&card))
             }
+            // Lock mode: number keys set the focused cell to a pure action.
+            KeyCode::Char(c @ '1'..='9') if !at_chance && view.lock_mode => {
+                let i = c as usize - '1' as usize;
+                if i < node.actions.len() {
+                    let mut freqs = vec![0.0; node.actions.len()];
+                    freqs[i] = 1.0;
+                    view.locks.insert(view.cursor, freqs);
+                }
+                None
+            }
             KeyCode::Char(c @ '1'..='9') if !at_chance => {
                 let i = c as usize - '1' as usize;
                 (i < node.actions.len()).then(|| session.play(i))
+            }
+            KeyCode::Char('L') if !at_chance && !node.actions.is_empty() => {
+                view.lock_mode = !view.lock_mode;
+                if view.lock_mode {
+                    view.locks.clear();
+                }
+                None
+            }
+            KeyCode::Char('c') if view.lock_mode => {
+                view.locks.remove(&view.cursor);
+                None
+            }
+            KeyCode::Char('R') if !at_chance && !view.locks.is_empty() => {
+                // Send the expanded lock, re-solve, and switch to the delta lens
+                // vs. the strategy we're leaving (captured now, pre-rebuild).
+                let base = baseline_map(&view.grid);
+                let strategy = expand_lock(&node, &view.locks);
+                match session.lock(&strategy).and_then(|_| session.resolve()) {
+                    Ok(next) => {
+                        node = next;
+                        view.grid = build_grid_node(&node);
+                        view.baseline_ev = Some(base);
+                        view.lens = Lens::Delta;
+                        view.lock_mode = false;
+                        view.runouts = None;
+                    }
+                    Err(e) => {
+                        died = Some(e);
+                        break;
+                    }
+                }
+                None
+            }
+            KeyCode::Char('d') => {
+                view.lens = Lens::Delta;
+                None
             }
             KeyCode::Char('s') => {
                 view.lens = Lens::Strategy;
@@ -1001,6 +1203,13 @@ pub fn run_tree(mut session: TreeSession, mut node: TreeNode) {
                 node = next;
                 view.grid = build_grid_node(&node);
                 view.runouts = None;
+                // Locks + the delta baseline are per-node; drop them on a move.
+                view.locks.clear();
+                view.lock_mode = false;
+                view.baseline_ev = None;
+                if view.lens == Lens::Delta {
+                    view.lens = Lens::Strategy;
+                }
             }
             Some(Err(e)) => {
                 died = Some(e);
@@ -1139,6 +1348,25 @@ mod tests {
     }
 
     #[test]
+    fn expand_lock_fills_locked_cells_and_zeros_the_rest() {
+        // tree_node(): AsKs/AhKh → AKs cell (0,1), 2s2d → 22 cell (12,12).
+        let node = tree_node();
+        let mut locks = CellLocks::new();
+        locks.insert((0, 1), vec![0.0, 1.0]); // AKs: always the second action
+        let strat = expand_lock(&node, &locks);
+        // Shape is [action][hand], parallel to node.freqs.
+        assert_eq!(strat.len(), node.actions.len());
+        assert_eq!(strat[0].len(), node.hands.len());
+        // Both AK combos (hands 0,1) get the locked freqs; 22 (hand 2) stays 0.
+        for j in [0, 1] {
+            assert_eq!(strat[0][j], 0.0);
+            assert_eq!(strat[1][j], 1.0);
+        }
+        assert_eq!(strat[0][2], 0.0);
+        assert_eq!(strat[1][2], 0.0);
+    }
+
+    #[test]
     fn heat_color_hits_the_ramp_ends() {
         assert_eq!(heat_color(0.0), Color::Rgb(200, 60, 50));
         assert_eq!(heat_color(1.0), Color::Rgb(60, 165, 90));
@@ -1170,21 +1398,31 @@ mod tests {
             freqs: vec![0.6, 0.4],
             ev_bb: 1.2,
         }];
+        // A baseline + a lock, so the delta lens and lock-mode UI both render.
+        let mut baseline = HashMap::new();
+        baseline.insert((0, 1), 5.0);
+        let mut locks = CellLocks::new();
+        locks.insert((0, 1), vec![1.0, 0.0]);
         let mut terminal = Terminal::new(TestBackend::new(80, 30)).unwrap();
         for node in [player, chance, terminal_node] {
-            for (lens, filter, runouts) in [
-                (Lens::Strategy, None, None),
-                (Lens::Range, Some(Bucket::Air), None),
-                (Lens::Ev, None, None),
-                (Lens::Equity, None, Some(runouts.clone())),
+            for (lens, filter, runouts, lock_mode) in [
+                (Lens::Strategy, None, None, false),
+                (Lens::Range, Some(Bucket::Air), None, false),
+                (Lens::Ev, None, None, false),
+                (Lens::Equity, None, Some(runouts.clone()), false),
+                (Lens::Delta, None, None, false),
+                (Lens::Strategy, None, None, true), // lock-edit mode
             ] {
                 let view = TreeView {
                     grid: build_grid_node(&node),
-                    cursor: (0, 0),
+                    cursor: (0, 1),
                     pick: (0, 12), // 2c: a dealable, summarized card
                     lens,
                     filter,
                     runouts,
+                    lock_mode,
+                    locks: locks.clone(),
+                    baseline_ev: Some(baseline.clone()),
                 };
                 terminal.draw(|f| draw_tree(f, &node, &view)).unwrap();
             }
