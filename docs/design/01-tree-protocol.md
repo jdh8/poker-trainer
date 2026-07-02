@@ -93,10 +93,11 @@ files — see 02). Store solver-native saves via the solver's `bincode` feature
 `~/.cache/poker-trainer/solves/<hash>.bin`. Cache files are an **AGPL-side
 implementation detail** — the trainer never reads them, so invariant #2 holds.
 
-Re-enabling the `bincode` feature needs the bincode-rc pin sorted out (the
-crate was disabled because bincode 2.0 broke the rev's rc-3 API); if pinning
-`bincode =2.0.0-rc.3` in solve-gen works, done — otherwise ship serve without
-the cache first. The cache is an optimization, not part of the protocol.
+The bincode-rc pin is sorted: solve-gen pins `bincode =2.0.0-rc.3` **and**
+`bincode_derive =2.0.0-rc.3` (both of the solver's `^2.0.0-rc.3` requirements
+would otherwise resolve to the API-breaking 2.0 stable releases). The cache is
+an optimization, not part of the protocol: a corrupt file re-solves and
+overwrites, a failed save only warns.
 
 Loading a cached 100-flop-tree save is seconds vs. minutes to re-solve;
 `serve` answers `{"cached": true}` in the solve ack so UIs can set

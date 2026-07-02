@@ -353,7 +353,7 @@ fn handle_op(sess: &mut Option<ServeSession>, req: &Value) -> Result<Value, Stri
                 flop: r.flop,
                 config: r.config,
             };
-            let (game, exploitability) = build_and_solve(&spot)?;
+            let (game, exploitability, cached) = load_or_solve(&spot)?;
             let s = sess.insert(ServeSession {
                 game,
                 starting_pot: (spot.config.pot_bb * CHIPS_PER_BB) as i32,
@@ -362,7 +362,9 @@ fn handle_op(sess: &mut Option<ServeSession>, req: &Value) -> Result<Value, Stri
                 generator: gen_info(exploitability),
                 locks: Vec::new(),
             });
-            return Ok(node_payload(s));
+            let mut ack = node_payload(s);
+            ack["cached"] = json!(cached);
+            return Ok(ack);
         }
         // Validate the op name before requiring a game, so an unknown op is
         // reported as such even before the first solve.
@@ -648,6 +650,43 @@ fn gen_info(exploitability_chips: f32) -> GenInfo {
 /// validation (bad range/size/flop), so `serve` can report them over the
 /// protocol instead of dying. Progress prints on stderr. Returns the solved
 /// game and the exploitability reached, in chips.
+/// Config-hash solve cache (design 01 M3): solver-native saves under
+/// `~/.cache/poker-trainer/solves/<flop>-<hash8>.bin`. AGPL-side detail —
+/// the trainer never reads these. Exploitability rides in the save's memo.
+fn solve_cache_path(spot: &Spot) -> Option<PathBuf> {
+    let cache = std::env::var_os("XDG_CACHE_HOME")
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".cache")))?;
+    let dir = cache.join("poker-trainer/solves");
+    fs::create_dir_all(&dir).ok()?;
+    Some(dir.join(format!(
+        "{}-{}.bin",
+        spot.flop.to_lowercase(),
+        spot.config.hash8()
+    )))
+}
+
+/// Load a cached solve if present, else solve and cache. The bool is
+/// `cached` for the serve ack. A corrupt/unreadable cache file just re-solves
+/// and overwrites; a failed save only warns — the cache is an optimization.
+fn load_or_solve(spot: &Spot) -> Result<(PostFlopGame, f32, bool), String> {
+    let path = solve_cache_path(spot);
+    if let Some(p) = &path {
+        if let Ok((mut game, memo)) = load_data_from_file::<PostFlopGame, _>(p, None) {
+            eprintln!("  loaded cached solve {}", p.display());
+            game.back_to_root();
+            return Ok((game, memo.parse().unwrap_or(f32::NAN), true));
+        }
+    }
+    let (game, exploitability) = build_and_solve(spot)?;
+    if let Some(p) = &path {
+        if let Err(e) = save_data_to_file(&game, &exploitability.to_string(), p, None) {
+            eprintln!("  warning: failed to cache solve: {e}");
+        }
+    }
+    Ok((game, exploitability, false))
+}
+
 fn build_and_solve(spot: &Spot) -> Result<(PostFlopGame, f32), String> {
     let c = &spot.config;
     let starting_pot = (c.pot_bb * CHIPS_PER_BB) as i32;
@@ -690,7 +729,7 @@ fn build_and_solve(spot: &Spot) -> Result<(PostFlopGame, f32), String> {
 }
 
 fn solve_spot(spot: &Spot, stem: &str) -> Vec<(String, SolvedSpot)> {
-    let (game, exploitability) = build_and_solve(spot).expect("spot must solve");
+    let (game, exploitability, _) = load_or_solve(spot).expect("spot must solve");
     let mut game = game;
     let generator = gen_info(exploitability);
     let starting_pot = (spot.config.pot_bb * CHIPS_PER_BB) as i32;

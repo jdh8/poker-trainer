@@ -11,9 +11,15 @@ publish = false
 
 [dependencies]
 # Pinned: the solver ships breaking changes without version bumps.
-# default-features=false drops its `bincode` feature — we extract to our own
-# JSON, never the solver's tree format, and bincode 2.0.x broke rc.3's API.
-postflop-solver = { git = "https://github.com/b-inary/postflop-solver", rev = "9d1509fe5077d019825f833eed04b16d342dfda1", default-features = false, features = ["rayon"] }
+# The `bincode` feature enables the config-hash solve cache (design 01 M3);
+# cache files are solver-native saves under ~/.cache — an AGPL-side detail
+# the trainer never reads.
+postflop-solver = { git = "https://github.com/b-inary/postflop-solver", rev = "9d1509fe5077d019825f833eed04b16d342dfda1", default-features = false, features = ["rayon", "bincode"] }
+# Never called directly — pins the solver's `^2.0.0-rc.3` requirement, which
+# cargo would otherwise resolve to bincode 2.0 stable (an rc.3 API break).
+# Same story for the derive macro: rc.3's `^2.0.0-rc.3` slips to 2.0.1.
+bincode = "=2.0.0-rc.3"
+bincode_derive = "=2.0.0-rc.3"
 poker-trainer = { path = "../.." }
 clap = { version = "4", features = ["derive"] } # `gen` / `solve` subcommands
 serde = { version = "1", features = ["derive"] } # manifest schema
