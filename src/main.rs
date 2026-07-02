@@ -179,6 +179,9 @@ enum Mode {
     Range,
     /// Play full hands (flop→river) vs. the equilibrium villain; needs --board.
     Hand,
+    /// Open/defend/3-bet decisions scored against the preflop charts
+    /// (data/ranges/); accuracy only, no solver.
+    Preflop,
 }
 
 fn main() {
@@ -191,6 +194,7 @@ fn main() {
                 Mode::Gto => trainer::run_gto_drill(req),
                 Mode::Range => trainer::run_range_drill(req),
                 Mode::Hand => trainer::run_hand_drill(req),
+                Mode::Preflop => trainer::run_preflop_drill(),
             }
         }
         Command::Table { solve, line } => trainer::run_table(solve.into_request(), line),

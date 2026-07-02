@@ -8,8 +8,8 @@
 
 use crate::eval::{self, Bucket};
 use crate::solution::{
-    FileSolutionProvider, LiveSolutionProvider, NodeStrategy, SolutionProvider, SolveRequest,
-    SolvedSpot,
+    FileSolutionProvider, Formation, LiveSolutionProvider, NodeStrategy, SolutionProvider,
+    SolveRequest, SolvedSpot, SpotConfig, FORMATIONS,
 };
 use crate::stats;
 use crate::texture::{self, SuitPattern};
@@ -17,6 +17,7 @@ use crate::tree::{TreeNode, TreeSession};
 use rand::seq::IndexedRandom;
 use rand::RngExt;
 use rs_poker::core::{Card, Deck, Suit};
+use rs_poker::holdem::RangeParser;
 use std::collections::BTreeMap;
 use std::io::{self, IsTerminal, Write};
 
@@ -196,6 +197,154 @@ pub fn run_texture_drill() {
             char::from(t.high),
             if right { "correct" } else { "wrong" }
         );
+    }
+
+    report(correct, spots);
+}
+
+/// One preflop decision the chart files can adjudicate (design doc 04).
+struct PreflopSpot {
+    formation: &'static str,
+    label: &'static str,
+    question: String,
+    /// The chart action when the hand is in range; out of range folds.
+    play: &'static str,
+    combos: Vec<[Card; 2]>,
+}
+
+/// The two decisions a formation's charts answer. The id encodes who the
+/// aggressor is: `srp-X-Y` = X opens, Y defends; `3bp-X-Y` = X 3-bets Y's
+/// open, Y calls the 3-bet.
+// ponytail: charts are binary flat/raise ranges, so each seat gets one
+// two-way question; mixed frequencies and 3-bet-vs-flat splits for the
+// defender need weighted chart files first.
+fn preflop_spots(f: &Formation, config: &SpotConfig) -> Result<Vec<PreflopSpot>, String> {
+    let mut it = f.id.split('-');
+    let (kind, first, second) = (
+        it.next().unwrap_or(""),
+        it.next().unwrap_or("").to_uppercase(),
+        it.next().unwrap_or("").to_uppercase(),
+    );
+    let chart = |seat: &str| -> Result<Vec<[Card; 2]>, String> {
+        let s = if seat.eq_ignore_ascii_case(f.oop_seat) {
+            &config.oop_range
+        } else {
+            &config.ip_range
+        };
+        RangeParser::parse_many(s)
+            .map_err(|e| format!("bad chart for {} {seat}: {e}", f.id))
+            .map(|hands| hands.iter().map(|h| [h[0], h[1]]).collect())
+    };
+    let (q1, q2) = if kind == "srp" {
+        (
+            format!("You're {first}, folded to you. Open-raise?"),
+            format!("You're {second} facing {first}'s open. Call?"),
+        )
+    } else {
+        (
+            format!("You're {first} facing {second}'s open. 3-bet?"),
+            format!("You opened {second} and {first} 3-bets. Call?"),
+        )
+    };
+    Ok(vec![
+        PreflopSpot {
+            formation: f.id,
+            label: f.label,
+            question: q1,
+            play: "Raise",
+            combos: chart(&first)?,
+        },
+        PreflopSpot {
+            formation: f.id,
+            label: f.label,
+            question: q2,
+            play: "Call",
+            combos: chart(&second)?,
+        },
+    ])
+}
+
+/// Entry point for `poker-trainer drill preflop` (design doc 04).
+///
+/// No solver: the chart files in `data/ranges/` are the answer key. Accuracy
+/// only — charts carry no EV, so records get `ev_loss: null`.
+pub fn run_preflop_drill() {
+    let mut spots_pool = Vec::new();
+    for f in FORMATIONS {
+        let config = match SpotConfig::for_formation(f.id, "data/ranges") {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("{e}");
+                return;
+            }
+        };
+        match preflop_spots(f, &config) {
+            Ok(mut s) => spots_pool.append(&mut s),
+            Err(e) => {
+                eprintln!("{e}");
+                return;
+            }
+        }
+    }
+
+    let mut rng = rand::rng();
+    let (mut spots, mut correct) = (0u32, 0u32);
+    println!("poker-trainer — preflop drill (chart accuracy, no EV).");
+    println!("Answer with the shown key or f)old. Empty line or q quits.\n");
+
+    loop {
+        let spot = spots_pool.choose(&mut rng).unwrap();
+        let mut deck = Deck::default();
+        let hero = [deck.deal(&mut rng).unwrap(), deck.deal(&mut rng).unwrap()];
+        let key = &spot.play[..1].to_lowercase();
+
+        println!("Spot #{} — {}", spots + 1, spot.label);
+        println!("  Your hand: {} {}", fmt(hero[0]), fmt(hero[1]));
+        println!("  {}", spot.question);
+        print!("  {key}){} or f)old? > ", &spot.play[1..].to_lowercase());
+        io::stdout().flush().unwrap();
+
+        let mut line = String::new();
+        if io::stdin().read_line(&mut line).unwrap() == 0 {
+            break; // EOF (Ctrl-D)
+        }
+        let ans = line.trim().to_lowercase();
+        let chosen = match ans.as_str() {
+            "" | "q" | "quit" => break,
+            "f" | "fold" => "Fold",
+            a if a == key || a == spot.play.to_lowercase() => spot.play,
+            _ => {
+                println!("  (type {key}, f, or q to quit)\n");
+                continue; // re-deal, don't count
+            }
+        };
+
+        let in_chart = spot
+            .combos
+            .iter()
+            .any(|c| c.contains(&hero[0]) && c.contains(&hero[1]));
+        let best = if in_chart { spot.play } else { "Fold" };
+        let right = chosen == best;
+        spots += 1;
+        if right {
+            correct += 1;
+        }
+        println!(
+            "  Chart says: {best}.  You said {chosen} -> {}\n",
+            if right { "correct" } else { "wrong" }
+        );
+
+        stats::record(&stats::StatRecord {
+            formation: spot.formation.into(),
+            street: "preflop".into(),
+            hand: format!("{}{}", fmt(hero[0]), fmt(hero[1])),
+            line: vec![spot.question.clone()],
+            chosen: chosen.into(),
+            best: best.into(),
+            ev_loss: None,
+            gto_freq: Some(if right { 1.0 } else { 0.0 }),
+            ..stats::StatRecord::new("preflop")
+        });
     }
 
     report(correct, spots);
@@ -1110,6 +1259,31 @@ fn fmt(c: Card) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn preflop_spots_map_seats_to_the_right_chart() {
+        // 3bp-bb-btn: BB (oop) 3-bets, BTN (ip) calls the 3-bet. AA is in
+        // both charts; 72o in neither.
+        let f = crate::solution::formation("3bp-bb-btn").unwrap();
+        let config = SpotConfig {
+            oop_range: "AA,KK".into(),
+            ip_range: "AA,QQ".into(),
+            ..SpotConfig::for_formation("3bp-bb-btn", "data/ranges").unwrap()
+        };
+        let spots = preflop_spots(f, &config).unwrap();
+        let in_chart = |s: &PreflopSpot, a: &str, b: &str| {
+            let (a, b) = (Card::try_from(a).unwrap(), Card::try_from(b).unwrap());
+            s.combos.iter().any(|c| c.contains(&a) && c.contains(&b))
+        };
+        // First spot: the 3-bettor (BB) raises off the oop chart.
+        assert_eq!(spots[0].play, "Raise");
+        assert!(spots[0].question.contains("BB facing BTN"));
+        assert!(in_chart(&spots[0], "Ks", "Kd") && !in_chart(&spots[0], "Qs", "Qd"));
+        // Second spot: the opener (BTN) calls off the ip chart.
+        assert_eq!(spots[1].play, "Call");
+        assert!(in_chart(&spots[1], "Qs", "Qd") && !in_chart(&spots[1], "Ks", "Kd"));
+        assert!(!in_chart(&spots[1], "7s", "2d"));
+    }
 
     #[test]
     fn pot_odds_formula() {
