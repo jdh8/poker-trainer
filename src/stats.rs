@@ -209,7 +209,7 @@ pub fn band(ev_loss: f32) -> &'static str {
 const TREND_WINDOW: usize = 200;
 
 /// `(prior, recent)` average EV loss over the last two windows of up to
-/// [`TREND_WINDOW`] EV-measured decisions; `None` until both windows have at
+/// `TREND_WINDOW` EV-measured decisions; `None` until both windows have at
 /// least 20 (any less is noise, not a trend).
 pub fn trend(records: &[StatRecord]) -> Option<(f32, f32)> {
     let evs: Vec<f32> = records.iter().filter_map(|r| r.ev_loss).collect();

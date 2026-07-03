@@ -378,10 +378,9 @@ pub(crate) fn solve_gen_command(args: &[String]) -> Command {
 fn run_solve_gen(req: &SolveRequest, out_dir: &Path) -> io::Result<()> {
     let status = solve_gen_command(&solve_gen_args(req, out_dir)).status()?;
     if !status.success() {
-        return Err(io::Error::new(
-            io::ErrorKind::Other,
-            format!("solve-gen failed ({status}) — see its output above"),
-        ));
+        return Err(io::Error::other(format!(
+            "solve-gen failed ({status}) — see its output above"
+        )));
     }
     Ok(())
 }

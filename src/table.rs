@@ -2,7 +2,8 @@
 //! GTO-Wizard-style 13×13 starting-hand grid, each cell colored by its
 //! equilibrium action mix.
 //!
-//! The data is already in [`SolvedSpot`]: one [`NodeStrategy`] per combo. This
+//! The data is already in [`SolvedSpot`]: one
+//! [`NodeStrategy`](crate::solution::NodeStrategy) per combo. This
 //! module folds those ~1326 combos into the 169 canonical cells and draws them.
 //! The folding + coloring are pure (and unit-tested below); the TUI half just
 //! renders the grid and walks the cursor / cycles nodes.

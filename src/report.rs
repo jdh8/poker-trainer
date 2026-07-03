@@ -204,8 +204,8 @@ pub fn run_report(
 
 fn print_table(rows: &[Row]) {
     println!(
-        "{:<8} {:<9} {:<7} {:>6} {:>6} {:>7}  {}",
-        "flop", "texture", "node", "combos", "bet%", "ev(bb)", "mix"
+        "{:<8} {:<9} {:<7} {:>6} {:>6} {:>7}  mix",
+        "flop", "texture", "node", "combos", "bet%", "ev(bb)"
     );
     for r in rows {
         println!(
