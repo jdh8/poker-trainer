@@ -527,6 +527,29 @@ mod tests {
         assert!(old.config.is_none());
     }
 
+    /// The repo's #1 invariant (CLAUDE.md, design 00): the trainer must never
+    /// link the solver — only `crates/solve-gen` may. `cargo tree` resolves
+    /// from the committed lockfile, so a bad `Cargo.toml` edit fails here
+    /// locally before it ever reaches CI. If this fails, remove the offending
+    /// dependency; do not touch the test.
+    #[test]
+    fn trainer_never_links_the_solver() {
+        let out = std::process::Command::new(env!("CARGO"))
+            .args(["tree", "-p", "poker-trainer", "-e", "normal,build"])
+            .output()
+            .expect("run cargo tree");
+        assert!(
+            out.status.success(),
+            "cargo tree failed: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let tree = String::from_utf8_lossy(&out.stdout);
+        assert!(
+            !tree.contains("postflop-solver"),
+            "the trainer's dependency tree links the AGPL solver:\n{tree}"
+        );
+    }
+
     #[test]
     fn solve_gen_args_forwards_the_whole_config() {
         let req = SolveRequest {
