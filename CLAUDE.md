@@ -43,8 +43,8 @@ RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features
 cargo test --all-features
 ```
 
-Three `#[ignore]` tests spawn a real solve (minutes): run
-`cargo test -- --ignored` only when touching `tree.rs`,
+Three `#[ignore]` tests spawn a real solve (~2 s with a warm solve cache,
+minutes cold): run `cargo test -- --ignored` only when touching `tree.rs`,
 `LiveSolutionProvider`, or `solve-gen serve`.
 
 ## Layout
