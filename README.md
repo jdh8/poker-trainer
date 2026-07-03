@@ -5,18 +5,14 @@ You're dealt realistic post-flop spots, you act, and the trainer scores your
 decision against a solver's equilibrium strategy — reporting EV loss and the full
 optimal frequency mix.
 
-> Status: Phase 0 done (equity + board-texture drills). Phase 1 (precomputed GTO
-> solutions) is live — `drill gto` covers 8 flop textures, each as both the BTN's
-> c-bet decision and the BB's defend. Phase 2 (`drill range`) builds on the same
-> solutions: assign an action to your whole range by strength bucket and get
-> per-bucket leak stats. Phase 3 adds on-demand **live solving** of any spot you
-> pass via `--board`. Phase 4 keeps the solved game resident in a
-> `solve-gen serve` subprocess so `table --board` walks the **whole game tree**.
-> Phase 5 builds on it: `drill hand` plays **full hands** (flop→river) against
-> the equilibrium villain, and every scored decision lands in a persistent
-> history that `stats` folds into a leak report. Phase 6 rebuilds the library:
-> **formations** (`--formation`, 3-bet pots, SB/CO), ranges as data files,
-> rake, TOML manifests, and config-hash cache keys. See the phased plan below.
+> Status: phases 0–10 are all shipped — precomputed + live solving, resident
+> tree sessions (`solve-gen serve`), full-hand drills with persistent stats,
+> the formations library, the study browser (lenses, runouts, blockers),
+> aggregate reports, hand-history analysis, and nodelocking. The parity matrix
+> in [docs/design/00-overview.md](docs/design/00-overview.md) is the status
+> source of truth. Still open: spot filters + curated-library sampling for
+> `drill hand`, a `broad-95` manifest tier, and the P10 deferred trio
+> (saved-lock villain personas, session-wide EV-delta, warm-start re-solve).
 
 ## Build & run
 
@@ -100,17 +96,21 @@ cargo run -- table --board Td9d6h   # live-solve this flop, then walk its tree
 
 ## Architecture
 
-Single binary crate for now, organized into modules:
+A two-crate workspace — the AGPL solver lives in `crates/solve-gen` (see
+Licensing); the trainer (lib + bin) is organized into modules:
 
 | module       | responsibility                                              |
 |--------------|-------------------------------------------------------------|
 | `board`      | community cards (flop/turn/river)                           |
 | `range`      | weighted hand ranges + `"22+, AKs"` parsing                 |
 | `eval`       | hand evaluation & equity (wraps `rs-poker` / `pokers`)      |
+| `texture`    | objective flop-texture classification                       |
 | `solution`   | **`SolutionProvider` trait** — where GTO answers come from  |
 | `trainer`    | the drill loops + scoring                                   |
 | `tree`       | `TreeSession` — walk a live-solved game tree over stdio     |
 | `stats`      | persistent decision history (JSONL) + the leak aggregator   |
+| `report`     | aggregate flop reports + range-vs-range `equity`            |
+| `analyze`    | hand-history import → EV-loss leak report                   |
 | `table`      | the GTO-Wizard-style 13×13 strategy grid (TUI)              |
 
 The key seam is `solution::SolutionProvider`. Everything that needs a strategy
@@ -145,12 +145,12 @@ goes through it, so a **file-backed** provider (precomputed sims) and, later, a
    minutes (range/hardware-dependent) and ~1 GB RAM. (Multi-position presets and
    preflop/multiway modeling stay out of scope — this exposes the postflop knobs
    solve-gen already has.)
-4. **Tree sessions** — *done (core).* `solve-gen serve` keeps a solved game
+4. **Tree sessions** — *done.* `solve-gen serve` keeps a solved game
    resident and answers node queries over line-delimited JSON on stdio
    ([design 01](docs/design/01-tree-protocol.md)); the trainer's `TreeSession`
    drives it, and `table --board` walks the full tree (any line, any runout).
-   Remaining: `runouts` op + weights/equity in payloads, config-hash save
-   cache, `lock`/`resolve`.
+   Solved games are cached by config hash (solver-native saves), and the
+   `lock`/`resolve` ops power nodelocking (Phase 10).
 5. **Full-hand drills + persistent stats** — *done (core).* `drill hand
    --board <flop>` plays whole hands (flop→river) on a tree session: villain
    is dealt a hidden hand from its range and plays the solved mix *for that
@@ -161,7 +161,8 @@ goes through it, so a **file-backed** provider (precomputed sims) and, later, a
    formation|street|texture|bucket] [--last N]` reports avg EV loss, accuracy,
    blunder rate, and a trend, worst groups first
    ([design 04](docs/design/04-training-mode.md)). Remaining: spot filters +
-   curated-library sampling, blocked on the P6 library.
+   curated-library sampling (unblocked now that Phase 6 landed;
+   `run_hand_drill` in `src/trainer.rs` still requires `--board`).
 6. **Library v2** — *done.* One `SpotConfig` struct is the CLI's
    resolved knobs, the serve request body, the cache key (stable FNV-1a hash →
    `<flop>-<hash8>-<node>.json`, so custom solves never clobber curated
@@ -182,7 +183,11 @@ goes through it, so a **file-backed** provider (precomputed sims) and, later, a
    (`--solve-budget` caps the solving; most frequent spots first), and reports
    EV-loss leaks, a blunder list with a `table --line` replay command per
    entry, and `--jsonl` export ([design 05](docs/design/05-analyze.md)).
-   Remaining: nodelocking (P10).
+   Phase 10 *done*: nodelocking — the `table` lock editor (`L`), presets
+   (overfold, never-raise), saved lock files (`--locks`), and an EV-delta lens
+   after re-solve. Deferred: saved locks as drill villain personas,
+   session-wide EV-delta baseline, warm-start re-solve
+   ([design 06](docs/design/06-solver-capabilities.md)).
 
 ## Licensing
 

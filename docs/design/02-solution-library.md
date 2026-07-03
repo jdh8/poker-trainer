@@ -1,5 +1,9 @@
 # Design 02 — Solution library v2: formations, ranges, manifests (P6)
 
+**Status: shipped** through milestone 4 (`texture-25` solved locally); the
+`broad-95` / `all-1755` tiers have no manifests yet. This doc is design
+rationale; current state lives in [00-overview](00-overview.md).
+
 **Unlocks:** aggregate reports (03), preflop drills (04), analyze matching
 (05). **Depends on:** nothing (parallel to P4).
 

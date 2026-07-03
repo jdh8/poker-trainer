@@ -1,5 +1,9 @@
 # Design 05 — Analyze: hand-history import & leak report (P9)
 
+**Status: shipped** (all four milestones — PokerStars + GGPoker parsers,
+budgeted scoring, `--jsonl`, `table --line` replay). This doc is design
+rationale; current state lives in [00-overview](00-overview.md).
+
 **Depends on:** 01 (scoring off-tree decisions), 02 (formation matching),
 04 (shared stats aggregator). The last big pillar; also the most
 approximation-laden — this doc is explicit about what the numbers mean.

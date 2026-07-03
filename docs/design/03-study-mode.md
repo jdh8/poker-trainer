@@ -1,5 +1,9 @@
 # Design 03 — Study mode v2: tree browser, views, reports (P7, P8)
 
+**Status: shipped** (all five milestones — P7 tree browsing/lenses/runouts and
+P8 `report`/`equity`/blocker column). This doc is design rationale; current
+state lives in [00-overview](00-overview.md).
+
 **Depends on:** 01 (tree walking, runouts, weights/equity), 02 (report
 breadth). **Unlocks:** the nodelocking UI (06) reuses the node editor surface.
 

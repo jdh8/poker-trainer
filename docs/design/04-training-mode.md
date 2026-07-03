@@ -1,5 +1,9 @@
 # Design 04 — Training v2: full hands, persistent leaks, preflop (P5)
 
+**Status: shipped** except milestone 3 (spot filters + curated-library
+sampling — `drill hand` still requires `--board`). This doc is design
+rationale; current state lives in [00-overview](00-overview.md).
+
 **Depends on:** 01 (tree sessions) for full-hand drills; 02 for preflop
 charts and formation variety. **Unlocks:** 05 reuses the stats aggregator.
 

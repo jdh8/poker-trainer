@@ -1,5 +1,9 @@
 # Design 01 — Tree sessions: `solve-gen serve` (P4)
 
+**Status: shipped** (all four milestones — serve ops, runouts/weights/equity,
+solve cache, lock/resolve). This doc is design rationale; current state lives
+in [00-overview](00-overview.md).
+
 **Unlocks:** tree browsing (03), multi-street drills (04), analyze (05),
 nodelocking (06). **Depends on:** nothing.
 

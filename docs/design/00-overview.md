@@ -13,9 +13,9 @@ design doc (`01`–`06`).
 ## Invariants (every phase must keep these)
 
 1. **License seam.** The trainer never links `postflop-solver`. The solver is
-   only ever reached across a process boundary (today: shell-out; next: a
-   long-lived subprocess speaking a JSON protocol — see 01). AGPL stays inside
-   `crates/solve-gen`.
+   only ever reached across a process boundary (shell-out for one-shot solves;
+   a long-lived `solve-gen serve` subprocess speaking line-delimited JSON for
+   tree sessions — see 01). AGPL stays inside `crates/solve-gen`.
 2. **Neutral, versioned data formats.** Everything the trainer reads is a
    format defined in `src/solution.rs` (or a sibling), never the solver's own
    serialization. Formats carry a version and old files keep parsing.
@@ -38,7 +38,7 @@ design doc (`01`–`06`).
 | Blockers / range-vs-range equity tools | ✅ range-vs-range `equity` (+histogram) + blocker panel column | — |
 | Single-node drills, EV-loss scoring | ✅ `drill gto` | — |
 | Range-builder drills + leak buckets | ✅ `drill range` | — |
-| **Full-hand practice** (flop→river vs. equilibrium villain) | ✅ `drill hand` (`--board` spots; library sampling needs P6) | — |
+| **Full-hand practice** (flop→river vs. equilibrium villain) | ✅ `drill hand` (`--board` spots; curated-library sampling not yet built) | — |
 | Persistent session stats, leak trends | ✅ `stats` over `history.jsonl` | — |
 | Preflop charts + preflop drills | ✅ `drill preflop` off the charts (accuracy-only, no EV) | — |
 | Formation breadth (positions, 3-bet pots, stack depths, rake) | ✅ config-side (5 formations, rake, manifests); breadth tiers solve locally | data-gen → [02](02-solution-library.md) |
@@ -65,7 +65,8 @@ for curated drills.
 
 ## Phases
 
-Continues the README's phases 0–3. Sizes are relative (S/M/L).
+Continues the README's phases 0–3. Sizes are relative (S/M/L). **All of
+P4–P10 are shipped**; the table is kept for the dependency map.
 
 | Phase | Deliverable | Size | Needs | Doc |
 |---|---|---|---|---|
@@ -73,13 +74,15 @@ Continues the README's phases 0–3. Sizes are relative (S/M/L).
 | **P5** | Multi-street full-hand drill + persistent stats/leak profile | M | P4 | [04](04-training-mode.md) |
 | **P6** | Library v2: formations, preflop chart files, manifests, rake, config-hash cache keys | M | — (parallel to P4) | [02](02-solution-library.md) |
 | **P7** | Study browser v2: tree walking, range/EV/EQ views, runouts | M | P4 | [03](03-study-mode.md) |
-| **P8** | Aggregate flop reports + equity/blocker tools (`report`, `equity` done; blocker column pending) | M | P6 | [03](03-study-mode.md) |
+| **P8** | Aggregate flop reports + equity/blocker tools — done | M | P6 | [03](03-study-mode.md) |
 | **P9** | `analyze`: hand-history import, EV-loss + leak report | L | P4, P6 | [05](05-analyze.md) |
 | **P10** | Nodelocking end-to-end (lock, re-solve, compare) + presets + saved-lock files — done | M | P4, P7 | [06](06-solver-capabilities.md) |
 | — | ICM (solver fork), bunching, multiway | research | — | [06](06-solver-capabilities.md) |
 
-P4 and P6 are independent and both unblock most of the rest; do P4 first —
-it's the keystone.
+P4 and P6 were independent and both unblocked most of the rest; P4 was the
+keystone. What remains open: spot filters + curated-library sampling for
+`drill hand` (04 M3), breadth tiers beyond `texture-25` (02), and the P10
+deferred trio (06).
 
 ## Risks
 

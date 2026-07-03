@@ -1,5 +1,9 @@
 # Design 06 — Solver capabilities: nodelocking, ICM, multiway, bunching
 
+**Status: current** against the pinned rev; P10 shipped (M1 + M2; the
+deferred trio is listed below); ICM/multiway remain out of scope. Current
+state lives in [00-overview](00-overview.md).
+
 What the engine under `solve-gen` can and cannot do, verified against the
 pinned rev (`9d1509f`) — and what that makes cheap, expensive, or impossible.
 Everything here stays AGPL-side; the trainer only ever sees protocol JSON.
@@ -11,7 +15,7 @@ Everything here stays AGPL-side; the trainer only ever sees protocol JSON.
 | Node locking | ✅ `lock_current_strategy(&[f32])` | nodelocking is a P10 feature, not a fork |
 | Bunching effect | ✅ `set_bunching_effect(BunchingData)` | folded-range realism is a config option |
 | Rake | ✅ `rake_rate`/`rake_cap` in `TreeConfig` | plumb through in 02; trivial |
-| Game save/load | ✅ `save_data_to_file` (behind `bincode` feature, currently off) | the 01 solve cache |
+| Game save/load | ✅ `save_data_to_file` (behind `bincode` feature, enabled) | the 01 solve cache |
 | Solve accuracy knobs | ✅ target exploitability, iteration cap, 16-bit compression | expose in `SpotConfig`/CLI |
 | Preflop trees | ❌ (`BoardState::Flop` is the earliest root) | preflop stays chart-data (02) |
 | ICM / custom terminal utility | ❌ chip-EV payoffs only | fork-level work; research |
