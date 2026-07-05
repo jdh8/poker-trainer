@@ -8,6 +8,7 @@ pub mod range;
 pub mod report;
 pub mod solution;
 pub mod stats;
+#[cfg(feature = "tui")]
 pub mod table;
 pub mod texture;
 pub mod trainer;

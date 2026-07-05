@@ -11,3 +11,8 @@
 # regenerate locally via `solve-gen gen --manifest`. Already-tracked starter-8
 # files are unaffected; `git add -f` if that curated set ever grows.
 /data/solutions/*.json
+
+# web/ is its own workspace; pkg/ is wasm-pack output, solutions/ a local stage.
+/web/target
+/web/pkg
+/web/solutions

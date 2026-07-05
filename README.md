@@ -29,6 +29,14 @@ cargo run -- report           # aggregate flop report over the library (Phase 8)
 cargo run -- analyze hh/*.txt # score your real hands vs. equilibrium (Phase 9)
 ```
 
+### Web examples
+
+[`web/`](web/) is a browser catalog of the human-facing examples — equity
+calculator, pot-odds drill, texture drill (the crate compiled to wasm), and a
+GTO strategy grid over the committed starter-8 snapshots. It deploys to GitHub
+Pages on every push to `main`; see [web/README.md](web/README.md) to build and
+serve it locally.
+
 The `gto` drill needs solution files; generate them with the (AGPL) solver
 crate, which walks a **manifest** of (formation × flop set) entries and skips
 anything already solved (resumable — pair long runs with

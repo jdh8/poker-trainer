@@ -1,0 +1,26 @@
+[package]
+name = "poker-trainer-web"
+version = "0.1.0"
+edition = "2021"
+description = "Browser catalog of poker-trainer's human-facing examples (wasm)"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"] # cdylib for wasm, rlib so `cargo test` runs natively
+
+[dependencies]
+poker-trainer = { path = "..", default-features = false }
+wasm-bindgen = "0.2"
+rand = "0.10"      # match root
+rs_poker = { version = "5", default-features = false } # match root
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+# rand's transitive getrandom refuses to compile for wasm unless a backend is named.
+getrandom = { version = "0.4", features = ["wasm_js"] }
+
+# Empty on purpose: keeps the root workspace from adopting this crate, so the
+# trainer's build and license seam stay untouched.
+[workspace]

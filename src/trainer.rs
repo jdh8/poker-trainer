@@ -19,7 +19,10 @@ use rand::RngExt;
 use rs_poker::core::{Card, Deck, Suit};
 use rs_poker::holdem::RangeParser;
 use std::collections::BTreeMap;
-use std::io::{self, IsTerminal, Write};
+#[cfg(feature = "tui")]
+use std::io::IsTerminal;
+use std::io::{self, Write};
+#[cfg(feature = "tui")]
 use std::path::PathBuf;
 
 /// A spot's formation id for history records; pre-v2 files carry no config and
@@ -487,6 +490,7 @@ fn load_provider() -> Option<FileSolutionProvider> {
 /// without it, it cycles the curated snapshot library exactly as before.
 /// `line` (needs `--board`) descends that action line before the browser opens
 /// — the replay handoff printed by `analyze`'s blunder list (design doc 05).
+#[cfg(feature = "tui")]
 pub fn run_table(req: Option<SolveRequest>, line: Option<String>, locks: Option<PathBuf>) {
     match req {
         Some(req) => {

@@ -63,6 +63,7 @@ minutes cold): run `cargo test -- --ignored` only when touching `tree.rs`,
 | `src/texture.rs` | objective flop-texture classification |
 | `src/board.rs`, `src/range.rs` | **intentional stubs — do not flesh out** |
 | `crates/solve-gen/src/main.rs` | single-file AGPL generator: `gen \| solve \| serve` |
+| `web/` | wasm catalog of the pure examples — **own workspace**, not a member; `cargo test` there runs natively; deployed by `pages.yml` |
 | `tests/` | fixtures only; all unit tests are colocated in `src/` |
 
 ## Data

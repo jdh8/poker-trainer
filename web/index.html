@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>poker-trainer — examples</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>poker-trainer</h1>
+  <p class="tagline">A catalog of the trainer's human-facing examples, running in your browser.
+     The poker logic is the Rust crate compiled to WebAssembly; the GTO grid reads the
+     committed solver snapshots.</p>
+  <nav>
+    <a href="#equity">Equity calculator</a>
+    <a href="#pot-odds">Pot-odds drill</a>
+    <a href="#texture">Texture drill</a>
+    <a href="#grid">GTO strategy grid</a>
+  </nav>
+</header>
+<main>
+
+<section id="equity">
+  <h2>Equity calculator</h2>
+  <p>Range-vs-range Monte-Carlo equity on a flop — the <code>poker-trainer equity</code> command.
+     Defaults are the SRP BTN-vs-BB ranges the solution library uses.</p>
+  <div class="cols">
+    <label>OOP range (BB)
+      <textarea id="eq-oop" rows="3">22+,A2s+,K2s+,Q5s+,J7s+,T7s+,96s+,86s+,75s+,64s+,53s+,A2o+,K9o+,Q9o+,J9o+,T9o,98o</textarea>
+    </label>
+    <label>IP range (BTN)
+      <textarea id="eq-ip" rows="3">22+,A2s+,K2s+,Q4s+,J6s+,T6s+,96s+,85s+,75s+,64s+,53s+,43s,A2o+,K7o+,Q8o+,J8o+,T8o+,98o</textarea>
+    </label>
+  </div>
+  <label class="inline">Flop <input id="eq-board" value="Td9d6h" size="8"></label>
+  <button id="eq-run">Compute</button>
+  <div id="eq-out"></div>
+</section>
+
+<section id="pot-odds">
+  <h2>Pot-odds drill</h2>
+  <p>You're dealt a hand, villain bets — call or fold? Scored against your true
+     (Monte-Carlo) equity vs villain's actual hand, like <code>drill pot-odds</code>.</p>
+  <button id="po-deal">Deal</button>
+  <span id="po-score" class="score"></span>
+  <div id="po-spot"></div>
+  <div id="po-actions" hidden>
+    <button id="po-call" class="answer">Call</button>
+    <button id="po-fold" class="answer">Fold</button>
+  </div>
+  <div id="po-reveal"></div>
+</section>
+
+<section id="texture">
+  <h2>Texture drill</h2>
+  <p>Name the flop's suit pattern and whether it's paired — both must be right,
+     like <code>drill texture</code>.</p>
+  <button id="tx-deal">Deal</button>
+  <span id="tx-score" class="score"></span>
+  <div id="tx-spot"></div>
+  <div id="tx-questions" hidden>
+    <div class="btn-group" id="tx-suits">
+      <button data-v="rainbow" class="answer">Rainbow</button>
+      <button data-v="two-tone" class="answer">Two-tone</button>
+      <button data-v="monotone" class="answer">Monotone</button>
+    </div>
+    <div class="btn-group" id="tx-paired">
+      <button data-v="false" class="answer">Unpaired</button>
+      <button data-v="true" class="answer">Paired</button>
+    </div>
+  </div>
+  <div id="tx-reveal"></div>
+</section>
+
+<section id="grid">
+  <h2>GTO strategy grid</h2>
+  <p>Browse the committed starter-8 solutions as a 13×13 grid, like the
+     <code>table</code> TUI. Cell colors are action frequencies averaged over the
+     class's combos; click a cell for the per-combo breakdown.</p>
+  <label class="inline">Flop <select id="gr-flop"></select></label>
+  <label class="inline">Spot <select id="gr-node"></select></label>
+  <div id="gr-head"></div>
+  <div id="gr-legend"></div>
+  <div id="gr-grid"></div>
+  <div id="gr-detail"></div>
+</section>
+
+</main>
+<footer>
+  <p>Trainer crate: MIT OR Apache-2.0. Snapshots were generated offline by the
+     AGPL <code>solve-gen</code> crate (never linked here) pinning
+     <a href="https://github.com/b-inary/postflop-solver">postflop-solver</a>.
+     Source: the <code>web/</code> directory of the poker-trainer repo.</p>
+</footer>
+<script type="module" src="app.js"></script>
+</body>
+</html>

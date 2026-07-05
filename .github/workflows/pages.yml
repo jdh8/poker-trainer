@@ -1,0 +1,43 @@
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+      - run: rustup target add wasm32-unknown-unknown
+      - run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - run: wasm-pack build --release --target web
+        working-directory: web
+      - name: Stage site
+        # The checkout only has the git-tracked starter-8 solutions, so local
+        # regenerated snapshots can never leak into the deployed site.
+        run: |
+          mkdir -p _site/solutions
+          cp web/index.html web/app.js web/style.css _site/
+          cp -r web/pkg _site/pkg
+          cp data/solutions/*.json _site/solutions/
+          (cd data/solutions && ls *.json | jq -R . | jq -s -c .) > _site/solutions/index.json
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

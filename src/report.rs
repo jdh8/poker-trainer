@@ -294,14 +294,14 @@ const EQ_ITERS: u32 = 60;
 const OPP_CAP: usize = 120;
 
 /// Parse a range string into concrete two-card combos.
-fn parse_range(s: &str) -> Result<Vec<[Card; 2]>, String> {
+pub fn parse_range(s: &str) -> Result<Vec<[Card; 2]>, String> {
     RangeParser::parse_many(s)
         .map_err(|e| format!("bad range {s:?}: {e}"))
         .map(|hands| hands.iter().map(|h| [h[0], h[1]]).collect())
 }
 
 /// Parse a packed board like "Td9d6h" into exactly three cards.
-fn parse_flop(board: &str) -> Option<[Card; 3]> {
+pub fn parse_flop(board: &str) -> Option<[Card; 3]> {
     let cards: Option<Vec<Card>> = board
         .as_bytes()
         .chunks(2)
@@ -315,7 +315,7 @@ fn parse_flop(board: &str) -> Option<[Card; 3]> {
 }
 
 /// Drop combos that collide with the flop (dead cards).
-fn live_combos(range: Vec<[Card; 2]>, flop: [Card; 3]) -> Vec<[Card; 2]> {
+pub fn live_combos(range: Vec<[Card; 2]>, flop: [Card; 3]) -> Vec<[Card; 2]> {
     range
         .into_iter()
         .filter(|c| !c.iter().any(|card| flop.contains(card)))
@@ -325,7 +325,7 @@ fn live_combos(range: Vec<[Card; 2]>, flop: [Card; 3]) -> Vec<[Card; 2]> {
 /// Per-combo equity of each hand in `hero` vs the `villain` range on `flop`.
 /// The villain range is sampled to `OPP_CAP` for speed (a per-hero fixed prefix
 /// is fine — the histogram/mean is over hero combos, not villain).
-fn combo_equities(hero: &[[Card; 2]], villain: &[[Card; 2]], flop: [Card; 3]) -> Vec<f64> {
+pub fn combo_equities(hero: &[[Card; 2]], villain: &[[Card; 2]], flop: [Card; 3]) -> Vec<f64> {
     let sample = &villain[..villain.len().min(OPP_CAP)];
     hero.iter()
         .map(|&h| equity_vs_range(h, flop, sample, EQ_ITERS))
@@ -333,7 +333,7 @@ fn combo_equities(hero: &[[Card; 2]], villain: &[[Card; 2]], flop: [Card; 3]) ->
 }
 
 /// A 10-bin `[0,100%)` histogram of equities, as counts.
-fn histogram(eqs: &[f64]) -> [usize; 10] {
+pub fn histogram(eqs: &[f64]) -> [usize; 10] {
     let mut bins = [0usize; 10];
     for &e in eqs {
         let b = ((e * 10.0) as usize).min(9);

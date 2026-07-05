@@ -8,10 +8,18 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 rand = "0.10"                   # RNG for dealing; matches rs_poker's rand
-rs_poker = "5"                  # card types + hand eval (crate name uses _, not -)
+# card types + hand eval (crate name uses _, not -); default features pull the
+# `arena` simulator and tokio, which we don't use and which can't build on wasm
+rs_poker = { version = "5", default-features = false }
 serde = { version = "1", features = ["derive"] } # solution file format
 serde_json = "1"               # human-inspectable solution files
-ratatui = "0.29"               # `table` TUI grid (MIT; re-exports crossterm)
+ratatui = { version = "0.29", optional = true } # `table` TUI grid (MIT; re-exports crossterm)
+
+# ponytail: `tui` gates ratatui so web/ can build the lib for wasm32. The bin
+# needs default features; `--no-default-features` is a lib-only shape.
+[features]
+default = ["tui"]
+tui = ["dep:ratatui"]
 
 # The AGPL solver lives in its own crate (crates/solve-gen) so it never links
 # into this binary — the trainer only deserializes the JSON it produces.

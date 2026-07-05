@@ -1,0 +1,134 @@
+/* Deliberately plain: dark card-room look, CSS variables, no framework.
+   Four-color deck matches the TUI convention (clubs green, diamonds blue). */
+:root {
+  --bg: #1b2127;
+  --panel: #232b33;
+  --text: #e8e6e0;
+  --muted: #9aa5ad;
+  --accent: #d4a94f;      /* gold: primary buttons */
+  --card-bg: #f4f2ec;
+  --spade: #1d2126;
+  --heart: #c0392b;
+  --diamond: #2471a3;
+  --club: #1e8449;
+  --good: #58b368;
+  --bad: #d9534f;
+  /* action colors: aggression reds, passive green, fold blue-gray */
+  --act-fold: #5d7285;
+  --act-passive: #3f9e63;
+  --act-bet1: #d98243;
+  --act-bet2: #c0392b;
+  --act-bet3: #8e2437;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font: 16px/1.5 system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+header, main, footer { max-width: 62rem; margin: 0 auto; padding: 0 1rem; }
+header { padding-top: 1.5rem; }
+h1 { margin: 0; font-size: 1.6rem; }
+.tagline { color: var(--muted); margin: 0.3rem 0 0.8rem; }
+nav { display: flex; gap: 1rem; flex-wrap: wrap; border-bottom: 1px solid #39434d; padding-bottom: 0.8rem; }
+nav a { color: var(--accent); text-decoration: none; }
+nav a:hover { text-decoration: underline; }
+a { color: var(--accent); }
+
+section {
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 1rem 1.2rem;
+  margin: 1.5rem 0;
+}
+h2 { margin-top: 0; font-size: 1.2rem; }
+section > p { color: var(--muted); margin-top: 0; }
+code { background: #2e3941; padding: 0 0.3em; border-radius: 3px; }
+footer { color: var(--muted); font-size: 0.85rem; padding-bottom: 2rem; }
+
+button {
+  font: inherit;
+  background: var(--accent);
+  color: #21160a;
+  border: 0;
+  border-radius: 5px;
+  padding: 0.35rem 1rem;
+  cursor: pointer;
+}
+button:hover { filter: brightness(1.1); }
+button.answer { background: #35414c; color: var(--text); }
+button.answer.picked { outline: 2px solid var(--accent); }
+.btn-group { display: inline-flex; gap: 0.4rem; margin: 0.4rem 0.8rem 0.4rem 0; }
+.score { color: var(--muted); margin-left: 0.8rem; }
+
+textarea, input, select {
+  font: inherit;
+  width: 100%;
+  background: #171c21;
+  color: var(--text);
+  border: 1px solid #39434d;
+  border-radius: 5px;
+  padding: 0.3rem 0.5rem;
+}
+label { display: block; margin: 0.5rem 0; color: var(--muted); }
+label.inline { display: inline-block; width: auto; margin-right: 0.8rem; }
+label.inline input, label.inline select { width: auto; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media (max-width: 40rem) { .cols { grid-template-columns: 1fr; } }
+
+/* cards */
+.card {
+  display: inline-block;
+  background: var(--card-bg);
+  border-radius: 4px;
+  padding: 0.1rem 0.35rem;
+  margin-right: 0.25rem;
+  font-weight: 700;
+}
+.card.spade { color: var(--spade); }
+.card.heart { color: var(--heart); }
+.card.diamond { color: var(--diamond); }
+.card.club { color: var(--club); }
+.spotline { margin: 0.7rem 0; font-size: 1.1rem; }
+.verdict-good { color: var(--good); font-weight: 700; }
+.verdict-bad { color: var(--bad); font-weight: 700; }
+
+/* histograms */
+.hist { margin: 0.8rem 0; }
+.hist .row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; }
+.hist .lbl { width: 4.5rem; color: var(--muted); text-align: right; }
+.hist .bar { background: var(--act-passive); height: 0.75rem; border-radius: 2px; }
+.hist .n { color: var(--muted); }
+
+/* 13x13 grid */
+#gr-head { margin: 0.6rem 0 0.2rem; color: var(--text); }
+#gr-head .sub { color: var(--muted); font-size: 0.85rem; }
+#gr-legend { display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem; }
+#gr-legend .chip { display: inline-block; width: 0.8em; height: 0.8em; border-radius: 2px; margin-right: 0.3em; vertical-align: -0.05em; }
+#gr-grid {
+  display: grid;
+  grid-template-columns: repeat(13, 1fr);
+  gap: 2px;
+  max-width: 40rem;
+}
+#gr-grid .cell {
+  aspect-ratio: 1.35;
+  font-size: 0.62rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  text-shadow: 0 0 2px rgba(0,0,0,0.8);
+  border-radius: 2px;
+  cursor: pointer;
+  background: #2b333b;
+}
+#gr-grid .cell.dead { color: #5a6570; cursor: default; }
+#gr-grid .cell.sel { outline: 2px solid var(--accent); }
+#gr-detail { margin-top: 0.8rem; overflow-x: auto; }
+#gr-detail table { border-collapse: collapse; font-size: 0.85rem; }
+#gr-detail th, #gr-detail td { padding: 0.15rem 0.7rem; text-align: right; border-bottom: 1px solid #39434d; }
+#gr-detail th:first-child, #gr-detail td:first-child { text-align: left; }
+#gr-detail .best { font-weight: 700; color: var(--good); }
