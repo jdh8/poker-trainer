@@ -570,6 +570,8 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "poker-trainer",
+ "rand",
+ "rs_poker",
  "serde",
  "serde_json",
  "toml",

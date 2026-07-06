@@ -1,7 +1,8 @@
 # 07 — Preflop solver: solved 6-max charts (`crates/preflop-gen`)
 
-Status: **M1 shipped** (format seam + game engine + `tree`); M2–M8 land in
-order (milestones below). Reverses the "preflop stays chart-data" stance of
+Status: **M1–M3 shipped** (format seam, game engine, equity/ICM machinery,
+MCCFR core validated against published heads-up push/fold Nash); M4–M8 land
+in order (milestones below). Reverses the "preflop stays chart-data" stance of
 [02](02-solution-library.md)/[06](06-solver-capabilities.md) — for preflop
 only. The postflop engine's limits are unchanged.
 
@@ -156,8 +157,8 @@ deliberately changed. Custom local rulesets are gitignored wholesale.
 | # | lands | state |
 |---|---|---|
 | M1 | `src/preflop.rs` seam, `game.rs`, manifests, `tree`, pinned counts | ✅ |
-| M2 | HU exact equity table + k-way MC cache; Malmuth–Harville + terminal valuer | — |
-| M3 | MCCFR core; HU push/fold vs published Nash (`#[ignore]`) | — |
+| M2 | HU exact equity table + k-way MC cache; Malmuth–Harville + terminal valuer | ✅ |
+| M3 | MCCFR core; HU push/fold vs published Nash (`#[ignore]`) | ✅ |
 | M4 | R-factors, export, cash100 solve + committed starter, license test | — |
 | M5 | Poker Chase ladder solves + ICM direction tests | — |
 | M6 | `drill preflop` v2 (EV-loss, reach sampling) | — |

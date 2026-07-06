@@ -14,6 +14,8 @@ publish = false
 # crate writes it, the same dependency direction as solve-gen.
 poker-trainer = { path = "../..", default-features = false }
 clap = { version = "4", features = ["derive"] } # gen / solve / equity / tree
+rand = "0.10" # seeded MCCFR + Monte-Carlo equity (deterministic per seed)
+rs_poker = { version = "5", default-features = false } # hand ranking for equity tables
 serde = { version = "1", features = ["derive"] } # ruleset TOML schema
 serde_json = "1"
 toml = "0.8" # manifests/preflop/<id>.toml
