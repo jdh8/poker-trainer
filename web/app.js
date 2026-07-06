@@ -1,6 +1,7 @@
 // Framework-free glue: wasm exports return JSON strings, we parse and render.
-// The GTO grid section never touches wasm — it fetches solution JSON directly.
-import init, { equity_report, deal_pot_odds, preflop_charts } from './pkg/poker_trainer_web.js';
+// The GTO grid and preflop chart sections never touch wasm — they fetch the
+// committed JSON directly.
+import init, { equity_report, deal_pot_odds } from './pkg/poker_trainer_web.js';
 
 const $ = id => document.getElementById(id);
 const SUITS = { s: ['♠', 'spade'], h: ['♥', 'heart'], d: ['♦', 'diamond'], c: ['♣', 'club'] };
@@ -71,34 +72,126 @@ function poAnswer(called) {
 $('po-call').onclick = () => poAnswer(true);
 $('po-fold').onclick = () => poAnswer(false);
 
-// ---- preflop charts ---------------------------------------------------------
+// ---- preflop chart browser (fetches data/preflop/, no wasm) ------------------
 
-let pfCharts = [];
+let pfNodes = null;   // path -> starter-tier node record
+let pfHeader = null;
+let pfPath = [];      // action tokens from the root
+
+const pfTok = l => l === 'Fold' ? 'f' : l === 'Call' ? 'c' : l === 'All-in' ? 'ai'
+  : 'r' + l.replace('Raise to ', '').replace('bb', '');
+const pfVerb = l => l === 'Fold' ? 'folds' : l === 'Call' ? 'calls' : l === 'All-in' ? 'jams'
+  : l.toLowerCase().replace('raise', 'raises');
+
+async function pfLoad(id) {
+  const [header, lines] = await Promise.all([
+    fetch(`preflop/${id}/header.json`).then(r => r.json()),
+    fetch(`preflop/${id}/starter.jsonl`).then(r => r.text()),
+  ]);
+  pfHeader = header;
+  pfNodes = {};
+  for (const l of lines.split('\n')) if (l.trim()) { const n = JSON.parse(l); pfNodes[n.path] = n; }
+  pfPath = [];
+  pfRender();
+}
+
+// The acting seat's per-class arrival probability: the product of its own
+// past action frequencies along the line (all ancestors are stored).
+function pfReach(node) {
+  const reach = new Float32Array(169).fill(1);
+  let prefix = '';
+  for (const tok of pfPath) {
+    const anc = pfNodes[prefix];
+    if (anc && anc.seat === node.seat) {
+      const ai = anc.actions.findIndex(l => pfTok(l) === tok);
+      if (ai >= 0) for (let c = 0; c < 169; c++) reach[c] *= anc.freqs[ai][c];
+    }
+    prefix = prefix ? prefix + '-' + tok : tok;
+  }
+  return reach;
+}
 
 function pfRender() {
-  const c = pfCharts[$('pf-chart').value];
-  if (!c) return;
-  const inRange = new Set(c.classes);
-  const color = c.aggressive ? 'var(--act-bet1)' : 'var(--act-passive)';
+  const node = pfNodes[pfPath.join('-')];
+
+  // Breadcrumb: clicking a crumb truncates the line back to it.
+  const crumbs = ['<button class="crumb" data-i="0">start</button>'];
+  let prefix = '';
+  pfPath.forEach((tok, i) => {
+    const anc = pfNodes[prefix];
+    const ai = anc ? anc.actions.findIndex(l => pfTok(l) === tok) : -1;
+    const text = ai >= 0 ? `${anc.seat} ${pfVerb(anc.actions[ai])}` : tok;
+    crumbs.push(`<button class="crumb" data-i="${i + 1}">${text}</button>`);
+    prefix = prefix ? prefix + '-' + tok : tok;
+  });
+  $('pf-crumbs').innerHTML = crumbs.join(' › ');
+  document.querySelectorAll('#pf-crumbs .crumb').forEach(b =>
+    b.onclick = () => { pfPath = pfPath.slice(0, +b.dataset.i); pfRender(); });
+
+  if (!node) {
+    $('pf-head').innerHTML = '<b>Line not stored</b><div class="sub">below the committed ' +
+      'starter reach — regenerate the full charts.jsonl locally for more depth (design 07)</div>';
+    for (const id of ['pf-actions', 'pf-legend', 'pf-grid', 'pf-detail']) $(id).innerHTML = '';
+    return;
+  }
+
   $('pf-head').innerHTML =
-    `<b>${c.label}</b><div class="sub">${c.seat} ${c.action} · ` +
-    `${c.classes.length}/169 hand classes in range</div>`;
+    `<b>${pfHeader.label}</b><div class="sub">${node.seat} to act · pot ${node.pot_bb}bb · ` +
+    `${node.to_call_bb}bb to call · spot reach ${(node.reach * 100).toFixed(1)}%</div>`;
+  $('pf-actions').innerHTML = node.actions.map((a, i) =>
+    `<button class="answer" data-i="${i}">${a}</button>`).join(' ');
+  document.querySelectorAll('#pf-actions button').forEach(b =>
+    b.onclick = () => { pfPath.push(pfTok(node.actions[+b.dataset.i])); pfRender(); });
+  $('pf-legend').innerHTML = node.actions.map(a =>
+    `<span><span class="chip" style="background:${actionColor(a, 0, node.actions)}"></span>${a}</span>`).join('');
+
+  const reach = pfReach(node);
   const cells = [];
   for (let i = 0; i < 13; i++) for (let j = 0; j < 13; j++) {
     const name = i === j ? RANKS[i] + RANKS[j]
       : i < j ? RANKS[i] + RANKS[j] + 's' : RANKS[j] + RANKS[i] + 'o';
-    const bg = inRange.has(name) ? color : 'var(--act-fold)';
-    cells.push(`<div class="cell" style="background:${bg}">${name}</div>`);
+    const c = i * 13 + j;
+    if (reach[c] < 1e-4) { cells.push(`<div class="cell dead">${name}</div>`); continue; }
+    let at = 0;
+    const stops = node.actions.map((a, k) => {
+      const f = node.freqs[k][c];
+      const seg = `${actionColor(a, k, node.actions)} ${at * 100}% ${(at + f) * 100}%`;
+      at += f;
+      return seg;
+    }).join(', ');
+    cells.push(`<div class="cell" data-c="${c}" data-name="${name}" ` +
+      `style="background:linear-gradient(to right, ${stops})">${name}</div>`);
   }
   $('pf-grid').innerHTML = cells.join('');
+  $('pf-detail').innerHTML = '<p class="sub" style="color:var(--muted)">Click a cell for frequencies and EV.</p>';
+  document.querySelectorAll('#pf-grid .cell[data-c]').forEach(el => el.onclick = () => pfDetail(node, el));
 }
 
-function pfInit() {
-  pfCharts = JSON.parse(preflop_charts());
-  $('pf-chart').innerHTML = pfCharts.map((c, i) =>
-    `<option value="${i}">${c.label} — ${c.seat} ${c.action}</option>`).join('');
-  $('pf-chart').onchange = pfRender;
-  pfRender();
+function pfDetail(node, cell) {
+  document.querySelectorAll('#pf-grid .cell.sel').forEach(c => c.classList.remove('sel'));
+  cell.classList.add('sel');
+  const c = +cell.dataset.c;
+  const evs = node.evs;
+  const best = evs ? evs.reduce((b, e, k) => (e[c] > evs[b][c] ? k : b), 0) : -1;
+  const head = '<tr><th></th>' + node.actions.map(a => `<th>${a}</th>`).join('') + '</tr>';
+  const row = `<tr><td>${cell.dataset.name}</td>` + node.actions.map((_, k) =>
+    `<td class="${k === best ? 'best' : ''}">${(node.freqs[k][c] * 100).toFixed(0)}%` +
+    (evs ? ` <small>(${evs[k][c].toFixed(2)})</small>` : '') + '</td>').join('') + '</tr>';
+  $('pf-detail').innerHTML = `<table>${head}${row}</table>` +
+    `<p class="sub" style="color:var(--muted)">Frequency <small>(EV in ${pfHeader.ev_unit})</small>; green = highest EV.</p>`;
+}
+
+async function pfInit() {
+  let ids;
+  try {
+    ids = await (await fetch('preflop/index.json')).json();
+  } catch {
+    $('pf-head').textContent = 'Preflop charts not staged — see web/README for the local copy step.';
+    return;
+  }
+  $('pf-ruleset').innerHTML = ids.map(id => `<option value="${id}">${id}</option>`).join('');
+  $('pf-ruleset').onchange = () => pfLoad($('pf-ruleset').value);
+  await pfLoad(ids[0]);
 }
 
 // ---- GTO strategy grid ------------------------------------------------------

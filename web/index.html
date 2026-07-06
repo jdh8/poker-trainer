@@ -54,12 +54,17 @@
 
 <section id="preflop">
   <h2>Preflop charts</h2>
-  <p>Browse the open/defend and 3-bet/call ranges from <code>data/ranges/</code>
-     as a 13×13 grid — the study view of what <code>drill preflop</code> quizzes.
-     Colored cells are in range; grey folds.</p>
-  <label class="inline">Chart <select id="pf-chart"></select></label>
+  <p>Browse the solved 6-max preflop trees (<code>data/preflop/</code>, computed by the
+     in-repo <code>preflop-gen</code> MCCFR solver) GTO-Wizard-style: pick a rule set,
+     walk the action line, read each hand's mixed strategy off the 13×13 grid.
+     Dimmed cells can't reach the spot; click a cell for frequencies and EV.</p>
+  <label class="inline">Rule set <select id="pf-ruleset"></select></label>
+  <div id="pf-crumbs"></div>
   <div id="pf-head"></div>
+  <div id="pf-actions"></div>
+  <div id="pf-legend"></div>
   <div id="pf-grid"></div>
+  <div id="pf-detail"></div>
 </section>
 
 <section id="grid">

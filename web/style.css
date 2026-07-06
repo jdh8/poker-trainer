@@ -123,10 +123,18 @@ label.inline input, label.inline select { width: auto; }
   cursor: pointer;
   background: #2b333b;
 }
-#gr-grid .cell.dead { color: #5a6570; cursor: default; }
-#gr-grid .cell.sel { outline: 2px solid var(--accent); }
-#gr-detail { margin-top: 0.8rem; overflow-x: auto; }
-#gr-detail table { border-collapse: collapse; font-size: 0.85rem; }
-#gr-detail th, #gr-detail td { padding: 0.15rem 0.7rem; text-align: right; border-bottom: 1px solid #39434d; }
-#gr-detail th:first-child, #gr-detail td:first-child { text-align: left; }
-#gr-detail .best { font-weight: 700; color: var(--good); }
+#gr-grid .cell.dead, #pf-grid .cell.dead { color: #5a6570; cursor: default; }
+#gr-grid .cell.sel, #pf-grid .cell.sel { outline: 2px solid var(--accent); }
+#gr-detail, #pf-detail { margin-top: 0.8rem; overflow-x: auto; }
+#gr-detail table, #pf-detail table { border-collapse: collapse; font-size: 0.85rem; }
+#gr-detail th, #gr-detail td, #pf-detail th, #pf-detail td { padding: 0.15rem 0.7rem; text-align: right; border-bottom: 1px solid #39434d; }
+#gr-detail th:first-child, #gr-detail td:first-child, #pf-detail th:first-child, #pf-detail td:first-child { text-align: left; }
+#gr-detail .best, #pf-detail .best { font-weight: 700; color: var(--good); }
+
+/* preflop tree browser */
+#pf-crumbs { margin: 0.6rem 0 0.2rem; color: var(--muted); font-size: 0.85rem; }
+#pf-crumbs .crumb { background: none; border: none; color: var(--accent); cursor: pointer; padding: 0.1rem 0.2rem; font-size: inherit; }
+#pf-crumbs .crumb:hover { text-decoration: underline; }
+#pf-actions { margin: 0.4rem 0; display: flex; gap: 0.4rem; flex-wrap: wrap; }
+#pf-legend { display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem; }
+#pf-legend .chip { display: inline-block; width: 0.8em; height: 0.8em; border-radius: 2px; margin-right: 0.3em; vertical-align: -0.05em; }

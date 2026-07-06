@@ -27,14 +27,16 @@ jobs:
       - run: wasm-pack build --release --target web
         working-directory: web
       - name: Stage site
-        # The checkout only has the git-tracked starter-8 solutions, so local
-        # regenerated snapshots can never leak into the deployed site.
+        # The checkout only has the git-tracked starter tiers (solutions and
+        # preflop charts), so local regenerated data can never leak into the
+        # deployed site.
         run: |
           mkdir -p _site/solutions
           cp web/index.html web/app.js web/style.css _site/
           cp -r web/pkg _site/pkg
           cp data/solutions/*.json _site/solutions/
           (cd data/solutions && ls *.json | jq -R . | jq -s -c .) > _site/solutions/index.json
+          cp -r data/preflop _site/preflop
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
