@@ -3,7 +3,6 @@
 //! - `run_pot_odds_drill`: deal a hand + flop and a hidden villain hand, villain
 //!   bets, you call or fold; scored against break-even pot odds using your true
 //!   (Monte-Carlo) equity.
-//! - `run_texture_drill`: deal a flop, you classify its objective texture.
 //! - `run_gto_drill`: act vs. a precomputed solution; scored on EV loss (Phase 1).
 
 use crate::eval::{self, Bucket};
@@ -12,7 +11,7 @@ use crate::solution::{
     SolveRequest, SolvedSpot, SpotConfig, FORMATIONS,
 };
 use crate::stats;
-use crate::texture::{self, SuitPattern};
+use crate::texture;
 use crate::tree::{TreeNode, TreeSession};
 use rand::seq::IndexedRandom;
 use rand::RngExt;
@@ -124,81 +123,6 @@ pub fn run_pot_odds_drill() {
             if should_call { "CALL" } else { "FOLD" },
             call_ev(eq, POT, bet),
             if called { "call" } else { "fold" },
-            if right { "correct" } else { "wrong" }
-        );
-    }
-
-    report(correct, spots);
-}
-
-/// Entry point for `poker-trainer drill texture`.
-///
-/// Deal a flop; you name its suit pattern and whether it's paired. Both must be
-/// right to score the spot. We reveal the full objective texture either way.
-pub fn run_texture_drill() {
-    let mut rng = rand::rng();
-    let mut spots = 0u32;
-    let mut correct = 0u32;
-
-    println!("poker-trainer — board-texture drill.");
-    println!("Name the suit pattern and whether the flop is paired. Empty line or q quits.\n");
-
-    loop {
-        let mut deck = Deck::default();
-        let mut draw = || deck.deal(&mut rng).unwrap();
-        let flop = [draw(), draw(), draw()];
-        let t = texture::classify(flop);
-
-        println!("Spot #{}", spots + 1);
-        println!("  Flop: {} {} {}", fmt(flop[0]), fmt(flop[1]), fmt(flop[2]));
-
-        let Some(suit_ans) = prompt("  Suit pattern? r)ainbow t)wo-tone m)onotone > ") else {
-            break;
-        };
-        let guessed_suits = match suit_ans.as_str() {
-            "r" | "rainbow" => SuitPattern::Rainbow,
-            "t" | "two-tone" | "twotone" => SuitPattern::TwoTone,
-            "m" | "monotone" => SuitPattern::Monotone,
-            "" | "q" | "quit" => break,
-            _ => {
-                println!("  (type r/t/m, or q to quit)\n");
-                continue;
-            }
-        };
-
-        let Some(pair_ans) = prompt("  Paired? y/n > ") else {
-            break;
-        };
-        let guessed_paired = match pair_ans.as_str() {
-            "y" | "yes" => true,
-            "n" | "no" => false,
-            "" | "q" | "quit" => break,
-            _ => {
-                println!("  (type y/n, or q to quit)\n");
-                continue;
-            }
-        };
-
-        let right = guessed_suits == t.suits && guessed_paired == t.paired;
-        spots += 1;
-        if right {
-            correct += 1;
-        }
-
-        println!(
-            "  Texture: {} pattern, {}, {}, high card {}.  -> {}\n",
-            match t.suits {
-                SuitPattern::Rainbow => "rainbow",
-                SuitPattern::TwoTone => "two-tone",
-                SuitPattern::Monotone => "monotone",
-            },
-            if t.paired { "paired" } else { "unpaired" },
-            if t.straighty {
-                "straighty"
-            } else {
-                "disconnected"
-            },
-            char::from(t.high),
             if right { "correct" } else { "wrong" }
         );
     }

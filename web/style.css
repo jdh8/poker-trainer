@@ -59,8 +59,6 @@ button {
 }
 button:hover { filter: brightness(1.1); }
 button.answer { background: #35414c; color: var(--text); }
-button.answer.picked { outline: 2px solid var(--accent); }
-.btn-group { display: inline-flex; gap: 0.4rem; margin: 0.4rem 0.8rem 0.4rem 0; }
 .score { color: var(--muted); margin-left: 0.8rem; }
 
 textarea, input, select {
@@ -103,17 +101,17 @@ label.inline input, label.inline select { width: auto; }
 .hist .n { color: var(--muted); }
 
 /* 13x13 grid */
-#gr-head { margin: 0.6rem 0 0.2rem; color: var(--text); }
-#gr-head .sub { color: var(--muted); font-size: 0.85rem; }
+#gr-head, #pf-head { margin: 0.6rem 0 0.2rem; color: var(--text); }
+#gr-head .sub, #pf-head .sub { color: var(--muted); font-size: 0.85rem; }
 #gr-legend { display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem; }
 #gr-legend .chip { display: inline-block; width: 0.8em; height: 0.8em; border-radius: 2px; margin-right: 0.3em; vertical-align: -0.05em; }
-#gr-grid {
+#gr-grid, #pf-grid {
   display: grid;
   grid-template-columns: repeat(13, 1fr);
   gap: 2px;
   max-width: 40rem;
 }
-#gr-grid .cell {
+#gr-grid .cell, #pf-grid .cell {
   aspect-ratio: 1.35;
   font-size: 0.62rem;
   display: flex;

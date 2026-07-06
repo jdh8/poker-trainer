@@ -1,8 +1,9 @@
 # poker-trainer web examples
 
 A static, framework-free catalog of the trainer's human-facing examples:
-equity calculator, pot-odds drill, texture drill (all the Rust crate compiled
-to wasm), and a GTO strategy grid that fetches the committed starter-8
+equity calculator, pot-odds drill, preflop charts (the Rust crate compiled to
+wasm; the charts embed `data/ranges/` via `include_str!`), and a
+GTO strategy grid that fetches the committed starter-8
 solution snapshots. Deployed to GitHub Pages by `.github/workflows/pages.yml`;
 there is no server.
 

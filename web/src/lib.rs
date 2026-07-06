@@ -8,7 +8,8 @@
 //! The internal `*_impl` functions return plain Rust types so the
 //! `#[cfg(test)]` module runs natively (rlib), no browser needed.
 
-use poker_trainer::{eval, report, texture};
+use poker_trainer::solution::{Formation, FORMATIONS};
+use poker_trainer::{eval, report};
 use rand::seq::IndexedRandom;
 use rs_poker::core::{Card, Deck, Suit};
 use serde::Serialize;
@@ -116,43 +117,108 @@ pub fn deal_pot_odds() -> String {
     serde_json::to_string(&deal_pot_odds_impl()).unwrap()
 }
 
-// ---- texture drill ----------------------------------------------------------
+// ---- preflop charts ---------------------------------------------------------
 
-#[derive(Serialize)]
-struct TextureSpot {
-    flop: [String; 3],
-    suits: &'static str,
-    paired: bool,
-    straighty: bool,
-    high: char,
-    class: &'static str,
-}
-
-fn deal_texture_impl() -> TextureSpot {
-    let mut rng = rand::rng();
-    let mut deck = Deck::default();
-    let mut draw = || deck.deal(&mut rng).unwrap();
-    let flop = [draw(), draw(), draw()];
-    let t = texture::classify(flop);
-    TextureSpot {
-        flop: flop.map(card_str),
-        suits: match t.suits {
-            texture::SuitPattern::Rainbow => "rainbow",
-            texture::SuitPattern::TwoTone => "two-tone",
-            texture::SuitPattern::Monotone => "monotone",
-        },
-        paired: t.paired,
-        straighty: t.straighty,
-        high: char::from(t.high),
-        class: texture::class(flop),
+/// The committed preflop chart text, embedded so the browser needs no fetch
+/// (there is no filesystem in wasm). One solver range string per file.
+fn range_text(id: &str, seat_file: &str) -> &'static str {
+    match (id, seat_file) {
+        ("srp-btn-bb", "oop") => include_str!("../../data/ranges/srp-btn-bb/oop.txt"),
+        ("srp-btn-bb", "ip") => include_str!("../../data/ranges/srp-btn-bb/ip.txt"),
+        ("srp-co-bb", "oop") => include_str!("../../data/ranges/srp-co-bb/oop.txt"),
+        ("srp-co-bb", "ip") => include_str!("../../data/ranges/srp-co-bb/ip.txt"),
+        ("srp-sb-bb", "oop") => include_str!("../../data/ranges/srp-sb-bb/oop.txt"),
+        ("srp-sb-bb", "ip") => include_str!("../../data/ranges/srp-sb-bb/ip.txt"),
+        ("3bp-bb-btn", "oop") => include_str!("../../data/ranges/3bp-bb-btn/oop.txt"),
+        ("3bp-bb-btn", "ip") => include_str!("../../data/ranges/3bp-bb-btn/ip.txt"),
+        ("3bp-btn-co", "oop") => include_str!("../../data/ranges/3bp-btn-co/oop.txt"),
+        ("3bp-btn-co", "ip") => include_str!("../../data/ranges/3bp-btn-co/ip.txt"),
+        _ => "",
     }
 }
 
-/// One texture spot with the full classification — the web port of
-/// `drill texture`. Scoring (suit pattern AND paired must both match) is in JS.
+/// Canonical 169-cell class of a combo: `"AA"`, `"AKs"`, `"AKo"` — the same
+/// mapping `app.js`'s grid uses, so an in-range combo lights the right cell.
+fn combo_class(h: [Card; 2]) -> String {
+    const RANKS: &str = "AKQJT98765432";
+    let (a, b) = (char::from(h[0].value), char::from(h[1].value));
+    if a == b {
+        return format!("{a}{b}");
+    }
+    let (hi, lo) = if RANKS.find(a) < RANKS.find(b) {
+        (a, b)
+    } else {
+        (b, a)
+    };
+    format!("{hi}{lo}{}", if h[0].suit == h[1].suit { 's' } else { 'o' })
+}
+
+#[derive(Serialize)]
+struct PreflopChart {
+    id: &'static str,
+    label: &'static str,
+    seat: String,
+    action: &'static str,
+    /// Raise/3-bet (aggressive color) vs. call the open/3-bet (passive color).
+    aggressive: bool,
+    /// The 169-cell class names this seat plays; every other cell folds.
+    classes: Vec<String>,
+}
+
+/// The in-range 169-cell classes for one seat's binary chart.
+fn chart_classes(id: &str, seat_file: &str) -> Vec<String> {
+    let combos = report::parse_range(range_text(id, seat_file).trim()).unwrap_or_default();
+    let mut classes: Vec<String> = combos.into_iter().map(combo_class).collect();
+    classes.sort();
+    classes.dedup();
+    classes
+}
+
+/// The two charts a formation answers: the aggressor's open/3-bet range and the
+/// defender's call range. Seat→file follows `trainer::preflop_spots` (the file
+/// name is postflop position, so the opener isn't always `ip`).
+fn charts_for(f: &Formation) -> Vec<PreflopChart> {
+    let mut it = f.id.split('-');
+    let kind = it.next().unwrap_or("");
+    let seats = [
+        it.next().unwrap_or("").to_uppercase(),
+        it.next().unwrap_or("").to_uppercase(),
+    ];
+    let (act0, act1) = if kind == "srp" {
+        ("opens", "defends")
+    } else {
+        ("3-bets", "calls 3-bet")
+    };
+    seats
+        .into_iter()
+        .zip([(act0, true), (act1, false)])
+        .map(|(seat, (action, aggressive))| {
+            let file = if seat.eq_ignore_ascii_case(f.oop_seat) {
+                "oop"
+            } else {
+                "ip"
+            };
+            PreflopChart {
+                id: f.id,
+                label: f.label,
+                classes: chart_classes(f.id, file),
+                seat,
+                action,
+                aggressive,
+            }
+        })
+        .collect()
+}
+
+fn preflop_charts_impl() -> Vec<PreflopChart> {
+    FORMATIONS.iter().flat_map(charts_for).collect()
+}
+
+/// Every formation's preflop charts as JSON — the browsable web view of the
+/// `data/ranges/` chart files that `drill preflop` quizzes on.
 #[wasm_bindgen]
-pub fn deal_texture() -> String {
-    serde_json::to_string(&deal_texture_impl()).unwrap()
+pub fn preflop_charts() -> String {
+    serde_json::to_string(&preflop_charts_impl()).unwrap()
 }
 
 #[cfg(test)]
@@ -194,15 +260,18 @@ mod tests {
     }
 
     #[test]
-    fn texture_spot_is_consistent() {
-        for _ in 0..20 {
-            let s = deal_texture_impl();
-            // `class` is paired-first, then the suit pattern (see texture.rs).
-            if s.paired {
-                assert_eq!(s.class, "paired");
-            } else {
-                assert_eq!(s.class, s.suits);
-            }
+    fn preflop_charts_cover_every_formation() {
+        let charts = preflop_charts_impl();
+        assert_eq!(charts.len(), FORMATIONS.len() * 2);
+        for c in &charts {
+            // Non-empty and every class is a valid grid cell (pair "AA" = 2
+            // chars, suited/offsuit "AKs" = 3), unique after dedup.
+            assert!(!c.classes.is_empty(), "empty chart for {} {}", c.id, c.seat);
+            assert!(c.classes.iter().all(|s| (2..=3).contains(&s.len())));
+            assert_eq!(
+                c.classes.iter().collect::<HashSet<_>>().len(),
+                c.classes.len()
+            );
         }
     }
 }

@@ -18,7 +18,6 @@ optimal frequency mix.
 
 ```sh
 cargo run -- drill pot-odds   # call/fold vs. break-even pot odds (Monte-Carlo equity)
-cargo run -- drill texture    # classify a flop's board texture
 cargo run -- drill gto        # act vs. a precomputed GTO solution (Phase 1)
 cargo run -- drill range      # assign your whole range by bucket; leak stats (Phase 2)
 cargo run -- drill hand --board Td9d6h   # play full hands vs. the GTO villain (Phase 5)
@@ -32,8 +31,8 @@ cargo run -- analyze hh/*.txt # score your real hands vs. equilibrium (Phase 9)
 ### Web examples
 
 [`web/`](web/) is a browser catalog of the human-facing examples — equity
-calculator, pot-odds drill, texture drill (the crate compiled to wasm), and a
-GTO strategy grid over the committed starter-8 snapshots. It deploys to GitHub
+calculator, pot-odds drill, preflop-chart browser (the crate compiled to
+wasm), and a GTO strategy grid over the committed starter-8 snapshots. It deploys to GitHub
 Pages on every push to `main`; see [web/README.md](web/README.md) to build and
 serve it locally.
 
@@ -127,8 +126,8 @@ goes through it, so a **file-backed** provider (precomputed sims) and, later, a
 
 ## Phased plan
 
-0. **Equity & board-texture drills** — *done.* Pure `rs_poker`, no solver:
-   `drill pot-odds` (call/fold vs. Monte-Carlo equity) and `drill texture`.
+0. **Equity & pot-odds drill** — *done.* Pure `rs_poker`, no solver:
+   `drill pot-odds` (call/fold vs. Monte-Carlo equity).
 1. **Precomputed-range comparison (the core product)** — *done.* `solve-gen`
    solves a curated library offline with `postflop-solver`, dumps per-hand
    strategy tables to `data/solutions/<flop>-{ip,oop}.json`, and `drill gto`

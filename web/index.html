@@ -15,7 +15,7 @@
   <nav>
     <a href="#equity">Equity calculator</a>
     <a href="#pot-odds">Pot-odds drill</a>
-    <a href="#texture">Texture drill</a>
+    <a href="#preflop">Preflop charts</a>
     <a href="#grid">GTO strategy grid</a>
   </nav>
 </header>
@@ -52,25 +52,14 @@
   <div id="po-reveal"></div>
 </section>
 
-<section id="texture">
-  <h2>Texture drill</h2>
-  <p>Name the flop's suit pattern and whether it's paired — both must be right,
-     like <code>drill texture</code>.</p>
-  <button id="tx-deal">Deal</button>
-  <span id="tx-score" class="score"></span>
-  <div id="tx-spot"></div>
-  <div id="tx-questions" hidden>
-    <div class="btn-group" id="tx-suits">
-      <button data-v="rainbow" class="answer">Rainbow</button>
-      <button data-v="two-tone" class="answer">Two-tone</button>
-      <button data-v="monotone" class="answer">Monotone</button>
-    </div>
-    <div class="btn-group" id="tx-paired">
-      <button data-v="false" class="answer">Unpaired</button>
-      <button data-v="true" class="answer">Paired</button>
-    </div>
-  </div>
-  <div id="tx-reveal"></div>
+<section id="preflop">
+  <h2>Preflop charts</h2>
+  <p>Browse the open/defend and 3-bet/call ranges from <code>data/ranges/</code>
+     as a 13×13 grid — the study view of what <code>drill preflop</code> quizzes.
+     Colored cells are in range; grey folds.</p>
+  <label class="inline">Chart <select id="pf-chart"></select></label>
+  <div id="pf-head"></div>
+  <div id="pf-grid"></div>
 </section>
 
 <section id="grid">

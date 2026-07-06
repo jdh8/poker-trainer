@@ -1,6 +1,6 @@
 // Framework-free glue: wasm exports return JSON strings, we parse and render.
 // The GTO grid section never touches wasm — it fetches solution JSON directly.
-import init, { equity_report, deal_pot_odds, deal_texture } from './pkg/poker_trainer_web.js';
+import init, { equity_report, deal_pot_odds, preflop_charts } from './pkg/poker_trainer_web.js';
 
 const $ = id => document.getElementById(id);
 const SUITS = { s: ['♠', 'spade'], h: ['♥', 'heart'], d: ['♦', 'diamond'], c: ['♣', 'club'] };
@@ -71,35 +71,34 @@ function poAnswer(called) {
 $('po-call').onclick = () => poAnswer(true);
 $('po-fold').onclick = () => poAnswer(false);
 
-// ---- texture drill ----------------------------------------------------------
+// ---- preflop charts ---------------------------------------------------------
 
-let txSpot = null, txRight = 0, txTotal = 0, txPick = {};
+let pfCharts = [];
 
-$('tx-deal').onclick = () => {
-  txSpot = JSON.parse(deal_texture());
-  txPick = {};
-  $('tx-spot').innerHTML = `<p class="spotline">Flop: ${cardsHTML(txSpot.flop)}</p>`;
-  $('tx-questions').hidden = false;
-  $('tx-reveal').innerHTML = '';
-  document.querySelectorAll('#tx-questions button').forEach(b => b.classList.remove('picked'));
-};
+function pfRender() {
+  const c = pfCharts[$('pf-chart').value];
+  if (!c) return;
+  const inRange = new Set(c.classes);
+  const color = c.aggressive ? 'var(--act-bet1)' : 'var(--act-passive)';
+  $('pf-head').innerHTML =
+    `<b>${c.label}</b><div class="sub">${c.seat} ${c.action} · ` +
+    `${c.classes.length}/169 hand classes in range</div>`;
+  const cells = [];
+  for (let i = 0; i < 13; i++) for (let j = 0; j < 13; j++) {
+    const name = i === j ? RANKS[i] + RANKS[j]
+      : i < j ? RANKS[i] + RANKS[j] + 's' : RANKS[j] + RANKS[i] + 'o';
+    const bg = inRange.has(name) ? color : 'var(--act-fold)';
+    cells.push(`<div class="cell" style="background:${bg}">${name}</div>`);
+  }
+  $('pf-grid').innerHTML = cells.join('');
+}
 
-document.querySelectorAll('#tx-suits button').forEach(b => b.onclick = () => txChoose('suits', b));
-document.querySelectorAll('#tx-paired button').forEach(b => b.onclick = () => txChoose('paired', b));
-
-function txChoose(kind, btn) {
-  if (!txSpot || kind in txPick) return;
-  txPick[kind] = btn.dataset.v;
-  btn.classList.add('picked');
-  if (!('suits' in txPick) || !('paired' in txPick)) return;
-  const s = txSpot; txSpot = null;
-  const right = txPick.suits === s.suits && (txPick.paired === 'true') === s.paired;
-  txTotal++; if (right) txRight++;
-  $('tx-score').textContent = `${txRight}/${txTotal} correct`;
-  $('tx-reveal').innerHTML =
-    `<p>Texture: <b>${s.suits}</b>, <b>${s.paired ? 'paired' : 'unpaired'}</b>, ` +
-    `${s.straighty ? 'straighty' : 'disconnected'}, high card ${s.high} ` +
-    `→ <span class="${right ? 'verdict-good' : 'verdict-bad'}">${right ? 'correct' : 'wrong'}</span></p>`;
+function pfInit() {
+  pfCharts = JSON.parse(preflop_charts());
+  $('pf-chart').innerHTML = pfCharts.map((c, i) =>
+    `<option value="${i}">${c.label} — ${c.seat} ${c.action}</option>`).join('');
+  $('pf-chart').onchange = pfRender;
+  pfRender();
 }
 
 // ---- GTO strategy grid ------------------------------------------------------
@@ -220,4 +219,5 @@ async function grInit() {
 // ---- boot -------------------------------------------------------------------
 
 await init();
+pfInit();
 grInit();

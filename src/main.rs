@@ -93,7 +93,7 @@ enum Command {
 /// The live-solve knobs shared by `drill gto`/`drill range`/`drill hand`/
 /// `table`. With `--board` set they live-solve that flop under `--formation`'s
 /// config (ranges from data/ranges/, overridable per flag); without it, the
-/// curated library is used. Ignored by `drill pot-odds`/`drill texture`.
+/// curated library is used. Ignored by `drill pot-odds`.
 #[derive(Args)]
 struct SolveArgs {
     /// Live-solve this flop (e.g. Td9d6h) instead of a curated spot. Expect
@@ -176,8 +176,6 @@ impl SolveArgs {
 enum Mode {
     /// Call/fold vs. break-even pot odds (Monte-Carlo equity).
     PotOdds,
-    /// Classify the flop's board texture.
-    Texture,
     /// Act vs. a GTO solution; scored on EV loss. `--board` live-solves a spot.
     Gto,
     /// Assign an action for your whole range; scored with per-bucket leak stats.
@@ -195,7 +193,6 @@ fn main() {
             let req = solve.into_request();
             match mode {
                 Mode::PotOdds => trainer::run_pot_odds_drill(),
-                Mode::Texture => trainer::run_texture_drill(),
                 Mode::Gto => trainer::run_gto_drill(req),
                 Mode::Range => trainer::run_range_drill(req),
                 Mode::Hand => trainer::run_hand_drill(req),
