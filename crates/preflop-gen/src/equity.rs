@@ -9,11 +9,9 @@
 
 use poker_trainer::preflop::{class_name, CLASSES};
 use rand::rngs::SmallRng;
-use rand::seq::IndexedRandom;
 use rand::RngExt;
 use rs_poker::core::{Card, Deck, Rankable};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::io;
 use std::path::Path;
 
@@ -193,13 +191,44 @@ pub fn load_hu_table(path: impl AsRef<Path>) -> io::Result<Vec<f64>> {
     Ok(file.equity)
 }
 
-/// Pot-share source for terminals: exact table heads-up, memoized Monte
-/// Carlo for 3+-way class tuples.
+/// One dealt hand: every seat's cards and classes, plus the undealt rest of
+/// the deck (multiway terminals sample runouts from it — blockers exact).
+pub struct Deal {
+    /// Each seat's 169-class.
+    pub classes: [u8; 6],
+    /// Each seat's actual hole cards.
+    pub holes: [[Card; 2]; 6],
+    /// The 52 − 2n cards nobody holds.
+    pub pool: Vec<Card>,
+}
+
+impl Deal {
+    /// A placeholder deal for class-level valuation paths (exact-BR) that
+    /// never sample boards: canonical holes, empty pool.
+    pub fn class_level(classes: [u8; 6]) -> Deal {
+        let mut holes = [[canonical(0)[0]; 2]; 6];
+        for (h, &c) in holes.iter_mut().zip(&classes) {
+            *h = canonical(c as usize);
+        }
+        Deal {
+            classes,
+            holes,
+            pool: Vec::new(),
+        }
+    }
+}
+
+/// Pot-share source for showdown terminals: the exact class table heads-up,
+/// per-visit sampled runouts multiway.
 pub struct EquityCache {
     hu: Vec<f64>,
-    kway: HashMap<Vec<u8>, Vec<f64>>,
-    /// Monte-Carlo boards per k-way miss (20k ⇒ share SE ≈ 0.35%).
-    pub mc_boards: u32,
+    /// Sampled runouts per multiway terminal visit. Unbiased and cheap
+    /// (~200 × k rank evals); MCCFR's own averaging absorbs the variance.
+    // ponytail: a memoized class-tuple cache was tried first and lost: 5/6-way
+    // tuples almost never repeat, so it was one fresh 20k-board solve per
+    // terminal and unbounded memory. Per-visit sampling from the *actual*
+    // dealt cards is bounded and blocker-exact.
+    pub sample_boards: u32,
 }
 
 impl EquityCache {
@@ -208,8 +237,7 @@ impl EquityCache {
         assert_eq!(hu.len(), CLASSES * CLASSES);
         Self {
             hu,
-            kway: HashMap::new(),
-            mc_boards: 20_000,
+            sample_boards: 200,
         }
     }
 
@@ -222,117 +250,53 @@ impl EquityCache {
     pub fn hu(&self, hero: usize, villain: usize) -> f64 {
         self.hu[hero * CLASSES + villain]
     }
-
-    /// Per-player pot shares for an all-in between `classes` (input order
-    /// preserved). k = 2 is exact; k ≥ 3 memoizes a Monte-Carlo estimate
-    /// keyed by the sorted tuple.
-    pub fn shares(&mut self, classes: &[u8], rng: &mut SmallRng) -> Vec<f64> {
-        if classes.len() == 2 {
-            let (a, b) = (classes[0] as usize, classes[1] as usize);
-            return vec![self.hu(a, b), self.hu(b, a)];
-        }
-        let mut key: Vec<u8> = classes.to_vec();
-        key.sort_unstable();
-        if !self.kway.contains_key(&key) {
-            let shares = mc_shares(&key, self.mc_boards, rng);
-            self.kway.insert(key.clone(), shares);
-        }
-        let sorted_shares = &self.kway[&key];
-        // Map back to input order: duplicates share the same (symmetric) value.
-        classes
-            .iter()
-            .map(|c| sorted_shares[key.iter().position(|k| k == c).unwrap()])
-            .collect()
-    }
-
-    /// Persist the k-way cache (merge-on-load, so runs accumulate).
-    pub fn save_kway(&self, path: impl AsRef<Path>) -> io::Result<()> {
-        let flat: Vec<(Vec<u8>, Vec<f64>)> = self
-            .kway
-            .iter()
-            .map(|(k, v)| (k.clone(), v.clone()))
-            .collect();
-        std::fs::write(path, serde_json::to_string(&flat)?)
-    }
-
-    /// Merge a previously saved k-way cache. Missing file = empty cache.
-    pub fn load_kway(&mut self, path: impl AsRef<Path>) -> io::Result<usize> {
-        let text = match std::fs::read_to_string(path) {
-            Ok(t) => t,
-            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(0),
-            Err(e) => return Err(e),
-        };
-        let flat: Vec<(Vec<u8>, Vec<f64>)> = serde_json::from_str(&text)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-        let n = flat.len();
-        self.kway.extend(flat);
-        Ok(n)
-    }
-
-    /// Entries currently memoized (diagnostics).
-    pub fn kway_len(&self) -> usize {
-        self.kway.len()
-    }
 }
 
-/// Monte-Carlo per-player pot shares for a sorted class tuple: deal each
-/// class a random non-conflicting combo, run out a random board, split the
-/// pot among the best hands.
-fn mc_shares(classes: &[u8], boards: u32, rng: &mut SmallRng) -> Vec<f64> {
-    let k = classes.len();
-    let pools: Vec<Vec<[Card; 2]>> = classes.iter().map(|&c| combos_of(c as usize)).collect();
-    let full_deck: Vec<Card> = Deck::default().into_iter().collect();
+/// Monte-Carlo per-player pot shares for concrete `holes`, sampling `boards`
+/// runouts from `pool` (the undealt deck). Ties split the pot.
+pub fn sampled_shares(
+    holes: &[[Card; 2]],
+    pool: &[Card],
+    boards: u32,
+    rng: &mut SmallRng,
+) -> Vec<f64> {
+    let k = holes.len();
+    debug_assert!(pool.len() >= 5, "pool must hold a full runout");
     let mut shares = vec![0.0f64; k];
+    let mut board = [holes[0][0]; 5];
+    let mut seven = [holes[0][0]; 7];
+    let mut ranks = Vec::with_capacity(k);
 
     for _ in 0..boards {
-        // Deal combos by rejection; a real deal produced this tuple, so a
-        // consistent assignment exists — the retry cap is just a tripwire.
-        let mut used: Vec<Card> = Vec::with_capacity(2 * k + 5);
-        let mut hands: Vec<[Card; 2]> = Vec::with_capacity(k);
-        'deal: for _attempt in 0..1000 {
-            used.clear();
-            hands.clear();
-            for pool in &pools {
-                let pick = pool.choose(rng).unwrap();
-                if pick.iter().any(|c| used.contains(c)) {
-                    continue 'deal;
-                }
-                used.extend_from_slice(pick);
-                hands.push(*pick);
-            }
-            break;
-        }
-        assert_eq!(hands.len(), k, "unsatisfiable class tuple {classes:?}");
-
-        // Board: 5 distinct cards from the remainder.
-        let mut board = [full_deck[0]; 5];
+        // 5 distinct pool indices by rejection (pool ≥ 40 in practice).
+        let mut idx = [0usize; 5];
         let mut picked = 0;
         while picked < 5 {
-            let c = full_deck[rng.random_range(0..52)];
-            if !used.contains(&c) {
-                board[picked] = c;
-                used.push(c);
+            let i = rng.random_range(0..pool.len());
+            if !idx[..picked].contains(&i) {
+                idx[picked] = i;
                 picked += 1;
             }
         }
-
-        let mut seven = [board[0]; 7];
+        for (b, &i) in board.iter_mut().zip(&idx) {
+            *b = pool[i];
+        }
         seven[2..].copy_from_slice(&board);
-        let ranks: Vec<_> = hands
-            .iter()
-            .map(|h| {
-                seven[..2].copy_from_slice(h);
-                seven[..].rank()
-            })
-            .collect();
+        ranks.clear();
+        ranks.extend(holes.iter().map(|h| {
+            seven[..2].copy_from_slice(h);
+            seven[..].rank()
+        }));
         let best = ranks.iter().max().unwrap();
-        let winners: Vec<usize> = (0..k).filter(|&i| ranks[i] == *best).collect();
-        for &w in &winners {
-            shares[w] += 1.0 / winners.len() as f64;
+        let winners = ranks.iter().filter(|r| *r == best).count() as f64;
+        for (s, r) in shares.iter_mut().zip(&ranks) {
+            if r == best {
+                *s += 1.0 / winners;
+            }
         }
     }
     for s in &mut shares {
-        *s /= boards as f64;
+        *s /= f64::from(boards);
     }
     shares
 }
@@ -356,41 +320,23 @@ mod tests {
     }
 
     #[test]
-    fn mc_shares_land_in_known_bands() {
+    fn sampled_shares_land_in_known_bands() {
         let mut rng = SmallRng::seed_from_u64(7);
-        let mut eq = EquityCache::new(vec![0.5; CLASSES * CLASSES]);
-        let (aa, kk, so) = (
-            class_index_of("AA").unwrap() as u8,
-            class_index_of("KK").unwrap() as u8,
-            class_index_of("72o").unwrap() as u8,
-        );
+        let holes = [
+            Deal::class_level([0; 6]).holes[0], // AA canonical
+            canonical(class_index_of("KK").unwrap()),
+            canonical(class_index_of("72o").unwrap()),
+        ];
+        let pool: Vec<Card> = Deck::default()
+            .into_iter()
+            .filter(|c| !holes.iter().any(|h| h.contains(c)))
+            .collect();
+        assert_eq!(pool.len(), 46);
         // 3-way AA vs KK vs 72o: shares sum to 1, AA clearly best, 72o worst.
-        let shares = eq.shares(&[aa, kk, so], &mut rng);
+        let shares = sampled_shares(&holes, &pool, 20_000, &mut rng);
         assert!((shares.iter().sum::<f64>() - 1.0).abs() < 1e-9);
         assert!(shares[0] > 0.55 && shares[0] < 0.75, "AA {shares:?}");
         assert!(shares[2] < 0.15, "72o {shares:?}");
-        // Same tuple in another order hits the memoized entry, mapped back.
-        let flipped = eq.shares(&[so, kk, aa], &mut rng);
-        assert_eq!(flipped[2], shares[0]);
-        assert_eq!(eq.kway_len(), 1);
-    }
-
-    #[test]
-    fn kway_cache_round_trips_and_merges() {
-        let mut rng = SmallRng::seed_from_u64(1);
-        let mut eq = EquityCache::new(vec![0.5; CLASSES * CLASSES]);
-        eq.mc_boards = 500; // speed over precision: persistence is the point
-        let tuple = [0u8, 14, 28]; // AA, KK, QQ
-        let shares = eq.shares(&tuple, &mut rng);
-
-        let path = std::env::temp_dir().join(format!("pt-kway-{}.json", std::process::id()));
-        eq.save_kway(&path).unwrap();
-        let mut fresh = EquityCache::new(vec![0.5; CLASSES * CLASSES]);
-        assert_eq!(fresh.load_kway(&path).unwrap(), 1);
-        // The merged entry answers without re-sampling (rng untouched).
-        assert_eq!(fresh.shares(&tuple, &mut rng), shares);
-        assert_eq!(fresh.load_kway("no-such-file.json").unwrap(), 0);
-        std::fs::remove_file(&path).unwrap();
     }
 
     #[test]

@@ -15,7 +15,7 @@ rake_rate = 0.05                # no flop no drop: fold-wins are unraked
 rake_cap_bb = 3.0
 
 [solver]
-traversals = 60000000
+traversals = 48000000
 seed = 1
-export_reach = 0.001
-starter_reach = 0.05
+export_reach = 0.0002
+starter_reach = 0.002

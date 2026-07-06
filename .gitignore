@@ -12,7 +12,14 @@
 # files are unaffected; `git add -f` if that curated set ever grows.
 /data/solutions/*.json
 
-# web/ is its own workspace; pkg/ is wasm-pack output, solutions/ a local stage.
+# Preflop charts (design 07): header.json + starter.jsonl per ruleset ARE
+# committed; the full export regenerates locally via `preflop-gen gen`.
+# Never commit a custom (non-manifest) ruleset directory.
+/data/preflop/*/charts.jsonl
+
+# web/ is its own workspace; pkg/ is wasm-pack output, solutions/ and
+# preflop/ are local stages.
 /web/target
 /web/pkg
 /web/solutions
+/web/preflop

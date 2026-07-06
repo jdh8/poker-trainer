@@ -33,7 +33,7 @@ pub fn fmt_bb(cb: u32) -> String {
 /// Solver knobs, per ruleset (`[solver]` in the TOML).
 #[derive(Debug, Clone, Deserialize)]
 pub struct SolverParams {
-    /// MCCFR traversal budget.
+    /// MCCFR budget in dealt hands (each hand traverses once per seat).
     pub traversals: u64,
     /// RNG seed; identical seed + budget ⇒ identical output.
     #[serde(default = "default_seed")]

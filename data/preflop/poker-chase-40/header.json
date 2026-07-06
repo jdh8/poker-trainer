@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "ruleset": "poker-chase-40",
+  "label": "Poker Chase 6-max, 40bb (ICM)",
+  "config": {
+    "ante_bb": 0.25,
+    "bb": 1.0,
+    "fourbet_mult": [
+      2.3
+    ],
+    "icm_payouts": [
+      4.0,
+      2.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "id": "poker-chase-40",
+    "jam_from_level": 2,
+    "label": "Poker Chase 6-max, 40bb (ICM)",
+    "open_to_bb": [
+      2.0,
+      2.5,
+      3.0
+    ],
+    "rake_cap_bb": 0.0,
+    "rake_rate": 0.0,
+    "sb": 0.5,
+    "seats": [
+      "UTG",
+      "HJ",
+      "CO",
+      "BTN",
+      "SB",
+      "BB"
+    ],
+    "solver": {
+      "export_reach": 0.0002,
+      "seed": 1,
+      "starter_reach": 0.002,
+      "traversals": 48000000
+    },
+    "squeeze_mult": [
+      4.0
+    ],
+    "stack_bb": 40.0,
+    "threebet_mult": [
+      2.0,
+      3.0,
+      4.0
+    ]
+  },
+  "config_hash": "d31ee395",
+  "ev_unit": "payout",
+  "generator": {
+    "version": "0.1.0",
+    "traversals": 48000000,
+    "seed": 1,
+    "strategy_drift": 0.104763806
+  }
+}

@@ -6,7 +6,7 @@
 //! baseline every utility is measured against — so they cancel out of every
 //! action comparison while still inflating the pot that's fought over.
 
-use crate::equity::EquityCache;
+use crate::equity::{sampled_shares, Deal, EquityCache};
 use crate::game::{Ruleset, State, Terminal, CB};
 use rand::rngs::SmallRng;
 
@@ -67,11 +67,54 @@ pub enum Utility {
     },
 }
 
+/// Equity-realization factor for a see-a-flop terminal: how much of its raw
+/// pot share a hand actually banks across the postflop streets.
+// ponytail: THE load-bearing approximation of design 07 — a static
+// playability × position × multiway heuristic, tuned until the chart-shape
+// tests hold; the upgrade path is calibrating against the in-repo
+// data/solutions postflop outputs. Known leak: per-hero factors aren't
+// jointly normalized, so see-a-flop terminals aren't exactly zero-sum.
+pub fn r_factor(class: usize, last_to_act: bool, players: u32) -> f64 {
+    let (r, c) = (class / 13, class % 13);
+    let (hi, lo) = (r.min(c), r.max(c)); // rank indices, 0 = ace
+    let hi_v = (12 - hi) as f64 / 12.0;
+    let lo_v = (12 - lo) as f64 / 12.0;
+    let (pair, suited) = (r == c, r < c);
+    let mut p = 0.80 + 0.14 * hi_v + 0.06 * lo_v; // high cards realize
+    if pair {
+        p += 0.10; // made hands don't need to hit
+    }
+    if suited {
+        p += 0.06;
+    }
+    if !pair && lo - hi <= 2 {
+        p += 0.03; // connectedness
+    }
+    let position = if last_to_act { 1.06 } else { 0.94 };
+    p * position * 0.96f64.powi(players.saturating_sub(2) as i32)
+}
+
+/// The seat that acts last postflop among `players`: the live seat closest
+/// to the button (heads-up: the small blind is the button).
+fn last_to_act(rs: &Ruleset, players: u8) -> usize {
+    let n = rs.n();
+    if n == 2 {
+        return 0; // HU: SB = dealer acts last postflop
+    }
+    // Postflop position: SB(0) < BB(1) < UTG(2) < … < BTN(n-1).
+    let pos = |s: usize| if s >= n - 2 { s - (n - 2) } else { s + 2 };
+    (0..n)
+        .filter(|s| players & (1 << s) != 0)
+        .max_by_key(|&s| pos(s))
+        .expect("non-empty live mask")
+}
+
 /// Values [`Terminal`]s for one hero seat given everyone's hand classes.
 pub struct TerminalValuer {
     utility: Utility,
     rake_rate: f64,
     rake_cap_bb: f64,
+    realization: bool,
 }
 
 impl TerminalValuer {
@@ -86,19 +129,27 @@ impl TerminalValuer {
             },
             rake_rate: f64::from(rs.rake_rate),
             rake_cap_bb: f64::from(rs.rake_cap_bb),
+            realization: true,
         }
     }
 
-    /// Hero's utility at terminal state `st`. `classes[seat]` is each seat's
-    /// 169-class; the hero must still be live (a folded traverser's utility
-    /// is fixed at the fold, so traversal never reaches a terminal for them).
+    /// Value see-a-flop terminals as pure check-down equity (`R ≡ 1`) — the
+    /// A/B baseline for the realization table.
+    pub fn check_down(mut self) -> Self {
+        self.realization = false;
+        self
+    }
+
+    /// Hero's utility at terminal state `st`, given the hand's [`Deal`].
+    /// Works for folded heroes too (their stake is fixed, but under ICM the
+    /// pot's destination still moves their tournament equity).
     pub fn value(
         &self,
         rs: &Ruleset,
         st: &State,
         hero: usize,
-        classes: &[u8],
-        eq: &mut EquityCache,
+        deal: &Deal,
+        eq: &EquityCache,
         rng: &mut SmallRng,
     ) -> f64 {
         let t = st.terminal(rs).expect("value() wants a terminal state");
@@ -109,14 +160,18 @@ impl TerminalValuer {
                 self.settle(rs, st, hero, &[(winner as usize, 1.0)], pot)
             }
             Terminal::AllInShowdown { players } => {
-                let outcomes = self.pot_shares(players, st, classes, eq, rng);
+                let outcomes = self.pot_shares(rs, players, deal, eq, rng);
                 self.settle(rs, st, hero, &outcomes, pot - self.rake(pot))
             }
             Terminal::SeeFlop { players } => {
-                // ponytail: R ≡ 1.0 (check-down equity) until design 07 M4
-                // lands the realization-factor table — the load-bearing
-                // approximation, named there.
-                let outcomes = self.pot_shares(players, st, classes, eq, rng);
+                let mut outcomes = self.pot_shares(rs, players, deal, eq, rng);
+                if self.realization {
+                    let last = last_to_act(rs, players);
+                    let k = players.count_ones();
+                    for (seat, share) in &mut outcomes {
+                        *share *= r_factor(deal.classes[*seat] as usize, *seat == last, k);
+                    }
+                }
                 self.settle(rs, st, hero, &outcomes, pot - self.rake(pot))
             }
         }
@@ -126,23 +181,23 @@ impl TerminalValuer {
         (pot * self.rake_rate).min(self.rake_cap_bb)
     }
 
-    /// (seat, pot-share) pairs for the live-mask showdown.
+    /// (seat, pot-share) pairs for the live-mask showdown: exact class table
+    /// heads-up, sampled runouts from the deal's remaining deck multiway.
     fn pot_shares(
         &self,
+        rs: &Ruleset,
         players: u8,
-        st: &State,
-        classes: &[u8],
-        eq: &mut EquityCache,
+        deal: &Deal,
+        eq: &EquityCache,
         rng: &mut SmallRng,
     ) -> Vec<(usize, f64)> {
-        let seats: Vec<usize> = (0..classes.len())
-            .filter(|s| players & (1 << s) != 0)
-            .collect();
-        let tuple: Vec<u8> = seats.iter().map(|&s| classes[s]).collect();
-        let shares = eq.shares(&tuple, rng);
-        // ponytail: st unused here today; the M4 realization factors need the
-        // seat context, so the signature already carries it.
-        let _ = st;
+        let seats: Vec<usize> = (0..rs.n()).filter(|s| players & (1 << s) != 0).collect();
+        if let [a, b] = seats[..] {
+            let (ca, cb) = (deal.classes[a] as usize, deal.classes[b] as usize);
+            return vec![(a, eq.hu(ca, cb)), (b, eq.hu(cb, ca))];
+        }
+        let holes: Vec<_> = seats.iter().map(|&s| deal.holes[s]).collect();
+        let shares = sampled_shares(&holes, &deal.pool, eq.sample_boards, rng);
         seats.into_iter().zip(shares).collect()
     }
 
@@ -230,25 +285,45 @@ mod tests {
     }
 
     #[test]
+    fn realization_factors_bend_the_right_way() {
+        let aa = 0;
+        let so = poker_trainer::preflop::class_index_of("72o").unwrap();
+        // Position: in position beats out of position for every class.
+        assert!(r_factor(aa, true, 2) > r_factor(aa, false, 2));
+        // Playability: AA realizes more than 72o everywhere.
+        assert!(r_factor(aa, false, 2) > r_factor(so, false, 2));
+        // Multiway squeezes realization down.
+        assert!(r_factor(so, false, 4) < r_factor(so, false, 2));
+        // Sane band overall.
+        for class in 0..CLASSES {
+            for (ip, k) in [(true, 2), (false, 2), (true, 6), (false, 6)] {
+                let r = r_factor(class, ip, k);
+                assert!((0.6..=1.25).contains(&r), "class {class}: {r}");
+            }
+        }
+    }
+
+    #[test]
     fn chip_ev_terminals_add_up() {
         let rs = crate::game::Ruleset::load(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/../../manifests/preflop/cash100.toml"
         ))
         .unwrap();
-        let v = TerminalValuer::new(&rs);
-        let mut eq = even_cache();
+        // check_down: the even-split arithmetic below assumes R ≡ 1.
+        let v = TerminalValuer::new(&rs).check_down();
+        let eq = even_cache();
         let mut rng = SmallRng::seed_from_u64(1);
-        let classes = [0u8; 6];
+        let deal = Deal::class_level([0, 20, 40, 60, 80, 100]);
 
         // BB walk: the blinds move over, no rake.
         let st = replay(&rs, "f-f-f-f-f").unwrap();
-        assert!((v.value(&rs, &st, 5, &classes, &mut eq, &mut rng) - 0.5).abs() < 1e-9);
+        assert!((v.value(&rs, &st, 5, &deal, &eq, &mut rng) - 0.5).abs() < 1e-9);
 
         // BTN opens 2.5, BB calls, flop seen: pot 5.5, rake 5% = 0.275.
         // Even equity ⇒ each takes half the raked pot minus their 2.5 in.
         let st = replay(&rs, "f-f-f-r2.5-f-c").unwrap();
-        let u = v.value(&rs, &st, 5, &classes, &mut eq, &mut rng);
+        let u = v.value(&rs, &st, 5, &deal, &eq, &mut rng);
         // 1e-6: the ruleset's f32 rake knobs wobble the f64 math slightly.
         assert!((u - (0.5 * (5.5 - 0.275) - 2.5)).abs() < 1e-6, "{u}");
     }
@@ -264,9 +339,9 @@ mod tests {
         ))
         .unwrap();
         let v = TerminalValuer::new(&rs);
-        let mut eq = even_cache();
+        let eq = even_cache();
         let mut rng = SmallRng::seed_from_u64(1);
-        let classes = [0u8; 6];
+        let deal = Deal::class_level([0, 20, 40, 60, 80, 100]);
 
         // Everyone's pre-hand tournament equity: payouts split evenly.
         let flat = 7.0 / 6.0;
@@ -274,11 +349,11 @@ mod tests {
         // UTG opens 2bb, HJ jams 25bb, folds back around, UTG calls the flip
         // (even 0.5 equity from the mock cache)…
         let st = replay(&rs, "r2-ai-f-f-f-f-c").unwrap();
-        let u_call = v.value(&rs, &st, 0, &classes, &mut eq, &mut rng);
+        let u_call = v.value(&rs, &st, 0, &deal, &eq, &mut rng);
         assert!(u_call < flat, "flip {u_call} vs flat {flat}");
         // …or folds, and the jammer banks the pot uncontested.
         let st_fold = replay(&rs, "r2-ai-f-f-f-f-f").unwrap();
-        let u_fold = v.value(&rs, &st_fold, 1, &classes, &mut eq, &mut rng);
+        let u_fold = v.value(&rs, &st_fold, 1, &deal, &eq, &mut rng);
         assert!(u_fold > flat, "steal {u_fold} vs flat {flat}");
     }
 }

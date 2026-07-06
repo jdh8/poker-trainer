@@ -17,7 +17,7 @@ rake_cap_bb = 0.0
 icm_payouts = [4.0, 2.0, 1.0, 0.0, 0.0, 0.0]
 
 [solver]
-traversals = 60000000
+traversals = 48000000
 seed = 1
-export_reach = 0.001
-starter_reach = 0.05
+export_reach = 0.0002
+starter_reach = 0.002

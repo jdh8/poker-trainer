@@ -10,7 +10,7 @@
 // sample variance; DCFR discounting or a vectorized CFR+ backend for the
 // 2-player subgame are the upgrades, behind the same NodeData layout.
 
-use crate::equity::EquityCache;
+use crate::equity::{Deal, EquityCache};
 use crate::game::{Ruleset, State};
 use crate::icm::TerminalValuer;
 use poker_trainer::preflop::{class_index, CLASSES};
@@ -97,7 +97,9 @@ pub struct Solver<'a> {
     equity: EquityCache,
     rng: SmallRng,
     deck: Vec<Card>,
+    deal: Deal,
     hands_dealt: u64,
+    avg_warmup: u64,
     scratch: Vec<Vec<f32>>, // per-depth strategy buffers (avoid re-allocating)
 }
 
@@ -111,14 +113,31 @@ impl<'a> Solver<'a> {
             equity,
             rng: SmallRng::seed_from_u64(rs.solver.seed),
             deck: Deck::default().into_iter().collect(),
+            deal: Deal::class_level([0; 6]),
             hands_dealt: 0,
+            avg_warmup: 0,
             scratch: Vec::new(),
         }
+    }
+
+    /// Delayed averaging: strategy/EV sums stay zero-weighted for the first
+    /// `hands` hands, so the average never carries the early-iteration noise
+    /// (uniform-ish opponents stacking off inflates every EV otherwise).
+    /// Regrets always update. Call before the first `run`.
+    pub fn set_avg_warmup(&mut self, hands: u64) {
+        self.avg_warmup = hands;
     }
 
     /// Hands dealt so far.
     pub fn hands_dealt(&self) -> u64 {
         self.hands_dealt
+    }
+
+    /// Switch see-a-flop terminals to check-down equity (the `R ≡ 1` A/B
+    /// baseline). Call before the first `run`.
+    pub fn check_down(mut self) -> Self {
+        self.valuer = TerminalValuer::new(self.rs).check_down();
+        self
     }
 
     /// Deal `hands` more hands, running one traversal per seat per hand.
@@ -131,27 +150,31 @@ impl<'a> Solver<'a> {
                 let j = self.rng.random_range(i..52);
                 self.deck.swap(i, j);
             }
-            let mut classes = [0u8; 6];
-            for (s, c) in classes.iter_mut().enumerate().take(n) {
-                *c = class_index([self.deck[2 * s], self.deck[2 * s + 1]]) as u8;
+            for s in 0..n {
+                let hole = [self.deck[2 * s], self.deck[2 * s + 1]];
+                self.deal.holes[s] = hole;
+                self.deal.classes[s] = class_index(hole) as u8;
             }
-            // Linear averaging: this hand's updates weigh `k`.
-            let w = self.hands_dealt as f32;
+            self.deal.pool.clear();
+            self.deal.pool.extend_from_slice(&self.deck[2 * n..]);
+            // Linear averaging past the warm-up: this hand's updates weigh
+            // `k − warmup` (zero during warm-up ⇒ sums untouched).
+            let w = self.hands_dealt.saturating_sub(self.avg_warmup) as f32;
             for t in 0..n {
-                self.traverse(State::root(self.rs), &classes, t, w, 0);
+                self.traverse(State::root(self.rs), t, w, 0);
             }
         }
     }
 
     /// External-sampling traversal returning the traverser's utility.
-    fn traverse(&mut self, st: State, classes: &[u8; 6], t: usize, w: f32, depth: usize) -> f64 {
+    fn traverse(&mut self, st: State, t: usize, w: f32, depth: usize) -> f64 {
         let Some(actor) = st.to_act() else {
             return self
                 .valuer
-                .value(self.rs, &st, t, classes, &mut self.equity, &mut self.rng);
+                .value(self.rs, &st, t, &self.deal, &self.equity, &mut self.rng);
         };
         let actor = actor as usize;
-        let class = classes[actor] as usize;
+        let class = self.deal.classes[actor] as usize;
         let key = st.key();
 
         let mut acts = Vec::new();
@@ -175,7 +198,7 @@ impl<'a> Solver<'a> {
             let mut vals = [0.0f64; 8];
             let mut node_value = 0.0f64;
             for (i, a) in acts.iter().enumerate() {
-                vals[i] = self.traverse(st.apply(self.rs, *a), classes, t, w, depth + 1);
+                vals[i] = self.traverse(st.apply(self.rs, *a), t, w, depth + 1);
                 node_value += f64::from(sigma[i]) * vals[i];
             }
             let node = self.infosets.get_mut(&key).expect("visited above");
@@ -204,7 +227,7 @@ impl<'a> Solver<'a> {
                 }
                 roll -= s;
             }
-            self.traverse(st.apply(self.rs, acts[pick]), classes, t, w, depth + 1)
+            self.traverse(st.apply(self.rs, acts[pick]), t, w, depth + 1)
         };
         self.scratch[depth] = sigma;
         value
@@ -271,21 +294,23 @@ impl<'a> Solver<'a> {
         let villain = 1 - hero;
         if st.terminal(self.rs).is_some() {
             let mut out = vec![0.0; CLASSES];
+            // Class-level deal: HU terminals never sample boards, so only
+            // the classes matter — mutate them in place.
+            let mut deal = Deal::class_level([0; 6]);
             for (i, o) in out.iter_mut().enumerate() {
                 for j in 0..CLASSES {
                     let w = weight[i * CLASSES + j] * villain_reach[j];
                     if w <= 0.0 {
                         continue;
                     }
-                    let mut classes = [0u8; 6];
-                    classes[hero] = i as u8;
-                    classes[villain] = j as u8;
+                    deal.classes[hero] = i as u8;
+                    deal.classes[villain] = j as u8;
                     *o += w * self.valuer.value(
                         self.rs,
                         &st,
                         hero,
-                        &classes,
-                        &mut self.equity,
+                        &deal,
+                        &self.equity,
                         &mut self.rng,
                     );
                 }
