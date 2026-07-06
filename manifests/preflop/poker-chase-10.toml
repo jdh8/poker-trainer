@@ -1,8 +1,9 @@
-# Poker Chase at 25bb: jam-heavy — all-in is a real option from vs-open on.
-id = "poker-chase-25"
-label = "Poker Chase 6-max, 25bb (ICM)"
+# Poker Chase at 10bb: endplay / push-fold. Open-jams are live from the start;
+# 3-bet and deeper sizes all collapse into the jam at this depth.
+id = "poker-chase-10"
+label = "Poker Chase 6-max, 10bb (ICM)"
 seats = ["UTG", "HJ", "CO", "BTN", "SB", "BB"]
-stack_bb = 25.0
+stack_bb = 10.0
 sb = 0.5
 bb = 1.0
 ante_bb = 0.25
@@ -10,8 +11,8 @@ open_to_bb = [2.0, 2.5, 3.0]
 threebet_mult = [2.0, 3.0, 4.0]
 squeeze_mult = [4.0]
 fourbet_mult = [2.3]
-fivebet_mult = [2.2] # never reached at 25bb: the 4-bet already collapses into the jam
-jam_from_level = 1 # 3-bet jams are the point at this depth
+fivebet_mult = [2.2]
+jam_from_level = 0 # open-jams allowed — push/fold endplay
 rake_rate = 0.0
 rake_cap_bb = 0.0
 icm_payouts = [4.0, 2.0, 1.0, 0.0, 0.0, 0.0]

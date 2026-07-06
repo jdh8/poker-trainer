@@ -88,8 +88,12 @@ pub struct Ruleset {
     pub squeeze_mult: Vec<f32>,
     /// 4-bet sizes as multiples of the 3-bet. One size + jam by design.
     pub fourbet_mult: Vec<f32>,
+    /// 5-bet sizes as multiples of the 4-bet. One size + jam by design.
+    /// Optional: an empty menu (the default) restores the jam-only 5-bet.
+    #[serde(default)]
+    pub fivebet_mult: Vec<f32>,
     /// Offer all-in as a raise option when facing raise-level ≥ this
-    /// (0 = open-jams allowed, 2 = jam only vs a 3-bet or later). A 5-bet is
+    /// (0 = open-jams allowed, 2 = jam only vs a 3-bet or later). A 6-bet is
     /// always jam-only.
     pub jam_from_level: u8,
     /// Rake taken from the pot (0.05 = 5%). No flop, no drop: fold-win pots
@@ -150,6 +154,7 @@ impl Ruleset {
             ("threebet_mult", &self.threebet_mult),
             ("squeeze_mult", &self.squeeze_mult),
             ("fourbet_mult", &self.fourbet_mult),
+            ("fivebet_mult", &self.fivebet_mult),
         ] {
             if mults.iter().any(|&m| m <= 1.0) {
                 return Err(format!("{name} entries must be > 1.0"));
@@ -215,7 +220,8 @@ pub struct State {
     pub all_in: u8,
     /// Current bet-to amount, centi-bb.
     pub cur_bet: u32,
-    /// Raise level: 0 unopened, 1 open, 2 = 3-bet, 3 = 4-bet, 4 = 5-bet.
+    /// Raise level: 0 unopened, 1 open, 2 = 3-bet, 3 = 4-bet, 4 = 5-bet,
+    /// 5 = 6-bet.
     pub level: u8,
     /// Someone called the open before a 3-bet (selects the squeeze menu).
     pub had_caller: bool,
@@ -319,9 +325,10 @@ impl State {
             1 if self.had_caller => rs.squeeze_mult.iter().map(mult).collect(),
             1 => rs.threebet_mult.iter().map(mult).collect(),
             2 => rs.fourbet_mult.iter().map(mult).collect(),
-            _ => vec![], // a 5-bet is jam-only
+            3 => rs.fivebet_mult.iter().map(mult).collect(),
+            _ => vec![], // a 6-bet is jam-only
         };
-        let mut jam = self.level >= rs.jam_from_level || self.level >= 3;
+        let mut jam = self.level >= rs.jam_from_level || self.level >= 4;
         for r in raises {
             debug_assert!(r > self.cur_bet, "raise menus must exceed the bet");
             if r >= stack {
@@ -623,11 +630,24 @@ mod tests {
             ]
         );
 
-        // Facing a 4-bet: 5-bet is jam-only. Facing the jam: fold/call only.
+        // Facing a 4-bet (level 3): the sized 5-bet + jam appears.
         let st = replay(&rs, "r2.5-f-f-r7.5-f-f-r17.25").unwrap();
         st.legal(&rs, &mut acts);
+        assert_eq!(
+            acts,
+            vec![
+                Action::Fold,
+                Action::Call,
+                Action::RaiseTo(3795), // 2.2 × 17.25bb
+                Action::AllIn
+            ]
+        );
+
+        // Facing a 5-bet (level 4): a 6-bet is jam-only. Facing the jam: fold/call.
+        let st = replay(&rs, "r2.5-f-f-r7.5-f-f-r17.25-r37.95").unwrap();
+        st.legal(&rs, &mut acts);
         assert_eq!(acts, vec![Action::Fold, Action::Call, Action::AllIn]);
-        let st = replay(&rs, "r2.5-f-f-r7.5-f-f-r17.25-ai").unwrap();
+        let st = replay(&rs, "r2.5-f-f-r7.5-f-f-r17.25-r37.95-ai").unwrap();
         st.legal(&rs, &mut acts);
         assert_eq!(acts, vec![Action::Fold, Action::Call]);
     }
@@ -672,6 +692,7 @@ mod tests {
     fn shipped_manifests_load_and_validate() {
         for id in [
             "cash100",
+            "poker-chase-10",
             "poker-chase-25",
             "poker-chase-40",
             "poker-chase-60",
@@ -680,6 +701,7 @@ mod tests {
             assert_eq!(rs.id, id);
             assert_eq!(rs.n(), 6);
         }
+        assert_eq!(manifest("poker-chase-10").jam_from_level, 0);
         assert_eq!(manifest("poker-chase-25").jam_from_level, 1);
         assert!(manifest("cash100").icm_payouts.is_none());
         assert_eq!(
@@ -693,24 +715,79 @@ mod tests {
     /// pins and the design-07 table together.
     #[test]
     fn shipped_tree_counts_are_pinned() {
+        // The sized 5-bet level (design 07) makes every depth distinct: the
+        // deeper the stack, the more 5-bet/6-bet branches survive below it.
+        // pc-25 still reaches a 5-bet on the small-3-bet lines; only the
+        // largest line's 27.6bb 4-bet collapses into the jam.
         assert_eq!(
             tree_stats(&manifest("cash100")),
             TreeStats {
-                decisions: 155_492,
-                states: 99_023,
-                edges: 332_966,
-                fold_wins: 21_988,
-                allin_2way: 51_366,
-                allin_multi: 84_468,
-                flop_2way: 6_891,
-                flop_multi: 12_762,
-                max_depth: 21,
+                decisions: 1_021_694,
+                states: 363_216,
+                edges: 2_201_204,
+                fold_wins: 157_822,
+                allin_2way: 351_105,
+                allin_multi: 532_350,
+                flop_2way: 52_134,
+                flop_multi: 86_100,
+                max_depth: 26,
             }
         );
-        // 40/60bb share cash100's shape (no menu size reaches the stack);
-        // 25bb shrinks: the 27.6bb 4-bet collapses into the jam.
-        assert_eq!(tree_stats(&manifest("poker-chase-40")).decisions, 155_492);
-        assert_eq!(tree_stats(&manifest("poker-chase-60")).decisions, 155_492);
-        assert_eq!(tree_stats(&manifest("poker-chase-25")).decisions, 123_765);
+        assert_eq!(
+            tree_stats(&manifest("poker-chase-60")),
+            TreeStats {
+                decisions: 810_252,
+                states: 305_959,
+                edges: 1_744_958,
+                fold_wins: 124_460,
+                allin_2way: 277_714,
+                allin_multi: 423_404,
+                flop_2way: 40_983,
+                flop_multi: 68_146,
+                max_depth: 26,
+            }
+        );
+        assert_eq!(
+            tree_stats(&manifest("poker-chase-40")),
+            TreeStats {
+                decisions: 348_722,
+                states: 173_533,
+                edges: 749_216,
+                fold_wins: 51_778,
+                allin_2way: 117_671,
+                allin_multi: 185_338,
+                flop_2way: 16_716,
+                flop_multi: 28_992,
+                max_depth: 22,
+            }
+        );
+        assert_eq!(
+            tree_stats(&manifest("poker-chase-25")),
+            TreeStats {
+                decisions: 162_411,
+                states: 99_793,
+                edges: 348_131,
+                fold_wins: 23_315,
+                allin_2way: 53_989,
+                allin_multi: 87_810,
+                flop_2way: 7_345,
+                flop_multi: 13_262,
+                max_depth: 22,
+            }
+        );
+        assert_eq!(
+            tree_stats(&manifest("poker-chase-10")),
+            TreeStats {
+                decisions: 17_704,
+                states: 15_501,
+                edges: 37_726,
+                fold_wins: 2_324,
+                allin_2way: 5_594,
+                allin_multi: 10_048,
+                flop_2way: 691,
+                flop_multi: 1_366,
+                max_depth: 17,
+            }
+        );
     }
 }

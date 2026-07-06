@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "ruleset": "poker-chase-25",
-  "label": "Poker Chase 6-max, 25bb (ICM)",
+  "ruleset": "poker-chase-10",
+  "label": "Poker Chase 6-max, 10bb (ICM)",
   "config": {
     "ante_bb": 0.25,
     "bb": 1.0,
@@ -19,9 +19,9 @@
       0.0,
       0.0
     ],
-    "id": "poker-chase-25",
-    "jam_from_level": 1,
-    "label": "Poker Chase 6-max, 25bb (ICM)",
+    "id": "poker-chase-10",
+    "jam_from_level": 0,
+    "label": "Poker Chase 6-max, 10bb (ICM)",
     "open_to_bb": [
       2.0,
       2.5,
@@ -47,19 +47,19 @@
     "squeeze_mult": [
       4.0
     ],
-    "stack_bb": 25.0,
+    "stack_bb": 10.0,
     "threebet_mult": [
       2.0,
       3.0,
       4.0
     ]
   },
-  "config_hash": "c7c487ab",
+  "config_hash": "2d4f7b08",
   "ev_unit": "payout",
   "generator": {
     "version": "0.1.0",
     "traversals": 48000000,
     "seed": 1,
-    "strategy_drift": 0.1185576
+    "strategy_drift": 0.088388085
   }
 }

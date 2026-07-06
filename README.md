@@ -41,8 +41,8 @@ build and serve it locally.
 
 `drill preflop` and the web browser read solved 6-max charts from
 `data/preflop/<ruleset>/`. Committed rule sets: `cash100` (100bb cash) and
-the Poker Chase ICM ladder `poker-chase-{25,40,60}` (0.25bb ante, 4-2-1
-payouts); pick one with `--ruleset`. They're produced by the permissive
+the Poker Chase ICM ladder `poker-chase-{10,25,40,60}` (0.25bb ante, 4-2-1
+payouts; 10bb is the push/fold endplay rung); pick one with `--ruleset`. They're produced by the permissive
 in-repo MCCFR generator ([design 07](docs/design/07-preflop-solver.md)):
 
 ```sh

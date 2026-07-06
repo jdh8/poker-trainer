@@ -29,15 +29,17 @@ and preflop-gen depends on the trainer, the same direction as solve-gen.
 One TOML per rule set: seats (acting order, blinds always the last two),
 uniform effective stack, blinds, per-player dead ante, the raise menus
 (`open_to_bb`, `threebet_mult`, `squeeze_mult`, `fourbet_mult`,
-`jam_from_level`), rake (`no flop no drop`), optional `icm_payouts` (absent =
+`fivebet_mult`, `jam_from_level`), rake (`no flop no drop`), optional
+`icm_payouts` (absent =
 chip-EV cash), and `[solver]` knobs (traversals, seed, export/starter reach).
 The header written next to every solve echoes the config verbatim and carries
 its FNV-1a `config_hash`; `gen` skips rulesets whose hash already matches
 (the solve-gen resumability contract).
 
 Shipped rulesets: `cash100` (6-max 100bb, 5% rake capped at 3bb) and the
-Poker Chase ladder `poker-chase-{25,40,60}` (0.25bb ante ⇒ 3bb root pot, ICM
-payouts 4-2-1-0-0-0, no rake; 25bb offers the jam from vs-open on).
+Poker Chase ladder `poker-chase-{10,25,40,60}` (0.25bb ante ⇒ 3bb root pot, ICM
+payouts 4-2-1-0-0-0, no rake; 25bb offers the jam from vs-open on, 10bb is the
+push/fold endplay rung with open-jams live from the start).
 
 ## The betting tree (`game.rs`)
 
@@ -48,8 +50,9 @@ each a ruleset knob with a named ceiling:
   the BB ever acts unopened. (Upgrade: a limp token + check-closes-round.)
 - Raise ladder: open (menu, absolute bb) → 3-bet (menu × the open; a single
   squeeze size once the open has a caller) → 4-bet (single size × the 3-bet)
-  → 5-bet jam-only. All-in joins the menu from `jam_from_level` on; menu
-  sizes at/over the stack collapse into the jam. Facing a jam: fold/call.
+  → 5-bet (single size × the 4-bet) → 6-bet jam-only. All-in joins the menu
+  from `jam_from_level` on; menu sizes at/over the stack collapse into the
+  jam. Facing a jam: fold/call.
 - Multiway is otherwise uncapped (cold-calls, squeezes, cold-4-bets all
   legal); sampling makes the deep branches affordable.
 - Uniform effective stacks, so all-in-for-less and reopening rules never
@@ -65,11 +68,16 @@ Measured trees under the shipped menus (`preflop-gen tree`, pinned by
 
 | ruleset | decisions | distinct states | edges | fold-wins | all-in SD (multi) | flops (multi) | depth |
 |---|---|---|---|---|---|---|---|
-| cash100, pc-40, pc-60 | 155,492 | 99,023 | 332,966 | 21,988 | 135,834 (84,468) | 19,653 (12,762) | 21 |
-| poker-chase-25 | 123,765 | 81,881 | 264,881 | 17,357 | 108,364 (67,636) | 15,396 (10,016) | 21 |
+| cash100 | 1,021,694 | 363,216 | 2,201,204 | 157,822 | 883,455 (532,350) | 138,234 (86,100) | 26 |
+| poker-chase-60 | 810,252 | 305,959 | 1,744,958 | 124,460 | 701,118 (423,404) | 109,129 (68,146) | 26 |
+| poker-chase-40 | 348,722 | 173,533 | 749,216 | 51,778 | 303,009 (185,338) | 45,708 (28,992) | 22 |
+| poker-chase-25 | 162,411 | 99,793 | 348,131 | 23,315 | 141,799 (87,810) | 20,607 (13,262) | 22 |
+| poker-chase-10 | 17,704 | 15,501 | 37,726 | 2,324 | 15,642 (10,048) | 2,057 (1,366) | 17 |
 
-(40/60bb share cash100's shape — no menu size reaches the stack; at 25bb the
-27.6bb 4-bet collapses into the jam.)
+(The sized 5-bet level makes every depth distinct — deeper stacks keep more
+5-bet/6-bet branches below the 4-bet. At 25bb only the largest line's 27.6bb
+4-bet collapses into the jam; at 10bb the tree is push/fold — open, open-jam,
+or fold.)
 
 ## Node addressing (path grammar)
 

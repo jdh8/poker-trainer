@@ -5,6 +5,9 @@
   "config": {
     "ante_bb": 0.0,
     "bb": 1.0,
+    "fivebet_mult": [
+      2.2
+    ],
     "fourbet_mult": [
       2.3
     ],
@@ -43,12 +46,12 @@
       4.0
     ]
   },
-  "config_hash": "552faa4e",
+  "config_hash": "72c856e1",
   "ev_unit": "bb",
   "generator": {
     "version": "0.1.0",
     "traversals": 48000000,
     "seed": 1,
-    "strategy_drift": 0.080483854
+    "strategy_drift": 0.07669431
   }
 }

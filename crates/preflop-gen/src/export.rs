@@ -303,12 +303,13 @@ mod tests {
         );
 
         // Poker Chase ladder: ICM payout units; shallower opens tighter.
-        let (pc25, pc40, pc60) = (
+        let (pc10, pc25, pc40, pc60) = (
+            load("poker-chase-10"),
             load("poker-chase-25"),
             load("poker-chase-40"),
             load("poker-chase-60"),
         );
-        for pc in [&pc25, &pc40, &pc60] {
+        for pc in [&pc10, &pc25, &pc40, &pc60] {
             assert_eq!(pc.header.ev_unit, "payout");
         }
         let btn = |c: &PreflopCharts| continue_freq(c, "f-f-f");
@@ -317,6 +318,12 @@ mod tests {
             "25bb should open tighter than 40bb: {} vs {}",
             btn(&pc25),
             btn(&pc40)
+        );
+        // 10bb is push/fold endplay: the BTN plays a wide open/jam range.
+        assert!(
+            btn(&pc10) > 0.35,
+            "10bb BTN open/jam too narrow: {}",
+            btn(&pc10)
         );
     }
 }
