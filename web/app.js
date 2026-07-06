@@ -160,7 +160,7 @@ function pfRender() {
       return seg;
     }).join(', ');
     cells.push(`<div class="cell" data-c="${c}" data-name="${name}" ` +
-      `style="background:linear-gradient(to right, ${stops})">${name}</div>`);
+      `style="background:linear-gradient(to left, ${stops})">${name}</div>`);
   }
   $('pf-grid').innerHTML = cells.join('');
   $('pf-detail').innerHTML = '<p class="sub" style="color:var(--muted)">Click a cell for frequencies and EV.</p>';
@@ -248,7 +248,7 @@ function renderGrid() {
       at += f;
       return seg;
     }).join(', ');
-    cells.push(`<div class="cell" data-class="${name}" style="background:linear-gradient(to right, ${stops})">${name}</div>`);
+    cells.push(`<div class="cell" data-class="${name}" style="background:linear-gradient(to left, ${stops})">${name}</div>`);
   }
   $('gr-grid').innerHTML = cells.join('');
   $('gr-detail').innerHTML = '<p class="sub" style="color:var(--muted)">Click a cell for the per-combo breakdown.</p>';

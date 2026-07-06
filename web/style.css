@@ -103,7 +103,7 @@ label.inline input, label.inline select { width: auto; }
 /* 13x13 grid */
 #gr-head, #pf-head { margin: 0.6rem 0 0.2rem; color: var(--text); }
 #gr-head .sub, #pf-head .sub { color: var(--muted); font-size: 0.85rem; }
-#gr-legend { display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem; }
+#gr-legend { display: flex; flex-direction: row-reverse; gap: 1rem; flex-wrap: wrap; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem; }
 #gr-legend .chip { display: inline-block; width: 0.8em; height: 0.8em; border-radius: 2px; margin-right: 0.3em; vertical-align: -0.05em; }
 #gr-grid, #pf-grid {
   display: grid;
@@ -136,5 +136,5 @@ label.inline input, label.inline select { width: auto; }
 #pf-crumbs .crumb { background: none; border: none; color: var(--accent); cursor: pointer; padding: 0.1rem 0.2rem; font-size: inherit; }
 #pf-crumbs .crumb:hover { text-decoration: underline; }
 #pf-actions { margin: 0.4rem 0; display: flex; gap: 0.4rem; flex-wrap: wrap; }
-#pf-legend { display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem; }
+#pf-legend { display: flex; flex-direction: row-reverse; gap: 1rem; flex-wrap: wrap; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem; }
 #pf-legend .chip { display: inline-block; width: 0.8em; height: 0.8em; border-radius: 2px; margin-right: 0.3em; vertical-align: -0.05em; }

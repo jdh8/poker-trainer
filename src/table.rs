@@ -471,9 +471,10 @@ fn cell_spans(
     } else {
         let widths = segment_widths(&cell.freqs, CELL_W);
         let mut pos = 0;
-        for (i, &w) in widths.iter().enumerate() {
+        // draw strongest action first (leftmost); fold ends up rightmost.
+        for i in (0..widths.len()).rev() {
             let col = action_color(&cell.actions[i], i, cell.actions.len());
-            for _ in 0..w {
+            for _ in 0..widths[i] {
                 if pos < CELL_W {
                     bg[pos] = col;
                     pos += 1;
@@ -557,9 +558,11 @@ fn grid_lines(
 
 /// A `w`-wide bar of colored blocks split by action frequency.
 fn freq_bar(actions: &[String], freqs: &[f32], w: usize) -> Vec<Span<'static>> {
+    // strongest action first (leftmost) to match the cell bars.
     segment_widths(freqs, w)
         .iter()
         .enumerate()
+        .rev()
         .filter(|(_, &n)| n > 0)
         .map(|(i, &n)| {
             Span::styled(
@@ -660,9 +663,11 @@ fn detail_lines(
 
 /// An action→color legend for `actions`.
 fn action_legend(actions: &[String]) -> Vec<Line<'static>> {
+    // strongest action first, to match the reversed cell bars.
     actions
         .iter()
         .enumerate()
+        .rev()
         .map(|(i, action)| {
             Line::from(vec![
                 Span::styled(
