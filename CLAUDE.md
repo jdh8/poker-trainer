@@ -1,10 +1,12 @@
 # poker-trainer
 
 A post-flop GTO poker trainer for the command line: you're dealt realistic
-spots, you act, the trainer scores you against a solver's equilibrium. Two-crate
-workspace: root `poker-trainer` (MIT OR Apache-2.0, lib + bin) and
+spots, you act, the trainer scores you against a solver's equilibrium.
+Three-crate workspace: root `poker-trainer` (MIT OR Apache-2.0, lib + bin),
 `crates/solve-gen` (AGPL-3.0-or-later — the only crate that links
-`postflop-solver`, pinned to rev `9d1509f`).
+`postflop-solver`, pinned to rev `9d1509f`), and `crates/preflop-gen`
+(MIT OR Apache-2.0 — original preflop MCCFR, no solver link,
+[design 07](docs/design/07-preflop-solver.md)).
 
 ## Hard rules
 
@@ -38,10 +40,13 @@ Ubuntu/macOS/Windows; all must pass before committing:
 
 ```sh
 cargo fmt --check          # fix with: cargo fmt
-cargo clippy --all-targets --all-features -- -D warnings
-RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features
-cargo test --all-features
+cargo clippy --workspace --exclude solve-gen --all-targets --all-features -- -D warnings
+RUSTDOCFLAGS="-D warnings" cargo doc --workspace --exclude solve-gen --no-deps --all-features
+cargo test --workspace --exclude solve-gen --all-features
 ```
+
+(`--exclude solve-gen` because building the AGPL solver is too heavy for CI;
+gate solve-gen locally with `cargo clippy -p solve-gen` when you touch it.)
 
 Three `#[ignore]` tests spawn a real solve (~2 s with a warm solve cache,
 minutes cold): run `cargo test -- --ignored` only when touching `tree.rs`,
@@ -62,7 +67,9 @@ minutes cold): run `cargo test -- --ignored` only when touching `tree.rs`,
 | `src/eval.rs` | Monte-Carlo equity + made-hand buckets (rs_poker) |
 | `src/texture.rs` | objective flop-texture classification |
 | `src/board.rs`, `src/range.rs` | **intentional stubs — do not flesh out** |
+| `src/preflop.rs` | preflop chart format + loader (the seam `preflop-gen` writes to) |
 | `crates/solve-gen/src/main.rs` | single-file AGPL generator: `gen \| solve \| serve` |
+| `crates/preflop-gen/` | permissive preflop MCCFR generator (design 07) |
 | `web/` | wasm catalog of the pure examples — **own workspace**, not a member; `cargo test` there runs natively; deployed by `pages.yml` |
 | `tests/` | fixtures only; all unit tests are colocated in `src/` |
 
@@ -77,6 +84,9 @@ minutes cold): run `cargo test -- --ignored` only when touching `tree.rs`,
   `flop_key` in `src/solution.rs`).
 - `manifests/*.toml` — resumable (formation × flop set) generation lists.
   `starter-8` is committed; `texture-25` and larger regenerate locally.
+- `manifests/preflop/<id>.toml` — one preflop ruleset (seats, blinds, ante,
+  raise menus, optional ICM payouts) per file; solved by `preflop-gen` into
+  `data/preflop/<id>/` (design 07).
 
 ## Conventions
 

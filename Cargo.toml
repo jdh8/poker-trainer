@@ -23,5 +23,7 @@ tui = ["dep:ratatui"]
 
 # The AGPL solver lives in its own crate (crates/solve-gen) so it never links
 # into this binary — the trainer only deserializes the JSON it produces.
+# preflop-gen is permissive (no solver link) but stays a separate crate too:
+# it's an offline generator, not trainer code.
 [workspace]
-members = ["crates/solve-gen"]
+members = ["crates/preflop-gen", "crates/solve-gen"]

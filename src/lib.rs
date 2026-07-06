@@ -4,6 +4,7 @@
 pub mod analyze;
 pub mod board;
 pub mod eval;
+pub mod preflop;
 pub mod range;
 pub mod report;
 pub mod solution;

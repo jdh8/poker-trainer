@@ -23,7 +23,9 @@ jobs:
     steps:
     - uses: actions/checkout@v7
     - name: Clippy
-      run: cargo clippy --all-targets --all-features -- -D warnings
+      # --exclude solve-gen: the AGPL generator builds the whole solver —
+      # too heavy for CI, and it never ships. preflop-gen is light and gated.
+      run: cargo clippy --workspace --exclude solve-gen --all-targets --all-features -- -D warnings
 
   doc:
     runs-on: ubuntu-latest
@@ -32,7 +34,7 @@ jobs:
     - name: Build docs
       env:
         RUSTDOCFLAGS: -D warnings
-      run: cargo doc --no-deps --all-features
+      run: cargo doc --workspace --exclude solve-gen --no-deps --all-features
 
   test:
     strategy:
@@ -43,4 +45,4 @@ jobs:
     steps:
     - uses: actions/checkout@v7
     - name: Test (all features)
-      run: cargo test --all-features --verbose
+      run: cargo test --workspace --exclude solve-gen --all-features --verbose

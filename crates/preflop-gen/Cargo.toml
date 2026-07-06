@@ -1,0 +1,19 @@
+[package]
+name = "preflop-gen"
+version = "0.1.0"
+edition = "2021"
+description = "Offline preflop chart generator (MCCFR) for poker-trainer"
+# Permissive, unlike solve-gen: this crate links no AGPL solver — the preflop
+# game and its CFR loop are original code. It must never grow a
+# postflop-solver dependency (test-enforced, like the trainer's own seam).
+license = "MIT OR Apache-2.0"
+publish = false
+
+[dependencies]
+# The chart *format* lives in the trainer (src/preflop.rs, design 07); this
+# crate writes it, the same dependency direction as solve-gen.
+poker-trainer = { path = "../..", default-features = false }
+clap = { version = "4", features = ["derive"] } # gen / solve / equity / tree
+serde = { version = "1", features = ["derive"] } # ruleset TOML schema
+serde_json = "1"
+toml = "0.8" # manifests/preflop/<id>.toml
