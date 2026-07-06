@@ -18,6 +18,11 @@ enum Command {
         #[arg(value_enum, default_value_t = Mode::PotOdds)]
         mode: Mode,
 
+        /// Preflop drill only: the solved chart set under data/preflop/
+        /// (e.g. cash100, poker-chase-40).
+        #[arg(long, default_value = "cash100")]
+        ruleset: String,
+
         #[command(flatten)]
         solve: SolveArgs,
     },
@@ -182,21 +187,25 @@ enum Mode {
     Range,
     /// Play full hands (flop→river) vs. the equilibrium villain; needs --board.
     Hand,
-    /// Open/defend/3-bet decisions scored against the preflop charts
-    /// (data/ranges/); accuracy only, no solver.
+    /// Preflop decisions vs. the solved 6-max charts (data/preflop/), scored
+    /// on EV loss; pick the rule set with --ruleset.
     Preflop,
 }
 
 fn main() {
     match Cli::parse().command {
-        Command::Drill { mode, solve } => {
+        Command::Drill {
+            mode,
+            solve,
+            ruleset,
+        } => {
             let req = solve.into_request();
             match mode {
                 Mode::PotOdds => trainer::run_pot_odds_drill(),
                 Mode::Gto => trainer::run_gto_drill(req),
                 Mode::Range => trainer::run_range_drill(req),
                 Mode::Hand => trainer::run_hand_drill(req),
-                Mode::Preflop => trainer::run_preflop_drill(),
+                Mode::Preflop => trainer::run_preflop_drill(&ruleset),
             }
         }
         Command::Table { solve, line, locks } => {

@@ -77,6 +77,24 @@ pub fn class_combos(i: usize) -> u32 {
     }
 }
 
+/// The path token of a stored action label (the inverse of the generator's
+/// label rendering): `"Fold"` → `"f"`, `"Call"` → `"c"`, `"Raise to 7.5bb"`
+/// → `"r7.5"`, `"All-in"` → `"ai"`.
+pub fn label_token(label: &str) -> String {
+    match label {
+        "Fold" => "f".into(),
+        "Call" => "c".into(),
+        "All-in" => "ai".into(),
+        raise => format!(
+            "r{}",
+            raise
+                .strip_prefix("Raise to ")
+                .and_then(|s| s.strip_suffix("bb"))
+                .unwrap_or("?")
+        ),
+    }
+}
+
 /// Provenance embedded in every ruleset's `header.json`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PreflopGenInfo {
@@ -235,6 +253,31 @@ impl PreflopCharts {
     pub fn nodes(&self) -> impl Iterator<Item = &PreflopNode> {
         self.nodes.values()
     }
+
+    /// The acting seat's per-class arrival probability at `path`: the product
+    /// of that seat's own past action frequencies along the line (export
+    /// prunes children before parents, so every stored node's ancestors are
+    /// stored too).
+    // ponytail: blocker effects on reach are ignored — class-level by design.
+    pub fn class_reach(&self, path: &str) -> Option<Vec<f32>> {
+        let seat = &self.node(path)?.seat;
+        let mut reach = vec![1.0f32; CLASSES];
+        let mut prefix = String::new();
+        for tok in path.split('-').filter(|t| !t.is_empty()) {
+            let node = self.node(&prefix)?;
+            if &node.seat == seat {
+                let ai = node.actions.iter().position(|l| label_token(l) == tok)?;
+                for (r, f) in reach.iter_mut().zip(&node.freqs[ai]) {
+                    *r *= f;
+                }
+            }
+            if !prefix.is_empty() {
+                prefix.push('-');
+            }
+            prefix.push_str(tok);
+        }
+        Some(reach)
+    }
 }
 
 #[cfg(test)]
@@ -359,6 +402,43 @@ mod tests {
         .unwrap();
         let err = PreflopCharts::load(&dir).unwrap_err();
         assert!(err.to_string().contains("newer"), "{err}");
+
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn label_tokens_invert_the_labels() {
+        for (label, tok) in [
+            ("Fold", "f"),
+            ("Call", "c"),
+            ("All-in", "ai"),
+            ("Raise to 2.5bb", "r2.5"),
+            ("Raise to 17.25bb", "r17.25"),
+        ] {
+            assert_eq!(label_token(label), tok);
+        }
+    }
+
+    #[test]
+    fn class_reach_multiplies_own_past_frequencies() {
+        let dir = std::env::temp_dir().join(format!("pt-preflop-reach-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        // Synthetic 3-node line where the same seat acts at "" and "c-c":
+        // reach at "c-c" is the root call frequency (0.75 everywhere).
+        let mut root = sample_node("", false);
+        root.seat = "SB".into();
+        let mut mid = sample_node("c", false);
+        mid.seat = "BB".into();
+        let mut back = sample_node("c-c", false);
+        back.seat = "SB".into();
+        write_ruleset(&dir, &[root, mid, back]);
+
+        let charts = PreflopCharts::load(&dir).unwrap();
+        let reach = charts.class_reach("c-c").unwrap();
+        assert!((reach[0] - 0.75).abs() < 1e-6);
+        // The seat acting at "c" never acted before: full reach.
+        assert!(charts.class_reach("c").unwrap().iter().all(|&r| r == 1.0));
+        assert!(charts.class_reach("nope").is_none());
 
         fs::remove_dir_all(&dir).unwrap();
     }

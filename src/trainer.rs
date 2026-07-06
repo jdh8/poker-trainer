@@ -6,9 +6,10 @@
 //! - `run_gto_drill`: act vs. a precomputed solution; scored on EV loss (Phase 1).
 
 use crate::eval::{self, Bucket};
+use crate::preflop::{self, PreflopCharts, PreflopNode};
 use crate::solution::{
-    FileSolutionProvider, Formation, LiveSolutionProvider, NodeStrategy, SolutionProvider,
-    SolveRequest, SolvedSpot, SpotConfig, FORMATIONS,
+    FileSolutionProvider, LiveSolutionProvider, NodeStrategy, SolutionProvider, SolveRequest,
+    SolvedSpot,
 };
 use crate::stats;
 use crate::texture;
@@ -16,7 +17,6 @@ use crate::tree::{TreeNode, TreeSession};
 use rand::seq::IndexedRandom;
 use rand::RngExt;
 use rs_poker::core::{Card, Deck, Suit};
-use rs_poker::holdem::RangeParser;
 use std::collections::BTreeMap;
 #[cfg(feature = "tui")]
 use std::io::IsTerminal;
@@ -130,152 +130,224 @@ pub fn run_pot_odds_drill() {
     report(correct, spots);
 }
 
-/// One preflop decision the chart files can adjudicate (design doc 04).
-struct PreflopSpot {
-    formation: &'static str,
-    label: &'static str,
-    question: String,
-    /// The chart action when the hand is in range; out of range folds.
-    play: &'static str,
-    combos: Vec<[Card; 2]>,
-}
-
-/// The two decisions a formation's charts answer. The id encodes who the
-/// aggressor is: `srp-X-Y` = X opens, Y defends; `3bp-X-Y` = X 3-bets Y's
-/// open, Y calls the 3-bet.
-// ponytail: charts are binary flat/raise ranges, so each seat gets one
-// two-way question; mixed frequencies and 3-bet-vs-flat splits for the
-// defender need weighted chart files first.
-fn preflop_spots(f: &Formation, config: &SpotConfig) -> Result<Vec<PreflopSpot>, String> {
-    let mut it = f.id.split('-');
-    let (kind, first, second) = (
-        it.next().unwrap_or(""),
-        it.next().unwrap_or("").to_uppercase(),
-        it.next().unwrap_or("").to_uppercase(),
-    );
-    let chart = |seat: &str| -> Result<Vec<[Card; 2]>, String> {
-        let s = if seat.eq_ignore_ascii_case(f.oop_seat) {
-            &config.oop_range
-        } else {
-            &config.ip_range
-        };
-        RangeParser::parse_many(s)
-            .map_err(|e| format!("bad chart for {} {seat}: {e}", f.id))
-            .map(|hands| hands.iter().map(|h| [h[0], h[1]]).collect())
-    };
-    let (q1, q2) = if kind == "srp" {
-        (
-            format!("You're {first}, folded to you. Open-raise?"),
-            format!("You're {second} facing {first}'s open. Call?"),
-        )
-    } else {
-        (
-            format!("You're {first} facing {second}'s open. 3-bet?"),
-            format!("You opened {second} and {first} 3-bets. Call?"),
-        )
-    };
-    Ok(vec![
-        PreflopSpot {
-            formation: f.id,
-            label: f.label,
-            question: q1,
-            play: "Raise",
-            combos: chart(&first)?,
-        },
-        PreflopSpot {
-            formation: f.id,
-            label: f.label,
-            question: q2,
-            play: "Call",
-            combos: chart(&second)?,
-        },
-    ])
-}
-
-/// Entry point for `poker-trainer drill preflop` (design doc 04).
-///
-/// No solver: the chart files in `data/ranges/` are the answer key. Accuracy
-/// only — charts carry no EV, so records get `ev_loss: null`.
-pub fn run_preflop_drill() {
-    let mut spots_pool = Vec::new();
-    for f in FORMATIONS {
-        let config = match SpotConfig::for_formation(f.id, "data/ranges") {
-            Ok(c) => c,
-            Err(e) => {
-                eprintln!("{e}");
-                return;
-            }
-        };
-        match preflop_spots(f, &config) {
-            Ok(mut s) => spots_pool.append(&mut s),
-            Err(e) => {
-                eprintln!("{e}");
-                return;
+/// "UTG folds", "CO raises to 2.5bb", … — the action line leading to `path`,
+/// rendered from the stored ancestor nodes (always present: export prunes
+/// children before parents).
+fn preflop_line(charts: &PreflopCharts, path: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut prefix = String::new();
+    for tok in path.split('-').filter(|t| !t.is_empty()) {
+        if let Some(node) = charts.node(&prefix) {
+            if let Some(ai) = node
+                .actions
+                .iter()
+                .position(|l| preflop::label_token(l) == tok)
+            {
+                let verb = match node.actions[ai].as_str() {
+                    "Fold" => "folds".into(),
+                    "Call" => "calls".into(),
+                    "All-in" => "jams".into(),
+                    raise => raise.to_lowercase().replacen("raise", "raises", 1),
+                };
+                out.push(format!("{} {verb}", node.seat));
             }
         }
+        if !prefix.is_empty() {
+            prefix.push('-');
+        }
+        prefix.push_str(tok);
     }
+    out
+}
+
+/// A uniformly random concrete combo of a 169-class.
+fn deal_class_combo<R: RngExt>(class: usize, rng: &mut R) -> [Card; 2] {
+    const SUITS: [char; 4] = ['s', 'h', 'd', 'c'];
+    let name = preflop::class_name(class);
+    let suited = name.len() == 3 && name.ends_with('s');
+    let (s1, s2) = if suited {
+        let s = SUITS[rng.random_range(0..4)];
+        (s, s)
+    } else {
+        // pair or offsuit: two distinct suits
+        let a = rng.random_range(0..4);
+        let mut b = rng.random_range(0..3);
+        if b >= a {
+            b += 1;
+        }
+        (SUITS[a], SUITS[b])
+    };
+    let mut ch = name.chars();
+    let card = |r: char, s: char| Card::try_from(format!("{r}{s}").as_str()).unwrap();
+    [card(ch.next().unwrap(), s1), card(ch.next().unwrap(), s2)]
+}
+
+/// Entry point for `poker-trainer drill preflop` (design docs 04 + 07).
+///
+/// The solved chart library (`data/preflop/<ruleset>/`) is the answer key:
+/// nodes are sampled by equilibrium reach, the hero's class by its arrival
+/// probability, and the chosen action scores on EV loss through the same
+/// [`NodeStrategy`] machinery as the postflop GTO drill.
+pub fn run_preflop_drill(ruleset: &str) {
+    let charts = match PreflopCharts::load(format!("data/preflop/{ruleset}")) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("{e}");
+            return;
+        }
+    };
+    // (node, per-class arrival) pool; nodes weighted by stored reach.
+    let pool: Vec<(&PreflopNode, Vec<f32>)> = charts
+        .nodes()
+        .filter(|n| n.reach > 0.0)
+        .filter_map(|n| Some((n, charts.class_reach(&n.path)?)))
+        .collect();
+    if pool.is_empty() {
+        eprintln!("no drillable nodes in data/preflop/{ruleset}");
+        return;
+    }
+    let reach_total: f32 = pool.iter().map(|(n, _)| n.reach).sum();
 
     let mut rng = rand::rng();
-    let (mut spots, mut correct) = (0u32, 0u32);
-    println!("poker-trainer — preflop drill (chart accuracy, no EV).");
-    println!("Answer with the shown key or f)old. Empty line or q quits.\n");
+    let mut played = 0u32;
+    let mut matched = 0u32; // picked an action GTO actually uses (>5%)
+    let mut total_ev_loss = 0.0f32;
+    let unit = charts.header.ev_unit.clone();
+    println!(
+        "poker-trainer — preflop drill: {} (EV in {unit}).",
+        charts.header.label
+    );
+    println!("Pick the action by number. Empty line or q quits.\n");
 
     loop {
-        let spot = spots_pool.choose(&mut rng).unwrap();
-        let mut deck = Deck::default();
-        let hero = [deck.deal(&mut rng).unwrap(), deck.deal(&mut rng).unwrap()];
-        let key = &spot.play[..1].to_lowercase();
-
-        println!("Spot #{} — {}", spots + 1, spot.label);
-        println!("  Your hand: {} {}", fmt(hero[0]), fmt(hero[1]));
-        println!("  {}", spot.question);
-        print!("  {key}){} or f)old? > ", &spot.play[1..].to_lowercase());
-        io::stdout().flush().unwrap();
-
-        let mut line = String::new();
-        if io::stdin().read_line(&mut line).unwrap() == 0 {
-            break; // EOF (Ctrl-D)
+        // Sample a node ∝ reach, then the hero's class ∝ arrival × combos —
+        // realistic spots, never a hand that can't get here.
+        let mut roll = rng.random_range(0.0..reach_total);
+        let (node, arrival) = pool
+            .iter()
+            .find(|(n, _)| {
+                roll -= n.reach;
+                roll < 0.0
+            })
+            .unwrap_or(&pool[0]);
+        let weights: Vec<f32> = arrival
+            .iter()
+            .enumerate()
+            .map(|(c, r)| r * preflop::class_combos(c) as f32)
+            .collect();
+        let wsum: f32 = weights.iter().sum();
+        if wsum <= 0.0 {
+            continue;
         }
-        let ans = line.trim().to_lowercase();
-        let chosen = match ans.as_str() {
-            "" | "q" | "quit" => break,
-            "f" | "fold" => "Fold",
-            a if a == key || a == spot.play.to_lowercase() => spot.play,
-            _ => {
-                println!("  (type {key}, f, or q to quit)\n");
-                continue; // re-deal, don't count
+        let mut roll = rng.random_range(0.0..wsum);
+        let class = weights
+            .iter()
+            .position(|w| {
+                roll -= w;
+                roll < 0.0
+            })
+            .unwrap_or(preflop::CLASSES - 1);
+        let hero = deal_class_combo(class, &mut rng);
+
+        println!(
+            "Spot #{} — you're the {}. Pot {:.1}bb, {:.1}bb to call.",
+            played + 1,
+            node.seat,
+            node.pot_bb,
+            node.to_call_bb
+        );
+        let line = preflop_line(&charts, &node.path);
+        if !line.is_empty() {
+            println!("  Action: {}.", line.join(", "));
+        }
+        println!("  Your hand: {} {}", fmt(hero[0]), fmt(hero[1]));
+        for (i, label) in node.actions.iter().enumerate() {
+            println!("    {}) {}", i + 1, label);
+        }
+
+        let Some(input) = prompt("  Your action? (number) > ") else {
+            break;
+        };
+        if matches!(input.as_str(), "" | "q" | "quit") {
+            break;
+        }
+        let Some(chosen) = input
+            .parse::<usize>()
+            .ok()
+            .filter(|n| (1..=node.actions.len()).contains(n))
+        else {
+            println!("  (enter 1..{}, or q to quit)\n", node.actions.len());
+            continue;
+        };
+        let chosen = chosen - 1;
+
+        let freqs = node.freqs_for(class);
+        played += 1;
+        if freqs[chosen] >= stats::GTO_ACTION_FREQ {
+            matched += 1;
+        }
+
+        // EV-loss scoring when the file carries EVs (always, for shipped
+        // data); pure frequency scoring otherwise.
+        let (best, ev_loss) = match node.strategy_for(class) {
+            Some(ns) => {
+                let (best, loss) = (ns.best(), ns.ev_loss(chosen));
+                total_ev_loss += loss;
+                println!("\n  GTO mix:");
+                for i in 0..ns.actions.len() {
+                    println!(
+                        "    {:<16} {:>5.1}%   EV {:+.2}{unit}{}",
+                        ns.actions[i],
+                        ns.frequencies[i] * 100.0,
+                        ns.action_ev[i],
+                        if i == best { "   <- best" } else { "" }
+                    );
+                }
+                println!(
+                    "  You chose {} -> EV loss {:.2}{unit} (GTO plays it {:.1}%).\n",
+                    ns.actions[chosen],
+                    loss,
+                    ns.frequencies[chosen] * 100.0
+                );
+                (best, Some(loss))
+            }
+            None => {
+                let best = (0..freqs.len())
+                    .max_by(|&a, &b| freqs[a].total_cmp(&freqs[b]))
+                    .unwrap_or(0);
+                println!(
+                    "\n  GTO plays {} {:.1}% of the time here (most-played: {}).\n",
+                    node.actions[chosen],
+                    freqs[chosen] * 100.0,
+                    node.actions[best]
+                );
+                (best, None)
             }
         };
 
-        let in_chart = spot
-            .combos
-            .iter()
-            .any(|c| c.contains(&hero[0]) && c.contains(&hero[1]));
-        let best = if in_chart { spot.play } else { "Fold" };
-        let right = chosen == best;
-        spots += 1;
-        if right {
-            correct += 1;
-        }
-        println!(
-            "  Chart says: {best}.  You said {chosen} -> {}\n",
-            if right { "correct" } else { "wrong" }
-        );
-
         stats::record(&stats::StatRecord {
-            formation: spot.formation.into(),
+            formation: ruleset.into(),
             street: "preflop".into(),
-            hand: format!("{}{}", fmt(hero[0]), fmt(hero[1])),
-            line: vec![spot.question.clone()],
-            chosen: chosen.into(),
-            best: best.into(),
-            ev_loss: None,
-            gto_freq: Some(if right { 1.0 } else { 0.0 }),
+            hand: format!("{}{}", hero[0], hero[1]),
+            bucket: preflop::class_name(class),
+            line,
+            chosen: node.actions[chosen].clone(),
+            best: node.actions[best].clone(),
+            ev_loss,
+            gto_freq: Some(freqs[chosen]),
             ..stats::StatRecord::new("preflop")
         });
     }
 
-    report(correct, spots);
+    if played > 0 {
+        println!(
+            "\nSession: {played} spots, {matched} on a GTO action ({:.0}%), avg EV loss {:.3}{unit}.",
+            100.0 * matched as f64 / played as f64,
+            total_ev_loss as f64 / played as f64
+        );
+    } else {
+        println!("\nNo spots played.");
+    }
 }
 
 /// Entry point for `poker-trainer drill gto` (Phase 1, plus Phase 3 live solve).
@@ -1243,28 +1315,61 @@ mod tests {
     use super::*;
 
     #[test]
-    fn preflop_spots_map_seats_to_the_right_chart() {
-        // 3bp-bb-btn: BB (oop) 3-bets, BTN (ip) calls the 3-bet. AA is in
-        // both charts; 72o in neither.
-        let f = crate::solution::formation("3bp-bb-btn").unwrap();
-        let config = SpotConfig {
-            oop_range: "AA,KK".into(),
-            ip_range: "AA,QQ".into(),
-            ..SpotConfig::for_formation("3bp-bb-btn", "data/ranges").unwrap()
+    fn dealt_class_combos_map_back_to_their_class() {
+        let mut rng = rand::rng();
+        for class in [0, 1, 13, 84, 168] {
+            for _ in 0..20 {
+                let combo = deal_class_combo(class, &mut rng);
+                assert_ne!(combo[0], combo[1]);
+                assert_eq!(crate::preflop::class_index(combo), class, "class {class}");
+            }
+        }
+    }
+
+    #[test]
+    fn preflop_lines_render_seats_and_verbs() {
+        // A tiny synthetic chart: UTG folds, CO opens 2.5bb, BB to act.
+        let dir = std::env::temp_dir().join(format!("pt-line-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let node = |path: &str, seat: &str, actions: &[&str]| {
+            serde_json::json!({
+                "path": path, "seat": seat, "pot_bb": 4.0, "to_call_bb": 2.5,
+                "reach": 0.5,
+                "actions": actions,
+                "freqs": actions.iter().map(|_| vec![0.5f32; 169]).collect::<Vec<_>>(),
+            })
+            .to_string()
         };
-        let spots = preflop_spots(f, &config).unwrap();
-        let in_chart = |s: &PreflopSpot, a: &str, b: &str| {
-            let (a, b) = (Card::try_from(a).unwrap(), Card::try_from(b).unwrap());
-            s.combos.iter().any(|c| c.contains(&a) && c.contains(&b))
-        };
-        // First spot: the 3-bettor (BB) raises off the oop chart.
-        assert_eq!(spots[0].play, "Raise");
-        assert!(spots[0].question.contains("BB facing BTN"));
-        assert!(in_chart(&spots[0], "Ks", "Kd") && !in_chart(&spots[0], "Qs", "Qd"));
-        // Second spot: the opener (BTN) calls off the ip chart.
-        assert_eq!(spots[1].play, "Call");
-        assert!(in_chart(&spots[1], "Qs", "Qd") && !in_chart(&spots[1], "Ks", "Kd"));
-        assert!(!in_chart(&spots[1], "7s", "2d"));
+        std::fs::write(
+            dir.join("header.json"),
+            serde_json::json!({
+                "version": 1, "ruleset": "t", "label": "t", "config": {},
+                "config_hash": "00000000", "ev_unit": "bb",
+                "generator": {"version": "0", "traversals": 1, "seed": 1},
+            })
+            .to_string(),
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("starter.jsonl"),
+            [
+                node("", "UTG", &["Fold", "Raise to 2.5bb"]),
+                node("f", "CO", &["Fold", "Raise to 2.5bb", "All-in"]),
+                node("f-r2.5", "BB", &["Fold", "Call"]),
+            ]
+            .join("\n"),
+        )
+        .unwrap();
+
+        let charts = PreflopCharts::load(&dir).unwrap();
+        assert_eq!(
+            preflop_line(&charts, "f-r2.5"),
+            vec!["UTG folds", "CO raises to 2.5bb"]
+        );
+        assert_eq!(preflop_line(&charts, ""), Vec::<String>::new());
+
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]
