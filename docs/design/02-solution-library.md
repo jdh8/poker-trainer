@@ -57,10 +57,16 @@ Curate our own charts (start: the current two, plus CO-vs-BB, SB-vs-BB,
 BB-vs-BTN-3bet). Do **not** copy commercial solver outputs wholesale —
 individual frequencies are facts, but bulk-copying a charted product is
 legally gray and against the project's clean-license posture. Hand-curated
-training-grade charts are fine; a solved preflop tree is explicitly out of
-scope (06).
+training-grade charts are fine; solving preflop is out of scope *for the
+postflop solver* (06) — it now has its own permissive MCCFR crate,
+`preflop-gen` ([07](07-preflop-solver.md)), whose solved charts live under
+`data/preflop/` and are **not** derived from, nor a replacement for, these
+range files.
 
-These files double as the preflop drill's answer key (04).
+These files remain the postflop solves' input ranges. `drill preflop` now
+scores against the solved `data/preflop/` charts instead (07); a future
+`export-range` condensing a solved line into weighted arrival ranges is named
+in 07, not built.
 
 ## Formations
 
@@ -118,7 +124,8 @@ regenerated locally (document the manifest command in README).
 
 ## Out of scope
 
-- Solving preflop to derive charts (06 explains why).
+- Solving preflop *with the postflop engine* (06 explains why); preflop has
+  its own solver crate ([07](07-preflop-solver.md)).
 - Limped pots, straddles, ante formats — add as formations later if drilling
   demand shows up; the schema already carries them.
 - A database. Files + an index JSON scale past any realistic local library.

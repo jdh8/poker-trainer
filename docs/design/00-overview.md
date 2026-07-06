@@ -8,14 +8,16 @@ around them.
 
 This doc is the map: the parity matrix, the invariants every phase must keep,
 the phase sequence, and the honest out-of-scope list. Each area has its own
-design doc (`01`–`06`).
+design doc (`01`–`07`).
 
 ## Invariants (every phase must keep these)
 
 1. **License seam.** The trainer never links `postflop-solver`. The solver is
    only ever reached across a process boundary (shell-out for one-shot solves;
    a long-lived `solve-gen serve` subprocess speaking line-delimited JSON for
-   tree sessions — see 01). AGPL stays inside `crates/solve-gen`.
+   tree sessions — see 01). AGPL stays inside `crates/solve-gen`. The preflop
+   generator `crates/preflop-gen` is MIT/Apache original code and must never
+   link the solver either (both seams are cargo-tree test-enforced).
 2. **Neutral, versioned data formats.** Everything the trainer reads is a
    format defined in `src/solution.rs` (or a sibling), never the solver's own
    serialization. Formats carry a version and old files keep parsing.
@@ -40,13 +42,13 @@ design doc (`01`–`06`).
 | Range-builder drills + leak buckets | ✅ `drill range` | — |
 | **Full-hand practice** (flop→river vs. equilibrium villain) | ✅ `drill hand` (`--board` spots; curated-library sampling not yet built) | — |
 | Persistent session stats, leak trends | ✅ `stats` over `history.jsonl` | — |
-| Preflop charts + preflop drills | ✅ `drill preflop` off the charts (accuracy-only, no EV) | — |
+| Preflop charts + preflop drills | ✅ solved 6-max charts (`crates/preflop-gen` MCCFR: cash + Poker Chase ICM ladder), EV-loss `drill preflop`, web tree browser | [07](07-preflop-solver.md) |
 | Formation breadth (positions, 3-bet pots, stack depths, rake) | ✅ config-side (5 formations, rake, manifests); breadth tiers solve locally | data-gen → [02](02-solution-library.md) |
 | Hand-history import & leak analysis | ✅ `analyze` (PS+GG import, EV-loss scoring, blunder replay, `--jsonl`) | — |
 | Custom spot solving (ranges/sizes/stacks) | ✅ `--board` + knobs | — |
 | **Nodelocking** (lock villain, re-solve exploit) | ✅ lock editor + presets + saved lock files | — |
-| ICM / MTT postflop | ❌ (engine lacks it) | research → [06](06-solver-capabilities.md) |
-| Multiway postflop | ❌ (engine is 2-player) | out of scope → [06](06-solver-capabilities.md) |
+| ICM / MTT postflop | ❌ (engine lacks it) — preflop ICM ✅ via `preflop-gen` payout vectors | research → [06](06-solver-capabilities.md); preflop → [07](07-preflop-solver.md) |
+| Multiway postflop | ❌ (engine is 2-player) — preflop multiway ✅ in `preflop-gen` (no-Nash caveat, 07) | out of scope → [06](06-solver-capabilities.md) |
 
 ## The keystone: from extracted nodes to tree sessions
 
@@ -77,7 +79,8 @@ P4–P10 are shipped**; the table is kept for the dependency map.
 | **P8** | Aggregate flop reports + equity/blocker tools — done | M | P6 | [03](03-study-mode.md) |
 | **P9** | `analyze`: hand-history import, EV-loss + leak report | L | P4, P6 | [05](05-analyze.md) |
 | **P10** | Nodelocking end-to-end (lock, re-solve, compare) + presets + saved-lock files — done | M | P4, P7 | [06](06-solver-capabilities.md) |
-| — | ICM (solver fork), bunching, multiway | research | — | [06](06-solver-capabilities.md) |
+| **P11** | Preflop MCCFR solver + solved chart library (6-max, size menus, antes, ICM) — done | L | — | [07](07-preflop-solver.md) |
+| — | ICM postflop (solver fork), bunching, multiway postflop | research | — | [06](06-solver-capabilities.md) |
 
 P4 and P6 were independent and both unblocked most of the rest; P4 was the
 keystone. What remains open: spot filters + curated-library sampling for

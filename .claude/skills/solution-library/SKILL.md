@@ -85,9 +85,9 @@ flop     texture   node    combos   bet%  ev(bb)  mix
 
 4. Regenerate with the tier recipe above.
 5. Confirm 3 new files per flop appeared: `ls -t data/solutions | head`.
-6. `cargo test` (formation/spot tests live in `src/solution.rs` and
-   `src/trainer.rs` — `drill preflop` reads every formation's charts, so a
-   malformed range file fails there), then the full done checklist.
+6. `cargo test` (formation/spot tests live in `src/solution.rs`), then the
+   full done checklist. (`drill preflop` no longer reads these files — it
+   uses the solved `data/preflop/` charts below.)
 
 ## Add a new breadth tier
 
@@ -96,3 +96,34 @@ card-string lists, plus the generated keyword `"all-iso-flops"` (the 1,755
 suit-isomorphic flops). `broad-95` is the next tier the docs name (~95 flops;
 no manifest exists yet). New tiers' outputs stay untracked — that is the git
 policy, not an accident.
+
+## The preflop chart library (design 07)
+
+Separate from the postflop snapshots: `crates/preflop-gen` (permissive MCCFR,
+no solver link) solves the rulesets in `manifests/preflop/*.toml` into
+`data/preflop/<id>/`:
+
+```sh
+scripts/idle-run.sh cargo run -p preflop-gen --release -- gen
+```
+
+Resumable: a ruleset whose `header.json` `config_hash` matches its manifest
+is skipped. ~15 min per 6-max ruleset (48M hands); one-off custom configs go
+through `preflop-gen solve --ruleset my.toml` and land gitignored. The exact
+HU equity table (`data/preflop/equity-hu-169.json`) is committed and only
+regenerates via `preflop-gen equity` (a few minutes) if deliberately changed.
+
+Git policy — the **inverse** of solutions: `header.json` + `starter.jsonl`
+for the four shipped rulesets ARE committed (the web browser on Pages and a
+fresh-clone `drill preflop` read them); `charts.jsonl` (full export) is
+gitignored. Never hand-edit; commit a regen only when the manifest or the
+generator deliberately changed — the diff is then the point. Never commit a
+custom ruleset directory.
+
+Verify a preflop regen:
+- `cargo test -p preflop-gen` — includes `shipped_charts_have_sane_shapes`
+  (monotone RFI, BB defense, ICM ladder direction) against the committed
+  starters.
+- `printf '1\nq\n' | cargo run -- drill preflop --ruleset poker-chase-40` —
+  one scored spot end-to-end (run-app skill has the recipes).
+- `git status data/preflop` shows only deliberate starter/header diffs.

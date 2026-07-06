@@ -1,8 +1,10 @@
 # Design 06 — Solver capabilities: nodelocking, ICM, multiway, bunching
 
 **Status: current** against the pinned rev; P10 shipped (M1 + M2; the
-deferred trio is listed below); ICM/multiway remain out of scope. Current
-state lives in [00-overview](00-overview.md).
+deferred trio is listed below); ICM/multiway remain out of scope **for this
+postflop engine** — preflop ICM/multiway ship separately via the permissive
+`preflop-gen` MCCFR crate ([07](07-preflop-solver.md)). Current state lives
+in [00-overview](00-overview.md).
 
 What the engine under `solve-gen` can and cannot do, verified against the
 pinned rev (`9d1509f`) — and what that makes cheap, expensive, or impossible.
@@ -17,7 +19,7 @@ Everything here stays AGPL-side; the trainer only ever sees protocol JSON.
 | Rake | ✅ `rake_rate`/`rake_cap` in `TreeConfig` | plumb through in 02; trivial |
 | Game save/load | ✅ `save_data_to_file` (behind `bincode` feature, enabled) | the 01 solve cache |
 | Solve accuracy knobs | ✅ target exploitability, iteration cap, 16-bit compression | expose in `SpotConfig`/CLI |
-| Preflop trees | ❌ (`BoardState::Flop` is the earliest root) | preflop stays chart-data (02) |
+| Preflop trees | ❌ (`BoardState::Flop` is the earliest root) | preflop has its own MCCFR crate (07); this engine is unchanged |
 | ICM / custom terminal utility | ❌ chip-EV payoffs only | fork-level work; research |
 | >2 players | ❌ two-player engine | out of scope |
 
@@ -81,10 +83,11 @@ transform there, i.e. a **fork of postflop-solver** maintained in (or beside)
 `solve-gen` — AGPL-compatible, but real CFR-internals work plus validation
 against known ICM solutions.
 
-Interim stance (what pre-2023 commercial tools did): MTT formations solve as
-chip-EV with ICM-aware *preflop* charts (02 data), and every MTT-labeled
-output carries a "chip-EV postflop" caveat. The fork happens only if MTT
-training becomes this project's actual use case.
+Interim stance (what pre-2023 commercial tools did), now shipped: MTT
+formations solve as chip-EV postflop with ICM-aware *preflop* charts — solved
+ones, via `preflop-gen`'s Malmuth–Harville payout vectors (07) — and every
+MTT-labeled output carries a "chip-EV postflop" caveat. The fork happens only
+if MTT training becomes this project's actual use case.
 
 ## Multiway — out of scope, permanently-until-proven-otherwise
 

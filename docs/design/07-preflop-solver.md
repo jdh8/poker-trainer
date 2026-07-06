@@ -1,8 +1,9 @@
 # 07 — Preflop solver: solved 6-max charts (`crates/preflop-gen`)
 
-Status: **M1–M3 shipped** (format seam, game engine, equity/ICM machinery,
-MCCFR core validated against published heads-up push/fold Nash); M4–M8 land
-in order (milestones below). Reverses the "preflop stays chart-data" stance of
+Status: **shipped end to end** (M1–M8): solver, four committed rulesets,
+EV-loss drill, web tree browser. The MCCFR core is validated against
+published heads-up push/fold Nash; committed charts are shape-tested in CI.
+Reverses the "preflop stays chart-data" stance of
 [02](02-solution-library.md)/[06](06-solver-capabilities.md) — for preflop
 only. The postflop engine's limits are unchanged.
 
@@ -82,8 +83,8 @@ folded to CO, CO opens 2.5bb, BTN folds, SB calls — BB to act.
 
 ```
 data/preflop/<ruleset>/header.json    # committed: config echo + hash + provenance + ev_unit
-data/preflop/<ruleset>/starter.jsonl  # committed: nodes with reach >= starter_reach
-data/preflop/<ruleset>/charts.jsonl   # gitignored: full export, reach >= export_reach
+data/preflop/<ruleset>/starter.jsonl  # committed: nodes with reach >= starter_reach (0.002 ≈ 200-300 nodes, ~2 MB)
+data/preflop/<ruleset>/charts.jsonl   # gitignored: full export, reach >= export_reach (0.0002)
 data/preflop/index.json               # committed: ruleset ids, written by `gen`
 data/preflop/equity-hu-169.json       # committed: exact 169x169 HU equity table
 ```
@@ -110,24 +111,38 @@ deliberately changed. Custom local rulesets are gitignored wholesale.
 
 ## Solver core (M2–M5)
 
-- **Algorithm**: external-sampling MCCFR, regret-matching+, linear strategy
-  averaging, seeded (deterministic per seed+budget). Per iteration a real
-  52-card deck is dealt, giving exact card removal for free; per-action EV
-  exports as average counterfactual value (`cfv_sum / weight`).
-- **Terminals**: fold-wins pay the pot unraked. All-in showdowns use exact
-  169×169 equity heads-up and a Monte-Carlo k-way cache (sorted class tuple
-  → per-player pot share, disk-persisted) multiway. Non-all-in pots that see
-  a flop are valued as equity × a static **realization factor** table (IP >
-  OOP, playability-scaled) — *the* load-bearing approximation of the whole
-  design; upgrade path: calibrate R against the in-repo `data/solutions/`
-  postflop outputs (reading solve-gen JSON, no AGPL link). An `R ≡ 1.0`
-  check-down baseline stays behind a flag for A/B.
+- **Algorithm**: external-sampling MCCFR, regret-matching+, linearly
+  weighted averaging with a **delayed-averaging warm-up** (first 20% of the
+  budget updates regrets only, so averages and EVs never carry the early
+  uniform-strategy noise). Seeded and single-threaded per solve
+  (deterministic per seed+budget); parallelism is across rulesets — `gen`'s
+  four manifests solve as independent processes. Per hand a real 52-card
+  deck is dealt (exact card removal for free); per-action EV exports as
+  average counterfactual value (`cfv_sum / weight`), a value vs the evolving
+  average profile.
+- **Terminals**: fold-wins pay the pot unraked. All-in showdowns use the
+  exact 169×169 class table heads-up; 3+-way showdowns sample ~200 runouts
+  **from the hand's actual remaining deck** per visit — unbiased,
+  blocker-exact, bounded cost. (A memoized class-tuple cache was tried and
+  lost: 5/6-way tuples almost never repeat, so it degenerated to one fresh
+  20k-board estimate per terminal plus unbounded memory.) Non-all-in pots
+  that see a flop are valued as equity × a static **realization factor**
+  table (`r_factor`: playability × position × multiway; IP > OOP) — *the*
+  load-bearing approximation of the whole design; upgrade path: calibrate R
+  against the in-repo `data/solutions/` postflop outputs (reading solve-gen
+  JSON, no AGPL link). An `R ≡ 1.0` check-down baseline stays behind
+  `solve --check-down` for A/B.
 - **ICM**: Malmuth–Harville over the paid places, applied at terminals.
   Split pots fold into the share vector; SeeFlop under ICM commits the
-  ICM(E[stack]) ≈ E[ICM(stack)] approximation.
-- **Convergence**: HU rulesets stop on exact best-response exploitability;
-  6-max runs a fixed traversal budget and records checkpointed strategy
-  drift in the header provenance.
+  ICM(E[stack]) ≈ E[ICM(stack)] approximation. `stack_bb` is the post-ante
+  betting stack (antes are sunk, so they cancel from every action comparison
+  while still inflating the contested pot).
+- **Convergence**: HU rulesets have exact best-response exploitability
+  (per-player, constant-sum-corrected). 6-max runs the manifest's hand
+  budget (48M ≈ 15 min per ruleset in parallel) and records the probe-set
+  strategy drift in the header provenance; macro shapes (RFI%, defense
+  frequencies) stabilize long before the last mixed-frequency decimals —
+  raise `traversals` when sharper mixes matter.
 
 ## Consumers
 
@@ -159,8 +174,8 @@ deliberately changed. Custom local rulesets are gitignored wholesale.
 | M1 | `src/preflop.rs` seam, `game.rs`, manifests, `tree`, pinned counts | ✅ |
 | M2 | HU exact equity table + k-way MC cache; Malmuth–Harville + terminal valuer | ✅ |
 | M3 | MCCFR core; HU push/fold vs published Nash (`#[ignore]`) | ✅ |
-| M4 | R-factors, export, cash100 solve + committed starter, license test | — |
-| M5 | Poker Chase ladder solves + ICM direction tests | — |
-| M6 | `drill preflop` v2 (EV-loss, reach sampling) | — |
-| M7 | web tree browser | — |
-| M8 | docs sweep (00/02/06/README/skill) | — |
+| M4 | R-factors, export, `solve`/`gen` CLI, cash100 solve + committed starter, license test | ✅ |
+| M5 | Poker Chase ladder solves + committed-chart shape tests | ✅ |
+| M6 | `drill preflop` v2 (EV-loss, reach sampling, `--ruleset`) | ✅ |
+| M7 | web tree browser | ✅ |
+| M8 | docs sweep (00/02/06/README/skill) | ✅ |

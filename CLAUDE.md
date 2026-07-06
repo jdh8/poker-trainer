@@ -21,8 +21,10 @@ Three-crate workspace: root `poker-trainer` (MIT OR Apache-2.0, lib + bin),
   ([design 01](docs/design/01-tree-protocol.md)).
 - **NEVER** commit new files under `data/solutions/` (gitignored by design —
   only the starter-8 tier is tracked) and **never** `git add -f` there.
-- **NEVER** hand-edit `data/solutions/*.json`: it's generated output.
-  Regenerate instead (solution-library skill).
+- **NEVER** hand-edit `data/solutions/*.json` or `data/preflop/**`: generated
+  output. Regenerate instead (solution-library skill). Unlike solutions, the
+  preflop starter tiers ARE committed — commit a regen only when the manifest
+  or preflop-gen deliberately changed.
 - **NEVER** run solver generation bare on this shared machine — wrap it in
   `scripts/idle-run.sh` (solution-library skill).
 - **NEVER** run `table` or a bare `drill` in a headless session — they block
@@ -87,6 +89,10 @@ minutes cold): run `cargo test -- --ignored` only when touching `tree.rs`,
 - `manifests/preflop/<id>.toml` — one preflop ruleset (seats, blinds, ante,
   raise menus, optional ICM payouts) per file; solved by `preflop-gen` into
   `data/preflop/<id>/` (design 07).
+- `data/preflop/<ruleset>/{header.json,starter.jsonl}` — committed solved
+  preflop charts (path-addressed nodes); `charts.jsonl` (full export) is
+  gitignored and regenerates via `preflop-gen gen` (~15 min per ruleset,
+  idle-run it).
 
 ## Conventions
 

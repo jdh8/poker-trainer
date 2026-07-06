@@ -21,7 +21,7 @@ cargo run -- drill pot-odds   # call/fold vs. break-even pot odds (Monte-Carlo e
 cargo run -- drill gto        # act vs. a precomputed GTO solution (Phase 1)
 cargo run -- drill range      # assign your whole range by bucket; leak stats (Phase 2)
 cargo run -- drill hand --board Td9d6h   # play full hands vs. the GTO villain (Phase 5)
-cargo run -- drill preflop    # open/defend/3-bet decisions scored vs. chart files (Phase 6)
+cargo run -- drill preflop    # 6-max preflop spots scored on EV loss vs. solved charts (P11)
 cargo run -- table            # browse a solved spot's strategy as a 13×13 grid
 cargo run -- stats            # leak report over your recorded drill history
 cargo run -- report           # aggregate flop report over the library (Phase 8)
@@ -31,10 +31,23 @@ cargo run -- analyze hh/*.txt # score your real hands vs. equilibrium (Phase 9)
 ### Web examples
 
 [`web/`](web/) is a browser catalog of the human-facing examples — equity
-calculator, pot-odds drill, preflop-chart browser (the crate compiled to
-wasm), and a GTO strategy grid over the committed starter-8 snapshots. It deploys to GitHub
-Pages on every push to `main`; see [web/README.md](web/README.md) to build and
-serve it locally.
+calculator, pot-odds drill (the crate compiled to wasm), a GTO-Wizard-style
+preflop chart tree browser over the committed `data/preflop/` starter tiers,
+and a GTO strategy grid over the committed starter-8 snapshots. It deploys to
+GitHub Pages on every push to `main`; see [web/README.md](web/README.md) to
+build and serve it locally.
+
+### Preflop charts
+
+`drill preflop` and the web browser read solved 6-max charts from
+`data/preflop/<ruleset>/`. Committed rule sets: `cash100` (100bb cash) and
+the Poker Chase ICM ladder `poker-chase-{25,40,60}` (0.25bb ante, 4-2-1
+payouts); pick one with `--ruleset`. They're produced by the permissive
+in-repo MCCFR generator ([design 07](docs/design/07-preflop-solver.md)):
+
+```sh
+cargo run -p preflop-gen --release -- gen    # re-solve stale rule sets
+```
 
 The `gto` drill needs solution files; generate them with the (AGPL) solver
 crate, which walks a **manifest** of (formation × flop set) entries and skips
