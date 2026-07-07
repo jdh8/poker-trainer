@@ -28,6 +28,7 @@
   --act-bet1: #d98243;
   --act-bet2: #c0392b;
   --act-bet3: #8e2437;
+  --act-allin: #6d3f9e;  /* amethyst — All-in, distinct from aggression reds */
 }
 
 * { box-sizing: border-box; }

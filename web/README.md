@@ -15,7 +15,7 @@ wasm-pack build --release --target web   # writes pkg/ (gitignored)
 mkdir -p solutions
 cp ../data/solutions/*.json solutions/
 (cd ../data/solutions && ls *.json | jq -R . | jq -s -c .) > solutions/index.json
-cp -r ../data/preflop preflop            # preflop chart browser data
+ln -s ../data/preflop preflop            # preflop chart browser data (symlink — never goes stale)
 python3 -m http.server 8000              # http://localhost:8000
 ```
 

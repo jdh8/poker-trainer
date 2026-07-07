@@ -189,7 +189,14 @@ async function pfInit() {
     $('pf-head').textContent = 'Preflop charts not staged — see web/README for the local copy step.';
     return;
   }
-  $('pf-ruleset').innerHTML = ids.map(id => `<option value="${id}">${id}</option>`).join('');
+  // family asc, blind level desc — robust to non-cash ids (e.g. poker-chase-10)
+  const parse = id => { const m = id.match(/^(.*?)-?(\d+)$/); return m ? [m[1], +m[2]] : [id, 0]; };
+  const pfLabel = id => {
+    const m = id.match(/^(.*?)-?(\d+)$/);
+    return m ? `${m[1].replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} ${m[2]} BB` : id;
+  };
+  ids.sort((a, b) => { const [an, av] = parse(a), [bn, bv] = parse(b); return an < bn ? -1 : an > bn ? 1 : bv - av; });
+  $('pf-ruleset').innerHTML = ids.map(id => `<option value="${id}">${pfLabel(id)}</option>`).join('');
   $('pf-ruleset').onchange = () => pfLoad($('pf-ruleset').value);
   await pfLoad(ids[0]);
 }
@@ -209,6 +216,7 @@ let grClasses = {}; // class name -> [strategy entries]
 function actionColor(label, i, actions) {
   if (/^fold/i.test(label)) return 'var(--act-fold)';
   if (/^(check|call)/i.test(label)) return 'var(--act-passive)';
+  if (/^all-?in/i.test(label)) return 'var(--act-allin)';
   // aggressive: darker red for the larger sizes, by position among bets/raises
   const aggr = actions.filter(a => !/^(fold|check|call)/i.test(a));
   const k = aggr.indexOf(label);
