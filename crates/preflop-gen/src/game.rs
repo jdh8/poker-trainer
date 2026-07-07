@@ -75,7 +75,8 @@ pub struct Ruleset {
     pub sb: f32,
     /// Big blind (the unit everything else is measured in).
     pub bb: f32,
-    /// Ante per player, dead in the pot (0.25 in Poker Chase).
+    /// Ante per player, dead in the pot (0 for cash; a tournament ruleset
+    /// sets it).
     #[serde(default)]
     pub ante_bb: f32,
     /// Open-raise sizes, absolute bb ("raise to").
@@ -96,6 +97,11 @@ pub struct Ruleset {
     /// (0 = open-jams allowed, 2 = jam only vs a 3-bet or later). A 6-bet is
     /// always jam-only.
     pub jam_from_level: u8,
+    /// Push/fold model: forbid limps (unopened = fold or raise) and skip the
+    /// BB's option, so the tree matches the classic jam-or-fold game. Default
+    /// off — cash rulesets allow limps.
+    #[serde(default)]
+    pub no_limps: bool,
     /// Rake taken from the pot (0.05 = 5%). No flop, no drop: fold-win pots
     /// are never raked.
     #[serde(default)]
@@ -169,8 +175,12 @@ impl Ruleset {
 pub enum Action {
     /// Give up the hand (and any blind already posted).
     Fold,
-    /// Match the current bet (calling a jam commits the full stack).
+    /// Match the current bet (calling a jam commits the full stack). Limping
+    /// is a call of the big blind in an unopened pot.
     Call,
+    /// Pass with no chips in an unraised pot — the BB's option, or a check
+    /// behind limpers. Never offered when facing a bet.
+    Check,
     /// Raise to a fixed amount below the stack.
     RaiseTo(u32),
     /// Jam the full stack.
@@ -178,11 +188,12 @@ pub enum Action {
 }
 
 impl Action {
-    /// The action-path token: `f | c | r<to-bb> | ai` (design 07).
+    /// The action-path token: `f | c | x | r<to-bb> | ai` (design 07).
     pub fn token(&self) -> String {
         match self {
             Action::Fold => "f".into(),
             Action::Call => "c".into(),
+            Action::Check => "x".into(),
             Action::RaiseTo(cb) => format!("r{}", fmt_bb(*cb)),
             Action::AllIn => "ai".into(),
         }
@@ -193,6 +204,7 @@ impl Action {
         match self {
             Action::Fold => "Fold".into(),
             Action::Call => "Call".into(),
+            Action::Check => "Check".into(),
             Action::RaiseTo(cb) => format!("Raise to {}bb", fmt_bb(*cb)),
             Action::AllIn => "All-in".into(),
         }
@@ -225,6 +237,10 @@ pub struct State {
     pub level: u8,
     /// Someone called the open before a 3-bet (selects the squeeze menu).
     pub had_caller: bool,
+    /// The BB still has its option: an unraised pot never returned to it.
+    /// Limps make `committed == cur_bet` reachable mid-round, so the option
+    /// can't be inferred from chips alone.
+    bb_option: bool,
     /// Seat to act, or [`CLOSED`] when betting is over.
     actor: u8,
 }
@@ -263,6 +279,7 @@ impl State {
             cur_bet: to_cb(rs.bb),
             level: 0,
             had_caller: false,
+            bb_option: true,
             actor: 0,
         }
     }
@@ -304,20 +321,26 @@ impl State {
     }
 
     /// Legal actions for the acting seat, appended to `out` (cleared first).
-    /// Fold is always first; Call second when facing a bet. No limps: the
-    /// unopened options are fold or raise, and a walk ends the hand before
-    /// the BB would ever "act" unopened.
-    // ponytail: limps excluded — they roughly double the tree; the upgrade is
-    // a limp token plus a check-closes-round rule (paths stay valid).
+    /// Facing a bet: fold or call, then the level's raises. Unraised and
+    /// already matched (the BB's option): check or raise — no free fold.
+    /// Everyone else unopened may fold, limp (call), or open. A walk still
+    /// ends the hand when everyone folds to the BB (it never acts).
+    // ponytail: a raise over limpers reuses the open menu (absolute bb); a
+    // dedicated iso-size is the upgrade if limped-pot charts need it.
     pub fn legal(&self, rs: &Ruleset, out: &mut Vec<Action>) {
         out.clear();
-        out.push(Action::Fold);
-        if self.level > 0 {
-            out.push(Action::Call);
-        }
+        let me = self.actor as usize;
         let stack = rs.stack();
-        if self.cur_bet >= stack {
-            return; // facing a jam: fold or call only
+        if self.committed[me] >= self.cur_bet {
+            out.push(Action::Check); // BB option in an unraised pot; no free fold
+        } else {
+            out.push(Action::Fold);
+            if self.level > 0 || !rs.no_limps {
+                out.push(Action::Call); // a limp at level 0, else facing a bet
+            }
+            if self.cur_bet >= stack {
+                return; // facing a jam: fold or call only
+            }
         }
         let mult = |m: &f32| ((self.cur_bet as f32) * m).round() as u32;
         let raises: Vec<u32> = match self.level {
@@ -350,6 +373,7 @@ impl State {
         let stack = rs.stack();
         match a {
             Action::Fold => s.folded |= 1 << me,
+            Action::Check => {} // the BB's option: no chips, no level change
             Action::Call => {
                 s.committed[me] = self.cur_bet.min(stack);
                 if s.committed[me] == stack {
@@ -373,16 +397,23 @@ impl State {
             }
         }
 
-        // Next actor: the first live, not-all-in seat after `me` that hasn't
-        // matched the bet. (A seat matching `cur_bet` mid-level can't exist
-        // preflop without limps, so "committed < cur_bet" is exact.)
+        // Next actor: the first live, not-all-in seat after `me` still owing
+        // chips — plus the BB's one-time option in an unraised pot (it posted
+        // `cur_bet` as a blind but never acted). Limps make `committed ==
+        // cur_bet` reachable mid-round, so the option needs its own flag.
         let n = rs.n();
+        let bb_seat = n - 1;
+        if me == bb_seat {
+            s.bb_option = false; // the BB has now acted
+        }
         s.actor = CLOSED;
         if s.live(rs).count_ones() > 1 {
             for k in 1..=n {
                 let seat = (me + k) % n;
                 let bit = 1u8 << seat;
-                if s.folded & bit == 0 && s.all_in & bit == 0 && s.committed[seat] < s.cur_bet {
+                let owes = s.committed[seat] < s.cur_bet;
+                let bb_opt = seat == bb_seat && s.bb_option && s.level == 0 && !rs.no_limps;
+                if s.folded & bit == 0 && s.all_in & bit == 0 && (owes || bb_opt) {
                     s.actor = seat as u8;
                     break;
                 }
@@ -404,6 +435,7 @@ impl State {
         eat(self.all_in);
         eat(self.level);
         eat(self.had_caller as u8);
+        eat(self.bb_option as u8);
         for b in self.cur_bet.to_le_bytes() {
             eat(b);
         }
@@ -507,6 +539,31 @@ mod tests {
         Ruleset::load(format!("{dir}/{name}.toml")).unwrap()
     }
 
+    /// A 6-max ruleset with a dead ante — no shipped cash ruleset has one,
+    /// so ante/pot math is covered inline.
+    fn six_max_ante() -> Ruleset {
+        toml::from_str(
+            r#"
+            id = "ante6"
+            label = "6-max 40bb, 0.25 ante"
+            seats = ["UTG", "HJ", "CO", "BTN", "SB", "BB"]
+            stack_bb = 40.0
+            sb = 0.5
+            bb = 1.0
+            ante_bb = 0.25
+            open_to_bb = [2.0, 2.5, 3.0]
+            threebet_mult = [2.0, 3.0, 4.0]
+            squeeze_mult = [4.0]
+            fourbet_mult = [2.3]
+            fivebet_mult = [2.2]
+            jam_from_level = 2
+            [solver]
+            traversals = 1000
+            "#,
+        )
+        .unwrap()
+    }
+
     /// A tiny hand-checkable ruleset: HU, 10bb, jam-or-fold.
     fn hu_pushfold() -> Ruleset {
         toml::from_str(
@@ -538,21 +595,21 @@ mod tests {
     }
 
     #[test]
-    fn hu_pushfold_is_the_textbook_two_node_game() {
+    fn hu_pushfold_limp_and_option_tree() {
         let rs = hu_pushfold();
         let stats = tree_stats(&rs);
         assert_eq!(
             stats,
             TreeStats {
-                decisions: 2, // SB jam/fold, BB call/fold
-                states: 2,
-                edges: 4,
-                fold_wins: 2, // SB folds; SB jams, BB folds
-                allin_2way: 1,
+                decisions: 4, // SB fold/limp/jam, BB option, SB-vs-jam, BB-vs-jam
+                states: 4,
+                edges: 9,
+                fold_wins: 3,  // SB folds; limp→BB-jam→SB folds; SB jams→BB folds
+                allin_2way: 2, // limp→BB jam→SB call; SB jam→BB call
                 allin_multi: 0,
-                flop_2way: 0,
+                flop_2way: 1, // SB limps, BB checks its option
                 flop_multi: 0,
-                max_depth: 2,
+                max_depth: 3,
             }
         );
 
@@ -570,7 +627,7 @@ mod tests {
 
     #[test]
     fn pot_counts_antes_and_dead_blinds() {
-        let rs = manifest("poker-chase-40");
+        let rs = six_max_ante();
         // Root pot: 0.5 + 1.0 blinds + 6 × 0.25 ante = 3bb.
         assert_eq!(State::root(&rs).pot(&rs), 300);
         // UTG opens 2.5bb, HJ folds: their commitments both stay in the pot.
@@ -584,12 +641,28 @@ mod tests {
         let rs = manifest("cash100");
         let mut acts = Vec::new();
 
-        // Unopened: fold or open, no call, no jam (jam_from_level = 2).
+        // Unopened: fold, limp, or open — no jam (jam_from_level = 2).
         State::root(&rs).legal(&rs, &mut acts);
         assert_eq!(
             acts,
             vec![
                 Action::Fold,
+                Action::Call,
+                Action::RaiseTo(200),
+                Action::RaiseTo(250),
+                Action::RaiseTo(300)
+            ]
+        );
+
+        // Limped around to the BB: its option is check or raise, never a
+        // free fold. jam_from_level = 2, so no open-jam here.
+        let st = replay(&rs, "c-c-c-c-c").unwrap();
+        assert_eq!(st.to_act(), Some(5)); // BB
+        st.legal(&rs, &mut acts);
+        assert_eq!(
+            acts,
+            vec![
+                Action::Check,
                 Action::RaiseTo(200),
                 Action::RaiseTo(250),
                 Action::RaiseTo(300)
@@ -671,7 +744,8 @@ mod tests {
     #[test]
     fn replay_rejects_illegal_tokens() {
         let rs = manifest("cash100");
-        assert!(replay(&rs, "c").is_err()); // no limps
+        assert!(replay(&rs, "c").is_ok()); // a limp is now legal
+        assert!(replay(&rs, "x").is_err()); // UTG can't check unopened, only limp
         assert!(replay(&rs, "r5").is_err()); // not a menu size
         assert!(replay(&rs, "f-f-f-f-f-f").is_err()); // past the walk
     }
@@ -691,102 +765,86 @@ mod tests {
     #[test]
     fn shipped_manifests_load_and_validate() {
         for id in [
-            "cash100",
-            "poker-chase-10",
-            "poker-chase-25",
-            "poker-chase-40",
-            "poker-chase-60",
+            "cash5", "cash10", "cash15", "cash20", "cash32", "cash50", "cash75", "cash100",
+            "cash150",
         ] {
             let rs = manifest(id);
             assert_eq!(rs.id, id);
             assert_eq!(rs.n(), 6);
+            assert!(rs.icm_payouts.is_none()); // all cash: chip-EV
         }
-        assert_eq!(manifest("poker-chase-10").jam_from_level, 0);
-        assert_eq!(manifest("poker-chase-25").jam_from_level, 1);
-        assert!(manifest("cash100").icm_payouts.is_none());
-        assert_eq!(
-            manifest("poker-chase-40").icm_payouts,
-            Some(vec![4.0, 2.0, 1.0, 0.0, 0.0, 0.0])
-        );
+        // "Jams earlier" ladder: push/fold short, jam-vs-open mid, jam-vs-3bet deep.
+        assert_eq!(manifest("cash5").jam_from_level, 0);
+        assert_eq!(manifest("cash15").jam_from_level, 0);
+        assert_eq!(manifest("cash20").jam_from_level, 0);
+        assert_eq!(manifest("cash50").jam_from_level, 1);
+        assert_eq!(manifest("cash100").jam_from_level, 2);
+        assert_eq!(manifest("cash150").jam_from_level, 2);
     }
 
-    /// Regression pin for the shipped trees. If a rule change moves these
-    /// numbers, that's a *deliberate* re-solve of every ruleset — update the
-    /// pins and the design-07 table together.
+    /// Regression pin for the shipped trees (a representative subset of the
+    /// cash depth ladder). If a rule change moves these numbers, that's a
+    /// *deliberate* re-solve of every ruleset — update the pins and the
+    /// design-07 table together. Limps + the BB option add the passive-pot
+    /// branches at every depth.
     #[test]
     fn shipped_tree_counts_are_pinned() {
-        // The sized 5-bet level (design 07) makes every depth distinct: the
-        // deeper the stack, the more 5-bet/6-bet branches survive below it.
-        // pc-25 still reaches a 5-bet on the small-3-bet lines; only the
-        // largest line's 27.6bb 4-bet collapses into the jam.
+        // cash75 and cash150 share this exact shape (same jam_from_level, no
+        // size collapses at any of the depths); only the equilibrium differs.
         assert_eq!(
             tree_stats(&manifest("cash100")),
             TreeStats {
-                decisions: 1_021_694,
-                states: 363_216,
-                edges: 2_201_204,
-                fold_wins: 157_822,
-                allin_2way: 351_105,
-                allin_multi: 532_350,
-                flop_2way: 52_134,
-                flop_multi: 86_100,
+                decisions: 7_281_536,
+                states: 1_184_149,
+                edges: 15_762_495,
+                fold_wins: 1_199_455,
+                allin_2way: 2_567_124,
+                allin_multi: 3_675_714,
+                flop_2way: 412_391,
+                flop_multi: 626_276,
+                max_depth: 31,
+            }
+        );
+        assert_eq!(
+            tree_stats(&manifest("cash50")),
+            TreeStats {
+                decisions: 4_355_454,
+                states: 900_507,
+                edges: 9_422_529,
+                fold_wins: 711_653,
+                allin_2way: 1_529_486,
+                allin_multi: 2_210_154,
+                flop_2way: 243_307,
+                flop_multi: 372_476,
+                max_depth: 31,
+            }
+        );
+        assert_eq!(
+            tree_stats(&manifest("cash20")),
+            TreeStats {
+                decisions: 656_116,
+                states: 274_598,
+                edges: 1_413_375,
+                fold_wins: 101_175,
+                allin_2way: 224_217,
+                allin_multi: 343_725,
+                flop_2way: 33_422,
+                flop_multi: 54_721,
                 max_depth: 26,
             }
         );
         assert_eq!(
-            tree_stats(&manifest("poker-chase-60")),
+            tree_stats(&manifest("cash10")),
             TreeStats {
-                decisions: 810_252,
-                states: 305_959,
-                edges: 1_744_958,
-                fold_wins: 124_460,
-                allin_2way: 277_714,
-                allin_multi: 423_404,
-                flop_2way: 40_983,
-                flop_multi: 68_146,
-                max_depth: 26,
-            }
-        );
-        assert_eq!(
-            tree_stats(&manifest("poker-chase-40")),
-            TreeStats {
-                decisions: 348_722,
-                states: 173_533,
-                edges: 749_216,
-                fold_wins: 51_778,
-                allin_2way: 117_671,
-                allin_multi: 185_338,
-                flop_2way: 16_716,
-                flop_multi: 28_992,
+                decisions: 147_048,
+                states: 92_542,
+                edges: 316_251,
+                fold_wins: 22_187,
+                allin_2way: 49_363,
+                allin_multi: 78_421,
+                flop_2way: 7_248,
+                flop_multi: 11_985,
                 max_depth: 22,
-            }
-        );
-        assert_eq!(
-            tree_stats(&manifest("poker-chase-25")),
-            TreeStats {
-                decisions: 162_411,
-                states: 99_793,
-                edges: 348_131,
-                fold_wins: 23_315,
-                allin_2way: 53_989,
-                allin_multi: 87_810,
-                flop_2way: 7_345,
-                flop_multi: 13_262,
-                max_depth: 22,
-            }
-        );
-        assert_eq!(
-            tree_stats(&manifest("poker-chase-10")),
-            TreeStats {
-                decisions: 17_704,
-                states: 15_501,
-                edges: 37_726,
-                fold_wins: 2_324,
-                allin_2way: 5_594,
-                allin_multi: 10_048,
-                flop_2way: 691,
-                flop_multi: 1_366,
-                max_depth: 17,
             }
         );
     }

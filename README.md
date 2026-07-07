@@ -40,10 +40,11 @@ build and serve it locally.
 ### Preflop charts
 
 `drill preflop` and the web browser read solved 6-max charts from
-`data/preflop/<ruleset>/`. Committed rule sets: `cash100` (100bb cash) and
-the Poker Chase ICM ladder `poker-chase-{10,25,40,60}` (0.25bb ante, 4-2-1
-payouts; 10bb is the push/fold endplay rung); pick one with `--ruleset`. They're produced by the permissive
-in-repo MCCFR generator ([design 07](docs/design/07-preflop-solver.md)):
+`data/preflop/<ruleset>/`. Committed rule sets: the cash depth ladder
+`cash{5,10,15,20,32,50,75,100,150}` (6-max, 5% rake, chip-EV, limps enabled;
+the shallow rungs play push/fold), pick one with `--ruleset`. They're produced by
+the permissive in-repo MCCFR generator
+([design 07](docs/design/07-preflop-solver.md)):
 
 ```sh
 cargo run -p preflop-gen --release -- gen    # re-solve stale rule sets

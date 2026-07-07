@@ -237,11 +237,11 @@ mod tests {
         assert_eq!(charts.header.ev_unit, "bb");
         assert_eq!(charts.header.config_hash.len(), 8);
 
-        // Root (SB jam/fold) and the jam-facing node both export; the root
-        // has full reach.
+        // Root (SB fold/limp/jam) and the jam-facing node both export; the
+        // root has full reach.
         let root = charts.node("").unwrap();
         assert_eq!(root.seat, "SB");
-        assert_eq!(root.actions, vec!["Fold", "All-in"]);
+        assert_eq!(root.actions, vec!["Fold", "Call", "All-in"]);
         assert!((root.reach - 1.0).abs() < 1e-6);
         assert_eq!(root.pot_bb, 1.5);
         let vs_jam = charts.node("ai").unwrap();
@@ -267,9 +267,9 @@ mod tests {
     }
 
     /// The committed starter tiers must keep their poker shapes (design 07
-    /// M4/M5): monotone RFI toward the button, wide BB defense, correct EV
-    /// units, and depth-monotone behavior across the Poker Chase ladder.
-    /// Guards accidental regens as much as solver regressions.
+    /// M4/M5): monotone entry toward the button, wide BB defense, correct EV
+    /// units, and a wide open/jam range at the push/fold rungs of the cash
+    /// depth ladder. Guards accidental regens as much as solver regressions.
     #[test]
     fn shipped_charts_have_sane_shapes() {
         let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/preflop");
@@ -288,42 +288,38 @@ mod tests {
 
         let cash = load("cash100");
         assert_eq!(cash.header.ev_unit, "bb");
-        let rfi: Vec<f64> = ["", "f", "f-f", "f-f-f"]
+        // Entry freq (1 − fold: limp + raise) rises toward the button; limps
+        // are near-zero deep, so this still tracks RFI.
+        let entry: Vec<f64> = ["", "f", "f-f", "f-f-f"]
             .iter()
             .map(|p| continue_freq(&cash, p))
             .collect();
-        for w in rfi.windows(2) {
-            assert!(w[0] < w[1], "RFI not monotone toward the button: {rfi:?}");
+        for w in entry.windows(2) {
+            assert!(
+                w[0] < w[1],
+                "entry not monotone toward the button: {entry:?}"
+            );
         }
-        assert!((0.08..0.28).contains(&rfi[0]), "UTG RFI {rfi:?}");
-        assert!((0.28..0.60).contains(&rfi[3]), "BTN RFI {rfi:?}");
+        assert!((0.08..0.30).contains(&entry[0]), "UTG entry {entry:?}");
+        assert!((0.28..0.65).contains(&entry[3]), "BTN entry {entry:?}");
         assert!(
             continue_freq(&cash, "f-f-f-r2.5-f") > 0.40,
             "BB defense vs BTN 2.5x"
         );
 
-        // Poker Chase ladder: ICM payout units; shallower opens tighter.
-        let (pc10, pc25, pc40, pc60) = (
-            load("poker-chase-10"),
-            load("poker-chase-25"),
-            load("poker-chase-40"),
-            load("poker-chase-60"),
-        );
-        for pc in [&pc10, &pc25, &pc40, &pc60] {
-            assert_eq!(pc.header.ev_unit, "payout");
+        // Cash depth ladder: every rung is chip-EV. Even the 10bb push/fold
+        // rung keeps a real, position-monotone range — rake makes short-stack
+        // cash tighter than deep (no postflop edge, taxed marginal opens), so
+        // this is a sanity floor, not a "wider than deep" claim.
+        let (c50, c20, c10) = (load("cash50"), load("cash20"), load("cash10"));
+        for c in [&cash, &c50, &c20, &c10] {
+            assert_eq!(c.header.ev_unit, "bb");
         }
-        let btn = |c: &PreflopCharts| continue_freq(c, "f-f-f");
+        let (utg10, btn10) = (continue_freq(&c10, ""), continue_freq(&c10, "f-f-f"));
         assert!(
-            btn(&pc25) < btn(&pc40),
-            "25bb should open tighter than 40bb: {} vs {}",
-            btn(&pc25),
-            btn(&pc40)
+            utg10 < btn10,
+            "10bb entry not monotone: UTG {utg10} vs BTN {btn10}"
         );
-        // 10bb is push/fold endplay: the BTN plays a wide open/jam range.
-        assert!(
-            btn(&pc10) > 0.35,
-            "10bb BTN open/jam too narrow: {}",
-            btn(&pc10)
-        );
+        assert!((0.20..0.55).contains(&btn10), "10bb BTN open/jam {btn10}");
     }
 }

@@ -331,12 +331,29 @@ mod tests {
     #[test]
     fn icm_pressure_beats_chips() {
         // The defining ICM fact: at even stacks, a ~50/50 flip for stacks is
-        // *negative* tournament equity though it's zero chip-EV. The 25bb
-        // ladder rung offers the 3-bet jam (jam_from_level = 1).
-        let rs = crate::game::Ruleset::load(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../../manifests/preflop/poker-chase-25.toml"
-        ))
+        // *negative* tournament equity though it's zero chip-EV. Inline 25bb
+        // ICM ruleset (no shipped cash ruleset carries payouts); the 3-bet jam
+        // is live (jam_from_level = 1).
+        let rs: crate::game::Ruleset = toml::from_str(
+            r#"
+            id = "icm25"
+            label = "6-max 25bb ICM"
+            seats = ["UTG", "HJ", "CO", "BTN", "SB", "BB"]
+            stack_bb = 25.0
+            sb = 0.5
+            bb = 1.0
+            ante_bb = 0.25
+            open_to_bb = [2.0, 2.5, 3.0]
+            threebet_mult = [2.0, 3.0, 4.0]
+            squeeze_mult = [4.0]
+            fourbet_mult = [2.3]
+            fivebet_mult = [2.2]
+            jam_from_level = 1
+            icm_payouts = [4.0, 2.0, 1.0, 0.0, 0.0, 0.0]
+            [solver]
+            traversals = 1000
+            "#,
+        )
         .unwrap();
         let v = TerminalValuer::new(&rs);
         let eq = even_cache();

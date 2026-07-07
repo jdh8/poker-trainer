@@ -42,7 +42,7 @@ design doc (`01`–`07`).
 | Range-builder drills + leak buckets | ✅ `drill range` | — |
 | **Full-hand practice** (flop→river vs. equilibrium villain) | ✅ `drill hand` (`--board` spots; curated-library sampling not yet built) | — |
 | Persistent session stats, leak trends | ✅ `stats` over `history.jsonl` | — |
-| Preflop charts + preflop drills | ✅ solved 6-max charts (`crates/preflop-gen` MCCFR: cash + Poker Chase ICM ladder), EV-loss `drill preflop`, web tree browser | [07](07-preflop-solver.md) |
+| Preflop charts + preflop drills | ✅ solved 6-max charts (`crates/preflop-gen` MCCFR: cash depth ladder 5–150bb, limps + BB option), EV-loss `drill preflop`, web tree browser | [07](07-preflop-solver.md) |
 | Formation breadth (positions, 3-bet pots, stack depths, rake) | ✅ config-side (5 formations, rake, manifests); breadth tiers solve locally | data-gen → [02](02-solution-library.md) |
 | Hand-history import & leak analysis | ✅ `analyze` (PS+GG import, EV-loss scoring, blunder replay, `--jsonl`) | — |
 | Custom spot solving (ranges/sizes/stacks) | ✅ `--board` + knobs | — |

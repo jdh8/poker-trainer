@@ -78,12 +78,13 @@ pub fn class_combos(i: usize) -> u32 {
 }
 
 /// The path token of a stored action label (the inverse of the generator's
-/// label rendering): `"Fold"` → `"f"`, `"Call"` → `"c"`, `"Raise to 7.5bb"`
-/// → `"r7.5"`, `"All-in"` → `"ai"`.
+/// label rendering): `"Fold"` → `"f"`, `"Call"` → `"c"`, `"Check"` → `"x"`,
+/// `"Raise to 7.5bb"` → `"r7.5"`, `"All-in"` → `"ai"`.
 pub fn label_token(label: &str) -> String {
     match label {
         "Fold" => "f".into(),
         "Call" => "c".into(),
+        "Check" => "x".into(),
         "All-in" => "ai".into(),
         raise => format!(
             "r{}",
@@ -411,6 +412,7 @@ mod tests {
         for (label, tok) in [
             ("Fold", "f"),
             ("Call", "c"),
+            ("Check", "x"),
             ("All-in", "ai"),
             ("Raise to 2.5bb", "r2.5"),
             ("Raise to 17.25bb", "r17.25"),

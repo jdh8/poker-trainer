@@ -1,8 +1,9 @@
 # 07 — Preflop solver: solved 6-max charts (`crates/preflop-gen`)
 
-Status: **shipped end to end** (M1–M8): solver, four committed rulesets,
-EV-loss drill, web tree browser. The MCCFR core is validated against
-published heads-up push/fold Nash; committed charts are shape-tested in CI.
+Status: **shipped end to end** (M1–M8): solver, a committed seven-rung cash
+depth ladder, EV-loss drill, web tree browser. The MCCFR core is validated
+against published heads-up push/fold Nash (the `no_limps` reference game);
+committed charts are shape-tested in CI.
 Reverses the "preflop stays chart-data" stance of
 [02](02-solution-library.md)/[06](06-solver-capabilities.md) — for preflop
 only. The postflop engine's limits are unchanged.
@@ -13,7 +14,7 @@ GTO-Wizard-style preflop charts (6-max, multiple open/3-bet sizes, ICM,
 antes) cannot come from `postflop-solver`: it is heads-up, postflop-rooted
 (`BoardState::Flop`), chip-EV only. No open-source alternative covers the
 requirement, and vendor charts are ToS-restricted and can't express custom
-rule sets like Poker Chase anyway. So `crates/preflop-gen` implements the
+rule sets (arbitrary depths, limps, ICM, antes) anyway. So `crates/preflop-gen` implements the
 standard recipe itself: external-sampling MCCFR over the 169 canonical hand
 classes on a capped preflop betting tree.
 
@@ -29,25 +30,30 @@ and preflop-gen depends on the trainer, the same direction as solve-gen.
 One TOML per rule set: seats (acting order, blinds always the last two),
 uniform effective stack, blinds, per-player dead ante, the raise menus
 (`open_to_bb`, `threebet_mult`, `squeeze_mult`, `fourbet_mult`,
-`fivebet_mult`, `jam_from_level`), rake (`no flop no drop`), optional
-`icm_payouts` (absent =
+`fivebet_mult`, `jam_from_level`), `no_limps` (push/fold model — default off),
+rake (`no flop no drop`), optional `icm_payouts` (absent =
 chip-EV cash), and `[solver]` knobs (traversals, seed, export/starter reach).
 The header written next to every solve echoes the config verbatim and carries
 its FNV-1a `config_hash`; `gen` skips rulesets whose hash already matches
 (the solve-gen resumability contract).
 
-Shipped rulesets: `cash100` (6-max 100bb, 5% rake capped at 3bb) and the
-Poker Chase ladder `poker-chase-{10,25,40,60}` (0.25bb ante ⇒ 3bb root pot, ICM
-payouts 4-2-1-0-0-0, no rake; 25bb offers the jam from vs-open on, 10bb is the
-push/fold endplay rung with open-jams live from the start).
+Shipped rulesets: the cash depth ladder `cash{5,10,15,20,32,50,75,100,150}` —
+6-max, 5% rake capped at 3bb, chip-EV, limps enabled. 32bb is the geometric
+mean of 50 and 20. `jam_from_level` rises with depth (150/100/75bb jam only vs
+a 3-bet; 50/32bb offer the jam vs an open; 20bb and shorter are open-jam/fold),
+so the short rungs are effectively push/fold while still allowing a limp.
 
 ## The betting tree (`game.rs`)
 
 A pure state machine — never materialized. Integer centi-bb pot math. Rules,
 each a ruleset knob with a named ceiling:
 
-- **No limps**: unopened action is fold-or-raise; a walk ends the hand before
-  the BB ever acts unopened. (Upgrade: a limp token + check-closes-round.)
+- **Limps**: an unopened seat may fold, limp (call the big blind), or open.
+  In a limped, unraised pot the BB has its option — **check** (`x`, closes the
+  round to a flop) or raise over the limpers (open menu, absolute bb). A walk
+  still ends the hand when everyone folds to the BB. `no_limps = true` restores
+  the classic push/fold tree (fold-or-raise, no BB option) — used by the HU
+  Nash reference.
 - Raise ladder: open (menu, absolute bb) → 3-bet (menu × the open; a single
   squeeze size once the open has a caller) → 4-bet (single size × the 3-bet)
   → 5-bet (single size × the 4-bet) → 6-bet jam-only. All-in joins the menu
@@ -68,24 +74,32 @@ Measured trees under the shipped menus (`preflop-gen tree`, pinned by
 
 | ruleset | decisions | distinct states | edges | fold-wins | all-in SD (multi) | flops (multi) | depth |
 |---|---|---|---|---|---|---|---|
-| cash100 | 1,021,694 | 363,216 | 2,201,204 | 157,822 | 883,455 (532,350) | 138,234 (86,100) | 26 |
-| poker-chase-60 | 810,252 | 305,959 | 1,744,958 | 124,460 | 701,118 (423,404) | 109,129 (68,146) | 26 |
-| poker-chase-40 | 348,722 | 173,533 | 749,216 | 51,778 | 303,009 (185,338) | 45,708 (28,992) | 22 |
-| poker-chase-25 | 162,411 | 99,793 | 348,131 | 23,315 | 141,799 (87,810) | 20,607 (13,262) | 22 |
-| poker-chase-10 | 17,704 | 15,501 | 37,726 | 2,324 | 15,642 (10,048) | 2,057 (1,366) | 17 |
+| cash150 | 7,281,536 | 1,184,149 | 15,762,495 | 1,199,455 | 6,242,838 (3,675,714) | 1,038,667 (626,276) | 31 |
+| cash100 | 7,281,536 | 1,184,149 | 15,762,495 | 1,199,455 | 6,242,838 (3,675,714) | 1,038,667 (626,276) | 31 |
+| cash75 | 7,281,536 | 1,184,149 | 15,762,495 | 1,199,455 | 6,242,838 (3,675,714) | 1,038,667 (626,276) | 31 |
+| cash50 | 4,355,454 | 900,507 | 9,422,529 | 711,653 | 3,739,640 (2,210,154) | 615,783 (372,476) | 31 |
+| cash32 | 2,320,842 | 629,260 | 5,014,533 | 372,881 | 1,997,466 (1,188,916) | 323,345 (197,074) | 27 |
+| cash20 | 656,116 | 274,598 | 1,413,375 | 101,175 | 567,942 (343,725) | 88,143 (54,721) | 26 |
+| cash15 | 364,328 | 188,438 | 784,131 | 55,507 | 316,002 (192,574) | 48,295 (30,072) | 22 |
+| cash10 | 147,048 | 92,542 | 316,251 | 22,187 | 127,784 (78,421) | 19,233 (11,985) | 22 |
+| cash5 | 24,380 | 20,446 | 51,987 | 3,259 | 21,494 (13,725) | 2,855 (1,881) | 17 |
 
-(The sized 5-bet level makes every depth distinct — deeper stacks keep more
-5-bet/6-bet branches below the 4-bet. At 25bb only the largest line's 27.6bb
-4-bet collapses into the jam; at 10bb the tree is push/fold — open, open-jam,
-or fold.)
+(Limps + the BB option add the passive-pot branches at every depth, roughly
+7× the old no-limp counts at 100bb. cash75/100/150 share an identical tree
+shape — same `jam_from_level`, and no raise size reaches any of the stacks — so
+only their equilibria differ. The `jam_from_level` ladder makes the shallower rungs
+collapse the deep 4-bet/5-bet branches into the jam; at 5–20bb the tree is
+essentially open-jam/fold plus the limp.)
 
 ## Node addressing (path grammar)
 
-Tokens `f | c | r<to-bb> | ai` joined by `-`; the root is the empty string.
-Raise amounts are "raise to" in bb with trailing zeros trimmed (`r2.5`,
-`r17.25`). The acting seat is implied by replaying the path (deterministic
-order), and stored denormalized in each node. Example: `f-f-r2.5-f-c` =
-folded to CO, CO opens 2.5bb, BTN folds, SB calls — BB to act.
+Tokens `f | c | x | r<to-bb> | ai` joined by `-`; the root is the empty string.
+`c` is a call (a limp at the unopened root), `x` the BB's check. Raise amounts
+are "raise to" in bb with trailing zeros trimmed (`r2.5`, `r17.25`). The acting
+seat is implied by replaying the path (deterministic order), and stored
+denormalized in each node. Example: `f-f-r2.5-f-c` = folded to CO, CO opens
+2.5bb, BTN folds, SB calls — BB to act; `c-c-c-c-c-x` = limped around, BB
+checks its option to a six-way flop.
 
 ## Output format (`src/preflop.rs`, format v1)
 
@@ -123,8 +137,9 @@ deliberately changed. Custom local rulesets are gitignored wholesale.
   weighted averaging with a **delayed-averaging warm-up** (first 20% of the
   budget updates regrets only, so averages and EVs never carry the early
   uniform-strategy noise). Seeded and single-threaded per solve
-  (deterministic per seed+budget); parallelism is across rulesets — `gen`'s
-  four manifests solve as independent processes. Per hand a real 52-card
+  (deterministic per seed+budget); parallelism is across rulesets — the
+  ladder's manifests solve as independent single-threaded processes (one core
+  each; fan out under `idle-run.sh` on a shared box). Per hand a real 52-card
   deck is dealt (exact card removal for free); per-action EV exports as
   average counterfactual value (`cfv_sum / weight`), a value vs the evolving
   average profile.
@@ -147,10 +162,12 @@ deliberately changed. Custom local rulesets are gitignored wholesale.
   while still inflating the contested pot).
 - **Convergence**: HU rulesets have exact best-response exploitability
   (per-player, constant-sum-corrected). 6-max runs the manifest's hand
-  budget (48M ≈ 15 min per ruleset in parallel) and records the probe-set
-  strategy drift in the header provenance; macro shapes (RFI%, defense
-  frequencies) stabilize long before the last mixed-frequency decimals —
-  raise `traversals` when sharper mixes matter.
+  budget (48M hands; the deep limp-inclusive rungs are ~3× the state count of
+  the old no-limp trees, so a fanned-out batch is tens of minutes) and records
+  the probe-set strategy drift in the header provenance; macro shapes (RFI%,
+  defense frequencies) stabilize long before the last mixed-frequency decimals
+  — raise `traversals` when sharper mixes matter, especially on the rarely
+  reached limp lines.
 
 ## Consumers
 
@@ -183,7 +200,7 @@ deliberately changed. Custom local rulesets are gitignored wholesale.
 | M2 | HU exact equity table + k-way MC cache; Malmuth–Harville + terminal valuer | ✅ |
 | M3 | MCCFR core; HU push/fold vs published Nash (`#[ignore]`) | ✅ |
 | M4 | R-factors, export, `solve`/`gen` CLI, cash100 solve + committed starter, license test | ✅ |
-| M5 | Poker Chase ladder solves + committed-chart shape tests | ✅ |
+| M5 | cash depth ladder solves (limps + BB option) + committed-chart shape tests | ✅ |
 | M6 | `drill preflop` v2 (EV-loss, reach sampling, `--ruleset`) | ✅ |
 | M7 | web tree browser | ✅ |
 | M8 | docs sweep (00/02/06/README/skill) | ✅ |

@@ -107,23 +107,41 @@ no solver link) solves the rulesets in `manifests/preflop/*.toml` into
 scripts/idle-run.sh cargo run -p preflop-gen --release -- gen
 ```
 
+`gen` is **sequential** (one core, one ruleset at a time). Because each solve
+is single-threaded, fan out across the nine cash rulesets to use spare cores
+— build once, then one polite `solve` per ruleset (the engine or a manifest
+change means all rungs re-solve; `solve` doesn't skip on a matching hash the
+way `gen` does):
+
+```sh
+cargo build -p preflop-gen --release
+for r in cash5 cash10 cash15 cash20 cash32 cash50 cash75 cash100 cash150; do
+  setsid nohup scripts/idle-run.sh \
+    ./target/release/preflop-gen solve --ruleset manifests/preflop/$r.toml \
+    >/tmp/preflop-$r.log 2>&1 </dev/null &
+done
+wait                                            # ~tens of minutes on spare cores
+cargo run -p preflop-gen --release -- gen       # refresh index.json (no re-solve)
+```
+
 Resumable: a ruleset whose `header.json` `config_hash` matches its manifest
-is skipped. ~15 min per 6-max ruleset (48M hands); one-off custom configs go
-through `preflop-gen solve --ruleset my.toml` and land gitignored. The exact
-HU equity table (`data/preflop/equity-hu-169.json`) is committed and only
-regenerates via `preflop-gen equity` (a few minutes) if deliberately changed.
+is skipped by `gen`. The deep limp-inclusive rungs (75/100/150bb ≈ 1.18M
+states) run longer than the shallow ones; one-off custom configs go through
+`preflop-gen solve --ruleset my.toml` and land gitignored. The exact HU equity
+table (`data/preflop/equity-hu-169.json`) is committed and only regenerates
+via `preflop-gen equity` (a few minutes) if deliberately changed.
 
 Git policy — the **inverse** of solutions: `header.json` + `starter.jsonl`
-for the four shipped rulesets ARE committed (the web browser on Pages and a
-fresh-clone `drill preflop` read them); `charts.jsonl` (full export) is
+for the nine shipped cash rulesets ARE committed (the web browser on Pages
+and a fresh-clone `drill preflop` read them); `charts.jsonl` (full export) is
 gitignored. Never hand-edit; commit a regen only when the manifest or the
 generator deliberately changed — the diff is then the point. Never commit a
 custom ruleset directory.
 
 Verify a preflop regen:
 - `cargo test -p preflop-gen` — includes `shipped_charts_have_sane_shapes`
-  (monotone RFI, BB defense, ICM ladder direction) against the committed
-  starters.
-- `printf '1\nq\n' | cargo run -- drill preflop --ruleset poker-chase-40` —
+  (monotone entry toward the button, BB defense, chip-EV units, wide short-stack
+  open/jam) against the committed starters.
+- `printf '1\nq\n' | cargo run -- drill preflop --ruleset cash20` —
   one scored spot end-to-end (run-app skill has the recipes).
 - `git status data/preflop` shows only deliberate starter/header diffs.

@@ -19,7 +19,7 @@ enum Command {
         mode: Mode,
 
         /// Preflop drill only: the solved chart set under data/preflop/
-        /// (e.g. cash100, poker-chase-40).
+        /// (e.g. cash100, cash20).
         #[arg(long, default_value = "cash100")]
         ruleset: String,
 

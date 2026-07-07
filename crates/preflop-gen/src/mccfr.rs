@@ -385,6 +385,7 @@ mod tests {
             squeeze_mult = [3.0]
             fourbet_mult = [2.3]
             jam_from_level = 0
+            no_limps = true
             [solver]
             traversals = 1000
             seed = {seed}
