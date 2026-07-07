@@ -21,4 +21,4 @@ icm_payouts = [4.0, 2.0, 1.0, 0.0, 0.0, 0.0]
 traversals = 48000000
 seed = 1
 export_reach = 0.0002
-starter_reach = 0.002
+starter_reach = 0.0002

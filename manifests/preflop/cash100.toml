@@ -19,4 +19,4 @@ rake_cap_bb = 3.0
 traversals = 48000000
 seed = 1
 export_reach = 0.0002
-starter_reach = 0.002
+starter_reach = 0.0002

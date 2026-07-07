@@ -41,7 +41,7 @@
     "solver": {
       "export_reach": 0.0002,
       "seed": 1,
-      "starter_reach": 0.002,
+      "starter_reach": 0.0002,
       "traversals": 48000000
     },
     "squeeze_mult": [
@@ -54,7 +54,7 @@
       4.0
     ]
   },
-  "config_hash": "c7c487ab",
+  "config_hash": "287045f3",
   "ev_unit": "payout",
   "generator": {
     "version": "0.1.0",
