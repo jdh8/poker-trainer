@@ -91,6 +91,95 @@ only their equilibria differ. The `jam_from_level` ladder makes the shallower ru
 collapse the deep 4-bet/5-bet branches into the jam; at 5–20bb the tree is
 essentially open-jam/fold plus the limp.)
 
+## Limp scope — SB-only (decided 2026-07-08, not yet built)
+
+The shipped ladder above enables limps at **every** seat, which *is* the ~7×
+blow-up: early-position limps spawn multiway limped pots (4/5/6-way flops plus a
+multiway BB option). Decided refinement: gate limps to **SB only** (the last
+unopened non-BB seat). An SB complete is heads-up vs BB — one branch, a 2-way
+flop — so this keeps the single strategically load-bearing limp while shedding
+almost all of the 7×. Encoded as a limp-*scope* knob (`none` = today's
+`no_limps` push/fold · `sb` = new default for the cash ladder · `all` = the
+current multiway behaviour).
+
+Deliberately **no per-seat open menus** — one global `open_to_bb = [2, 2.5, 3]`
+for all seats, SB included. An isolated SB-vs-BB solve (100bb, cash rake, tested
+under both the single- and three-size 3-bet menus) found SB's open sizing ≈
+every other seat's: 2.5 and 3 both live, the 2bb open a harmless ~0.6%
+EV-neutral crumb, and offering 3.5/4 drew ~27% frequency for **+0.002–0.004 bb**
+(noise) — flat EV above 2.5bb, i.e. size-*indifference*, not a wish to open
+bigger. SB's ideal menu `{limp, 2.5, 3}` is thus the global menu minus one 0.6%
+button; a per-seat-menu refactor to delete that crumb isn't worth it. Building
+`sb` scope will re-pin the tree counts and re-commit the ladder's starter
+charts.
+
+## Re-raise menu — 3-bet `{3, 4}`, multiplier-sized (decided 2026-07-08, not yet built)
+
+Shipped `threebet_mult = [2, 3, 4]` carries a dead button and loses nothing by
+trimming to two. From the SB-vs-BB and `[BTN,SB,BB]` diagnostics:
+
+- **Drop the 2× min-3-bet.** ≤0.5% in *every* 3-bet spot measured — IP (BTN vs
+  CO), both OOP blinds, and blind-vs-blind. A 2×-the-open 3-bet is too small to
+  raise for value or fold equity, so the solver routes around it: dominated, not
+  rare-but-crucial, so its near-zero frequency is a safe drop signal.
+- **Don't add a 5×.** OOP piles onto the 4× ceiling (~8%), which *looks* like a
+  wish to go bigger — but offering `{3,4,5,6}` makes the mass **spread evenly
+  across 4/5/6** (not climb to 6×) for **+0.004 bb** (noise). Flat EV above 4×:
+  size-indifference, not a binding ceiling. OOP wants *at least* 4× (3× is too
+  small OOP) and nothing beyond it. Result: **`threebet_mult = [3.0, 4.0]`** —
+  3× the IP size, 4× the OOP size, each earning its keep. 4-bets stay the single
+  `[2.3]` (at 100bb the over-3-bet action is mostly fold/call/**jam** anyway).
+
+Sizing stays **multiplicative** (× the open / × the prior raise), never absolute
+bb: a reraise's correct size scales with the bet it raises over (a fixed-bb
+3-bet is oversized vs small opens, undersized vs large ones). Opens stay
+absolute-vs-BB because they have no prior raise to scale off — the deliberate
+hybrid already in `game.rs`; pot-relative would be marginally more geometric but
+isn't worth the machinery for the ante-free cash ladder.
+
+**Methodology — the ceiling test.** Mass piling on a menu's top size is *not*
+evidence the strategy wants bigger; as often it is flat-EV indifference. Raise
+the ceiling and watch: mass that **climbs** to the new top is real; mass that
+**spreads** is indifferent. This called three sizing decisions in a row (SB open
+3.5/4, OOP 3-bet 5/6) — run it before widening any menu.
+
+## Depth ladder — Fibonacci, shifted up one from HU (decided 2026-07-08, not yet built)
+
+The shipped cash ladder `{5,10,15,20,32,50,75,100,150}` is ad-hoc — though the
+doc already reaches for log-spacing ("32 is the geometric mean of 20 and 50").
+Formalize that instinct. The HU reference is already pure Fibonacci
+`heads-up{3,5,8,13,21,34,55,89}` (constant ×φ ≈ 1.618 per rung — uniform
+log-spacing of stack depth). Give 6-max the **same ladder shifted up one
+Fibonacci index**:
+
+```
+HU:     3   5   8  13  21  34  55  89
+6-max:      5   8  13  21  34  55  89  144
+```
+
+Drop the 3bb jam-only floor (HU spin/hyper territory, not 6-max cash) and add a
+144bb ceiling (≈ the retired 150 top). Same rung count, φ-spaced, and the two
+formats stay one clean step apart, so "HU-89 vs 6max-89" names one depth.
+
+- **89 replaces 100 as the flagship.** Fibonacci brackets 100 with 89 and 144;
+  snap to 89 (~12% shallower, the nearest φ rung). No round-number depth is
+  sacred to a trainer, and the SB-limp/`{3,4}` menu study (run at 100bb)
+  transfers — 12% of depth doesn't move the sizing conclusions.
+- **Keep the 5bb floor.** 6-way jam/fold ≠ HU jam/fold (Nash jam ranges tighten
+  with more seats behind), and it's the cheapest tree in the ladder. Swapping the
+  10/15/20/32/50/75 rungs for 8/13/21/34/55 is lateral, not a loss.
+- **Cap at 144.** 233bb (next Fibonacci) is 200bb+ deep-cash niche and the most
+  expensive tree (longest raise ladder before all-in) — add it when someone
+  actually trains that deep.
+
+**Zero marginal cost.** The SB-only-limp and `threebet_mult = [3, 4]` decisions
+above already force a full re-solve of every rung; re-depthing to Fibonacci rides
+that same pass, so the new depths cost no extra generation time. `jam_from_level`
+re-assigns per new depth (deep rungs jam only vs a 3-bet, mid rungs offer the jam
+vs an open, short rungs open-jam/fold — exact thresholds tuned at build). Re-pins
+the shipped tree counts and re-commits the ladder's starter charts, same as the
+menu changes.
+
 ## Node addressing (path grammar)
 
 Tokens `f | c | x | r<to-bb> | ai` joined by `-`; the root is the empty string.
