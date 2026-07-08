@@ -1,6 +1,6 @@
 # 07 — Preflop solver: solved 6-max charts (`crates/preflop-gen`)
 
-Status: **shipped end to end** (M1–M8): solver, a committed seven-rung cash
+Status: **shipped end to end** (M1–M8): solver, a committed eight-rung cash
 depth ladder, EV-loss drill, web tree browser. The MCCFR core is validated
 against published heads-up push/fold Nash (the `no_limps` reference game);
 committed charts are shape-tested in CI.
@@ -190,8 +190,9 @@ Tokens `f | c | x | r<to-bb> | ai` joined by `-`; the root is the empty string.
 are "raise to" in bb with trailing zeros trimmed (`r2.5`, `r17.25`). The acting
 seat is implied by replaying the path (deterministic order), and stored
 denormalized in each node. Example: `f-f-r2.5-f-c` = folded to CO, CO opens
-2.5bb, BTN folds, SB calls — BB to act; `c-c-c-c-c-x` = limped around, BB
-checks its option to a six-way flop.
+2.5bb, BTN folds, SB calls — BB to act; `f-f-f-f-c-x` = folded to the SB, SB
+completes, BB checks its option to a heads-up flop (the only limp `sb` scope
+allows; `all` scope also reaches multiway limps like `c-c-c-c-c-x`).
 
 ## Output format (`src/preflop.rs`, format v1)
 
@@ -254,18 +255,21 @@ deliberately changed. Custom local rulesets are gitignored wholesale.
   while still inflating the contested pot).
 - **Convergence**: HU rulesets have exact best-response exploitability
   (per-player, constant-sum-corrected). 6-max runs the manifest's hand budget
-  (500M hands; the deep limp-inclusive rungs are ~1.18M states, so a fanned-out
-  batch of all nine is ~10 h wall-clock on spare cores) and records the
-  probe-set strategy drift in the header provenance. Caveat: that drift is an
-  L∞ (max) over a handful of high-reach probe nodes, so it floors around
-  0.06–0.10 — one genuinely-indifferent hand pins it — and does **not** track
-  distance to equilibrium. It barely moved 48M→500M, yet the averaged charts
-  shifted materially (~10–12% of action-probabilities by >0.15; some hands
-  flipped), because the later, wider Cesàro window is closer to equilibrium.
-  Macro shapes (RFI%, defense frequencies) stabilize by ~48M; the fine mixes
-  need the full budget. Raise `traversals` further only if the rarely-reached
-  limp lines still look noisy — there is no cheap header signal for it, diff
-  the charts against a hotter solve to tell.
+  (100M hands) and records the probe-set strategy drift in the header
+  provenance. Wall-clock is **terminal-bound, not tree-bound**: the multiway
+  all-in Monte-Carlo dominates, so push/fold rungs — which funnel most
+  traversals into 3–6-way jams — cost the most despite the smallest trees. All
+  eight rungs land at 54–74 min at 100M (cash5, 1.9k states, is the *slowest*;
+  cash144, 885k states, is not), so a fanned-out batch finishes in ~75 min on
+  spare cores. The ~8× smaller SB-only tree earns back the 5× budget cut vs the
+  old all-limp ladder: 100M gives ~113 visits/decision node against its 500M
+  ~69. Caveat: the drift is an L∞ (max) over a handful of high-reach probe
+  nodes, so it floors around 0.06–0.10 — one genuinely-indifferent hand pins it
+  — and does **not** track distance to equilibrium; macro shapes (RFI%, defense
+  frequencies) stabilize early while the fine mixes keep moving. Raise
+  `traversals` on just the deep rungs (55/89/144) if the rarely-reached lines
+  still look noisy — there is no cheap header signal, diff against a hotter
+  solve to tell.
 
 ## Consumers
 
