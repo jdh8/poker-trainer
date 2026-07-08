@@ -161,13 +161,19 @@ deliberately changed. Custom local rulesets are gitignored wholesale.
   betting stack (antes are sunk, so they cancel from every action comparison
   while still inflating the contested pot).
 - **Convergence**: HU rulesets have exact best-response exploitability
-  (per-player, constant-sum-corrected). 6-max runs the manifest's hand
-  budget (48M hands; the deep limp-inclusive rungs are ~3× the state count of
-  the old no-limp trees, so a fanned-out batch is tens of minutes) and records
-  the probe-set strategy drift in the header provenance; macro shapes (RFI%,
-  defense frequencies) stabilize long before the last mixed-frequency decimals
-  — raise `traversals` when sharper mixes matter, especially on the rarely
-  reached limp lines.
+  (per-player, constant-sum-corrected). 6-max runs the manifest's hand budget
+  (500M hands; the deep limp-inclusive rungs are ~1.18M states, so a fanned-out
+  batch of all nine is ~10 h wall-clock on spare cores) and records the
+  probe-set strategy drift in the header provenance. Caveat: that drift is an
+  L∞ (max) over a handful of high-reach probe nodes, so it floors around
+  0.06–0.10 — one genuinely-indifferent hand pins it — and does **not** track
+  distance to equilibrium. It barely moved 48M→500M, yet the averaged charts
+  shifted materially (~10–12% of action-probabilities by >0.15; some hands
+  flipped), because the later, wider Cesàro window is closer to equilibrium.
+  Macro shapes (RFI%, defense frequencies) stabilize by ~48M; the fine mixes
+  need the full budget. Raise `traversals` further only if the rarely-reached
+  limp lines still look noisy — there is no cheap header signal for it, diff
+  the charts against a hotter solve to tell.
 
 ## Consumers
 
