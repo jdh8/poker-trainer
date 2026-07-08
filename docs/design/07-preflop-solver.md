@@ -45,6 +45,32 @@ depth (144/89/55bb jam only vs a 3-bet; 34bb offers the jam vs an open; 21bb and
 shorter are open-jam/fold), so the short rungs are effectively push/fold while
 still allowing the SB's limp.
 
+## Rake & ante — real-world calibration
+
+Both economy knobs are pinned to a 2024–2026 survey of popular platforms and series
+(full cited version: [../rake-ante-survey-2026.md](../rake-ante-survey-2026.md)):
+
+- **Rake — validated, no change.** Online cash is near-universally ~5% "no flop no drop"
+  with a small cap; the ladder's `rake_rate = 0.05` / `rake_cap_bb = 3.0` / unraked
+  fold-wins is literally GGPoker Rush & Cash's structure (5% capped at 3bb). PokerStars
+  ≈ $2.50 cap at NL100, WPT Global 4%, ACR flat $3 — all the same shape. Rake **tightens**
+  ranges (marginal opens/flats that break even at 0 rake go negative), the mirror of the
+  ante below.
+- **Ante — `0` is right for cash, universal for tournaments.** Standard NLHE cash is
+  blinds-only (antes are a niche high-stakes-live novelty). But every serious tournament
+  (WSOP/EPT/WPT/Triton NLH since ~2018–19, plus PKO/satellite/turbo) runs an ante — live
+  via the **big blind ante = 1bb**, online via a per-player ~⅛-bb ante; both put ≈1bb of
+  dead money in the pot, making it ~40% bigger preflop and **widening** correct ranges.
+
+**Tournament ladder — the one open extension** (capability idle, not missing: `ante_bb` +
+ICM already solve — see §Solver core, and the "future per-seat stacks" caveat). Its regime
+barely overlaps cash — a tournament's decision-weighted play sits at **~10–40bb with an
+ante**, not 100bb without one — so it is a distinct chart set, not a variation. When built:
+set `rake_rate = 0` (tournament juice is an entry fee, not a per-pot drop); reproduce the
+BB-ante's total with a per-player `ante_bb ≈ 1/seats` (dead antes are equal by total for
+chip-EV, so no `game.rs` change — the "only-BB-posts" mechanic matters only under ICM);
+cluster depths jam-heavy in ~10–40bb.
+
 ## The betting tree (`game.rs`)
 
 A pure state machine — never materialized. Integer centi-bb pot math. Rules,
