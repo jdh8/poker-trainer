@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "ruleset": "heads-up89",
+  "label": "Heads-up, 89bb",
+  "config": {
+    "ante_bb": 0.0,
+    "bb": 1.0,
+    "fivebet_mult": [
+      2.2
+    ],
+    "fourbet_mult": [
+      2.3
+    ],
+    "id": "heads-up89",
+    "jam_from_level": 2,
+    "label": "Heads-up, 89bb",
+    "no_limps": true,
+    "open_to_bb": [
+      2.0,
+      2.5,
+      3.0
+    ],
+    "rake_cap_bb": 0.0,
+    "rake_rate": 0.0,
+    "sb": 0.5,
+    "seats": [
+      "SB",
+      "BB"
+    ],
+    "solver": {
+      "export_reach": 0.0002,
+      "seed": 1,
+      "starter_reach": 0.0002,
+      "traversals": 10000000
+    },
+    "squeeze_mult": [
+      3.0
+    ],
+    "stack_bb": 89.0,
+    "threebet_mult": [
+      3.0
+    ]
+  },
+  "config_hash": "ac5ebdd9",
+  "ev_unit": "bb",
+  "generator": {
+    "version": "0.1.0",
+    "traversals": 10000000,
+    "seed": 1,
+    "strategy_drift": 0.058030784
+  }
+}

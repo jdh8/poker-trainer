@@ -189,16 +189,24 @@ async function pfInit() {
     $('pf-head').textContent = 'Preflop charts not staged — see web/README for the local copy step.';
     return;
   }
-  // family asc, blind level desc — robust to non-cash ids (e.g. poker-chase-10)
+  // ids encode family + depth: "cash20" -> ["cash", 20], "heads-up21" -> ["heads-up", 21].
   const parse = id => { const m = id.match(/^(.*?)-?(\d+)$/); return m ? [m[1], +m[2]] : [id, 0]; };
-  const pfLabel = id => {
-    const m = id.match(/^(.*?)-?(\d+)$/);
-    return m ? `${m[1].replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} ${m[2]} BB` : id;
-  };
-  ids.sort((a, b) => { const [an, av] = parse(a), [bn, bv] = parse(b); return an < bn ? -1 : an > bn ? 1 : bv - av; });
-  $('pf-ruleset').innerHTML = ids.map(id => `<option value="${id}">${pfLabel(id)}</option>`).join('');
-  $('pf-ruleset').onchange = () => pfLoad($('pf-ruleset').value);
-  await pfLoad(ids[0]);
+  const title = s => s.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+  // Two cascading selects: Table (family, asc) -> Depth (blind level, desc).
+  const fams = {};
+  for (const id of ids) { const [fam] = parse(id); (fams[fam] ||= []).push(id); }
+  const famNames = Object.keys(fams).sort();
+  for (const f of famNames) fams[f].sort((a, b) => parse(b)[1] - parse(a)[1]);
+  $('pf-family').innerHTML = famNames.map(f => `<option value="${f}">${title(f)}</option>`).join('');
+
+  const fillDepths = fam =>
+    $('pf-depth').innerHTML = fams[fam].map(id => `<option value="${id}">${parse(id)[1]} BB</option>`).join('');
+  $('pf-family').onchange = () => { fillDepths($('pf-family').value); pfLoad($('pf-depth').value); };
+  $('pf-depth').onchange = () => pfLoad($('pf-depth').value);
+
+  fillDepths(famNames[0]);
+  await pfLoad($('pf-depth').value);
 }
 
 // ---- GTO strategy grid ------------------------------------------------------

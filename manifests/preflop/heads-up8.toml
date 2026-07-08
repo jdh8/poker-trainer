@@ -1,0 +1,24 @@
+# Heads-up (SB vs BB), 8bb effective, chip-EV. No-limp reference tree
+# (design 07): SB opens/raises/jams or folds; BB responds. No limped pots.
+id = "heads-up8"
+label = "Heads-up, 8bb"
+seats = ["SB", "BB"]           # n=2: seat 0 = SB = button, acts first; seat 1 = BB
+stack_bb = 8.0
+sb = 0.5
+bb = 1.0
+ante_bb = 0.0
+open_to_bb = [2.0, 2.5, 3.0]
+threebet_mult = [3.0]          # single 3-bet size keeps the HU tree small/fast
+squeeze_mult = [3.0]           # unreachable in HU (no caller) but validation needs >1.0
+fourbet_mult = [2.3]
+fivebet_mult = [2.2]
+jam_from_level = 0          # 0 push/fold · 1 jam-vs-open · 2 jam-vs-3bet
+no_limps = true                # fold-or-raise-or-jam; no limp, no BB check
+rake_rate = 0.0                # HU reference: 0 rake (also unlocks exact exploitability)
+rake_cap_bb = 0.0
+
+[solver]
+traversals = 10000000          # fast preview tier; bump to 100M+ for a polished commit
+seed = 1
+export_reach = 0.0002
+starter_reach = 0.0002

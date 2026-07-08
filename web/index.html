@@ -54,11 +54,12 @@
 
 <section id="preflop">
   <h2>Preflop charts</h2>
-  <p>Browse the solved 6-max preflop trees (<code>data/preflop/</code>, computed by the
-     in-repo <code>preflop-gen</code> MCCFR solver) GTO-Wizard-style: pick a rule set,
-     walk the action line, read each hand's mixed strategy off the 13×13 grid.
-     Dimmed cells can't reach the spot; click a cell for frequencies and EV.</p>
-  <label class="inline">Rule set <select id="pf-ruleset"></select></label>
+  <p>Browse the solved preflop trees (<code>data/preflop/</code>, computed by the
+     in-repo <code>preflop-gen</code> MCCFR solver) GTO-Wizard-style: pick a table and
+     stack depth, walk the action line, read each hand's mixed strategy off the 13×13
+     grid. Dimmed cells can't reach the spot; click a cell for frequencies and EV.</p>
+  <label class="inline">Table <select id="pf-family"></select></label>
+  <label class="inline">Depth <select id="pf-depth"></select></label>
   <div id="pf-crumbs"></div>
   <div id="pf-head"></div>
   <div id="pf-actions"></div>
