@@ -56,6 +56,20 @@ fn default_starter_reach() -> f32 {
     0.05
 }
 
+/// Which seats may limp an unopened pot.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum LimpScope {
+    /// No limps — fold or open only (the classic push/fold tree).
+    None,
+    /// Only the small blind may complete: one 2-way limped branch, no
+    /// multiway limped pots. The cash-ladder default.
+    Sb,
+    /// Every unopened seat may limp (the full multiway limped tree).
+    #[default]
+    All,
+}
+
 /// One rule set: table format, blinds/antes, the raise-size menus, and the
 /// optional ICM payout vector. Loaded from `manifests/preflop/<id>.toml`.
 #[derive(Debug, Clone, Deserialize)]
@@ -99,9 +113,15 @@ pub struct Ruleset {
     pub jam_from_level: u8,
     /// Push/fold model: forbid limps (unopened = fold or raise) and skip the
     /// BB's option, so the tree matches the classic jam-or-fold game. Default
-    /// off — cash rulesets allow limps.
+    /// off — cash rulesets allow limps. Shorthand for `limp_scope = "none"`
+    /// (kept for the committed HU push/fold rulesets); `no_limps = true` wins.
     #[serde(default)]
     pub no_limps: bool,
+    /// Which seats may complete an unopened pot (default `all`). `sb` keeps
+    /// only the small blind's limp — one 2-way branch instead of the multiway
+    /// limped pots that dominate the 6-max tree (design 07).
+    #[serde(default)]
+    pub limp_scope: LimpScope,
     /// Rake taken from the pot (0.05 = 5%). No flop, no drop: fold-win pots
     /// are never raked.
     #[serde(default)]
@@ -138,6 +158,30 @@ impl Ruleset {
     /// Effective stack in centi-bb.
     pub fn stack(&self) -> u32 {
         to_cb(self.stack_bb)
+    }
+
+    /// Effective limp scope: `no_limps` forces `None`, else `limp_scope`.
+    fn scope(&self) -> LimpScope {
+        if self.no_limps {
+            LimpScope::None
+        } else {
+            self.limp_scope
+        }
+    }
+
+    /// May the seat at acting index `me` limp an unopened pot? (`sb` = the
+    /// last non-BB seat completes; every other seat folds or opens.)
+    fn may_limp(&self, me: usize) -> bool {
+        match self.scope() {
+            LimpScope::None => false,
+            LimpScope::All => true,
+            LimpScope::Sb => me == self.n() - 2,
+        }
+    }
+
+    /// Do limps exist at all? Gates the BB's option in an unraised pot.
+    fn limps_enabled(&self) -> bool {
+        self.scope() != LimpScope::None
     }
 
     fn validate(&self) -> Result<(), String> {
@@ -335,7 +379,7 @@ impl State {
             out.push(Action::Check); // BB option in an unraised pot; no free fold
         } else {
             out.push(Action::Fold);
-            if self.level > 0 || !rs.no_limps {
+            if self.level > 0 || rs.may_limp(me) {
                 out.push(Action::Call); // a limp at level 0, else facing a bet
             }
             if self.cur_bet >= stack {
@@ -412,7 +456,7 @@ impl State {
                 let seat = (me + k) % n;
                 let bit = 1u8 << seat;
                 let owes = s.committed[seat] < s.cur_bet;
-                let bb_opt = seat == bb_seat && s.bb_option && s.level == 0 && !rs.no_limps;
+                let bb_opt = seat == bb_seat && s.bb_option && s.level == 0 && rs.limps_enabled();
                 if s.folded & bit == 0 && s.all_in & bit == 0 && (owes || bb_opt) {
                     s.actor = seat as u8;
                     break;
@@ -539,6 +583,31 @@ mod tests {
         Ruleset::load(format!("{dir}/{name}.toml")).unwrap()
     }
 
+    /// A 6-max cash ruleset with all-seat limps and the full {2,3,4}× 3-bet
+    /// menu — exercises the multiway limp-around and menu machinery that the
+    /// shipped `sb`-scope ladder no longer uses. (Was the old cash100 shape.)
+    fn cash_6max_all() -> Ruleset {
+        toml::from_str(
+            r#"
+            id = "cashall"
+            label = "6-max cash, all limps"
+            seats = ["UTG", "HJ", "CO", "BTN", "SB", "BB"]
+            stack_bb = 100.0
+            sb = 0.5
+            bb = 1.0
+            open_to_bb = [2.0, 2.5, 3.0]
+            threebet_mult = [2.0, 3.0, 4.0]
+            squeeze_mult = [4.0]
+            fourbet_mult = [2.3]
+            fivebet_mult = [2.2]
+            jam_from_level = 2
+            [solver]
+            traversals = 1000
+            "#,
+        )
+        .unwrap()
+    }
+
     /// A 6-max ruleset with a dead ante — no shipped cash ruleset has one,
     /// so ante/pot math is covered inline.
     fn six_max_ante() -> Ruleset {
@@ -638,7 +707,7 @@ mod tests {
 
     #[test]
     fn legality_follows_the_level_menus() {
-        let rs = manifest("cash100");
+        let rs = cash_6max_all();
         let mut acts = Vec::new();
 
         // Unopened: fold, limp, or open — no jam (jam_from_level = 2).
@@ -727,7 +796,7 @@ mod tests {
 
     #[test]
     fn walks_and_multiway_terminals_resolve() {
-        let rs = manifest("cash100");
+        let rs = cash_6max_all();
         // Everyone folds: the BB walks without ever acting.
         let st = replay(&rs, "f-f-f-f-f").unwrap();
         assert_eq!(st.terminal(&rs), Some(Terminal::FoldWin { winner: 5 }));
@@ -743,7 +812,7 @@ mod tests {
 
     #[test]
     fn replay_rejects_illegal_tokens() {
-        let rs = manifest("cash100");
+        let rs = cash_6max_all();
         assert!(replay(&rs, "c").is_ok()); // a limp is now legal
         assert!(replay(&rs, "x").is_err()); // UTG can't check unopened, only limp
         assert!(replay(&rs, "r5").is_err()); // not a menu size
@@ -752,7 +821,7 @@ mod tests {
 
     #[test]
     fn public_state_key_merges_fold_order() {
-        let rs = manifest("cash100");
+        let rs = cash_6max_all();
         // CO opens after UTG and HJ folded — same public state for the BTN
         // regardless of the (nonexistent) fold-order variation; sanity: the
         // key at least distinguishes different states.
@@ -764,87 +833,152 @@ mod tests {
 
     #[test]
     fn shipped_manifests_load_and_validate() {
+        // Fibonacci depth ladder, shifted one rung up from the HU set (design 07).
         for id in [
-            "cash5", "cash10", "cash15", "cash20", "cash32", "cash50", "cash75", "cash100",
-            "cash150",
+            "cash5", "cash8", "cash13", "cash21", "cash34", "cash55", "cash89", "cash144",
         ] {
             let rs = manifest(id);
             assert_eq!(rs.id, id);
             assert_eq!(rs.n(), 6);
             assert!(rs.icm_payouts.is_none()); // all cash: chip-EV
+            assert_eq!(rs.limp_scope, LimpScope::Sb); // SB-only limps (design 07)
+            assert_eq!(rs.threebet_mult, vec![3.0, 4.0]); // trimmed 3-bet menu
         }
         // "Jams earlier" ladder: push/fold short, jam-vs-open mid, jam-vs-3bet deep.
         assert_eq!(manifest("cash5").jam_from_level, 0);
-        assert_eq!(manifest("cash15").jam_from_level, 0);
-        assert_eq!(manifest("cash20").jam_from_level, 0);
-        assert_eq!(manifest("cash50").jam_from_level, 1);
-        assert_eq!(manifest("cash100").jam_from_level, 2);
-        assert_eq!(manifest("cash150").jam_from_level, 2);
+        assert_eq!(manifest("cash21").jam_from_level, 0);
+        assert_eq!(manifest("cash34").jam_from_level, 1);
+        assert_eq!(manifest("cash89").jam_from_level, 2);
+        assert_eq!(manifest("cash144").jam_from_level, 2);
+    }
+
+    #[test]
+    fn sb_scope_gates_limps_and_trims_the_3bet_menu() {
+        let rs = manifest("cash89");
+        assert_eq!(rs.limp_scope, LimpScope::Sb);
+        let mut acts = Vec::new();
+
+        // UTG unopened: fold or open — no limp under sb scope.
+        State::root(&rs).legal(&rs, &mut acts);
+        assert_eq!(
+            acts,
+            vec![
+                Action::Fold,
+                Action::RaiseTo(200),
+                Action::RaiseTo(250),
+                Action::RaiseTo(300)
+            ]
+        );
+        // An early limp is unreachable (no multiway limped pots).
+        assert!(replay(&rs, "c").is_err());
+
+        // Folded to the SB: it alone may complete (fold/limp/open).
+        let st = replay(&rs, "f-f-f-f").unwrap();
+        assert_eq!(st.to_act(), Some(4)); // SB
+        st.legal(&rs, &mut acts);
+        assert_eq!(
+            acts,
+            vec![
+                Action::Fold,
+                Action::Call, // the SB limp
+                Action::RaiseTo(200),
+                Action::RaiseTo(250),
+                Action::RaiseTo(300)
+            ]
+        );
+
+        // SB limps: the BB still gets its option (check or raise), heads-up.
+        let st = replay(&rs, "f-f-f-f-c").unwrap();
+        assert_eq!(st.to_act(), Some(5)); // BB
+        st.legal(&rs, &mut acts);
+        assert_eq!(
+            acts,
+            vec![
+                Action::Check,
+                Action::RaiseTo(200),
+                Action::RaiseTo(250),
+                Action::RaiseTo(300)
+            ]
+        );
+
+        // 3-bet menu trimmed to 3/4 × the open (a 2bb open → 6/8bb).
+        let st = replay(&rs, "r2-f-f-f-f").unwrap();
+        st.legal(&rs, &mut acts);
+        assert_eq!(
+            acts,
+            vec![
+                Action::Fold,
+                Action::Call,
+                Action::RaiseTo(600),
+                Action::RaiseTo(800)
+            ]
+        );
     }
 
     /// Regression pin for the shipped trees (a representative subset of the
     /// cash depth ladder). If a rule change moves these numbers, that's a
     /// *deliberate* re-solve of every ruleset — update the pins and the
-    /// design-07 table together. Limps + the BB option add the passive-pot
-    /// branches at every depth.
+    /// design-07 table together. SB-only limps keep just the one 2-way
+    /// completed branch, so the multiway limped pots are gone (design 07).
     #[test]
     fn shipped_tree_counts_are_pinned() {
-        // cash75 and cash150 share this exact shape (same jam_from_level, no
-        // size collapses at any of the depths); only the equilibrium differs.
+        // cash89 and cash144 share this exact shape — no raise size reaches
+        // either stack, so only the equilibrium differs.
+        let deep = TreeStats {
+            decisions: 885_384,
+            states: 311_682,
+            edges: 1_907_869,
+            fold_wins: 137_107,
+            allin_2way: 304_650,
+            allin_multi: 460_644,
+            flop_2way: 45_361,
+            flop_multi: 74_724,
+            max_depth: 26,
+        };
+        assert_eq!(tree_stats(&manifest("cash89")), deep);
+        assert_eq!(tree_stats(&manifest("cash144")), deep);
+        // cash55 shares jam_from_level = 2 but is smaller: the 5-bet sizes
+        // collapse into the jam at 55bb.
         assert_eq!(
-            tree_stats(&manifest("cash100")),
+            tree_stats(&manifest("cash55")),
             TreeStats {
-                decisions: 7_281_536,
-                states: 1_184_149,
-                edges: 15_762_495,
-                fold_wins: 1_199_455,
-                allin_2way: 2_567_124,
-                allin_multi: 3_675_714,
-                flop_2way: 412_391,
-                flop_multi: 626_276,
-                max_depth: 31,
-            }
-        );
-        assert_eq!(
-            tree_stats(&manifest("cash50")),
-            TreeStats {
-                decisions: 4_355_454,
-                states: 900_507,
-                edges: 9_422_529,
-                fold_wins: 711_653,
-                allin_2way: 1_529_486,
-                allin_multi: 2_210_154,
-                flop_2way: 243_307,
-                flop_multi: 372_476,
-                max_depth: 31,
-            }
-        );
-        assert_eq!(
-            tree_stats(&manifest("cash20")),
-            TreeStats {
-                decisions: 656_116,
-                states: 274_598,
-                edges: 1_413_375,
-                fold_wins: 101_175,
-                allin_2way: 224_217,
-                allin_multi: 343_725,
-                flop_2way: 33_422,
-                flop_multi: 54_721,
+                decisions: 673_940,
+                states: 254_423,
+                edges: 1_451_617,
+                fold_wins: 103_743,
+                allin_2way: 231_258,
+                allin_multi: 351_698,
+                flop_2way: 34_209,
+                flop_multi: 56_770,
                 max_depth: 26,
             }
         );
         assert_eq!(
-            tree_stats(&manifest("cash10")),
+            tree_stats(&manifest("cash34")),
             TreeStats {
-                decisions: 147_048,
-                states: 92_542,
-                edges: 316_251,
-                fold_wins: 22_187,
-                allin_2way: 49_363,
-                allin_multi: 78_421,
-                flop_2way: 7_248,
-                flop_multi: 11_985,
+                decisions: 175_394,
+                states: 105_715,
+                edges: 376_051,
+                fold_wins: 25_269,
+                allin_2way: 58_466,
+                allin_multi: 94_580,
+                flop_2way: 7_973,
+                flop_multi: 14_370,
                 max_depth: 22,
+            }
+        );
+        assert_eq!(
+            tree_stats(&manifest("cash13")),
+            TreeStats {
+                decisions: 18_832,
+                states: 16_936,
+                edges: 40_017,
+                fold_wins: 2_359,
+                allin_2way: 5_866,
+                allin_multi: 10_848,
+                flop_2way: 673,
+                flop_multi: 1_440,
+                max_depth: 16,
             }
         );
     }

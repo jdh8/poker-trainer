@@ -307,7 +307,7 @@ mod tests {
     fn chip_ev_terminals_add_up() {
         let rs = crate::game::Ruleset::load(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../manifests/preflop/cash100.toml"
+            "/../../manifests/preflop/cash89.toml"
         ))
         .unwrap();
         // check_down: the even-split arithmetic below assumes R ≡ 1.

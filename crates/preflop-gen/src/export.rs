@@ -286,7 +286,7 @@ mod tests {
                 / 1326.0
         };
 
-        let cash = load("cash100");
+        let cash = load("cash89");
         assert_eq!(cash.header.ev_unit, "bb");
         // Entry freq (1 − fold: limp + raise) rises toward the button; limps
         // are near-zero deep, so this still tracks RFI.
@@ -307,19 +307,19 @@ mod tests {
             "BB defense vs BTN 2.5x"
         );
 
-        // Cash depth ladder: every rung is chip-EV. Even the 10bb push/fold
+        // Cash depth ladder: every rung is chip-EV. Even the shallow push/fold
         // rung keeps a real, position-monotone range — rake makes short-stack
         // cash tighter than deep (no postflop edge, taxed marginal opens), so
         // this is a sanity floor, not a "wider than deep" claim.
-        let (c50, c20, c10) = (load("cash50"), load("cash20"), load("cash10"));
-        for c in [&cash, &c50, &c20, &c10] {
+        let (c55, c21, c13) = (load("cash55"), load("cash21"), load("cash13"));
+        for c in [&cash, &c55, &c21, &c13] {
             assert_eq!(c.header.ev_unit, "bb");
         }
-        let (utg10, btn10) = (continue_freq(&c10, ""), continue_freq(&c10, "f-f-f"));
+        let (utg13, btn13) = (continue_freq(&c13, ""), continue_freq(&c13, "f-f-f"));
         assert!(
-            utg10 < btn10,
-            "10bb entry not monotone: UTG {utg10} vs BTN {btn10}"
+            utg13 < btn13,
+            "13bb entry not monotone: UTG {utg13} vs BTN {btn13}"
         );
-        assert!((0.20..0.55).contains(&btn10), "10bb BTN open/jam {btn10}");
+        assert!((0.20..0.55).contains(&btn13), "13bb BTN open/jam {btn13}");
     }
 }

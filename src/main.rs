@@ -19,8 +19,8 @@ enum Command {
         mode: Mode,
 
         /// Preflop drill only: the solved chart set under data/preflop/
-        /// (e.g. cash100, cash20).
-        #[arg(long, default_value = "cash100")]
+        /// (e.g. cash89, cash21).
+        #[arg(long, default_value = "cash89")]
         ruleset: String,
 
         #[command(flatten)]

@@ -1,0 +1,24 @@
+# 6-max cash, 55bb effective, chip-EV (design 07). Jam offered from vs-3-bet on;
+# only the small blind may complete an unopened pot.
+id = "cash55"
+label = "6-max cash, 55bb"
+seats = ["UTG", "HJ", "CO", "BTN", "SB", "BB"]
+stack_bb = 55.0
+sb = 0.5
+bb = 1.0
+ante_bb = 0.0
+open_to_bb = [2.0, 2.5, 3.0]
+threebet_mult = [3.0, 4.0]      # × the open-to amount: 3× IP, 4× OOP (design 07)
+squeeze_mult = [4.0]            # × the open-to amount once the open has a caller
+fourbet_mult = [2.3]            # × the 3-bet-to amount; larger 4-bets collapse into the jam
+fivebet_mult = [2.2]            # × the 4-bet-to amount; a 6-bet is jam-only
+jam_from_level = 2              # jam offered from vs-3-bet on (open-jams this deep are noise)
+limp_scope = "sb"               # only the small blind completes (design 07)
+rake_rate = 0.05                # no flop no drop: fold-wins are unraked
+rake_cap_bb = 3.0
+
+[solver]
+traversals = 100000000
+seed = 1
+export_reach = 0.0002
+starter_reach = 0.0002

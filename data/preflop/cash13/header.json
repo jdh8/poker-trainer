@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "ruleset": "cash13",
+  "label": "6-max cash, 13bb",
+  "config": {
+    "ante_bb": 0.0,
+    "bb": 1.0,
+    "fivebet_mult": [
+      2.2
+    ],
+    "fourbet_mult": [
+      2.3
+    ],
+    "id": "cash13",
+    "jam_from_level": 0,
+    "label": "6-max cash, 13bb",
+    "limp_scope": "sb",
+    "open_to_bb": [
+      2.0,
+      2.5,
+      3.0
+    ],
+    "rake_cap_bb": 3.0,
+    "rake_rate": 0.05,
+    "sb": 0.5,
+    "seats": [
+      "UTG",
+      "HJ",
+      "CO",
+      "BTN",
+      "SB",
+      "BB"
+    ],
+    "solver": {
+      "export_reach": 0.0002,
+      "seed": 1,
+      "starter_reach": 0.0002,
+      "traversals": 100000000
+    },
+    "squeeze_mult": [
+      4.0
+    ],
+    "stack_bb": 13.0,
+    "threebet_mult": [
+      3.0,
+      4.0
+    ]
+  },
+  "config_hash": "c9ad0d47",
+  "ev_unit": "bb",
+  "generator": {
+    "version": "0.1.0",
+    "traversals": 100000000,
+    "seed": 1,
+    "strategy_drift": 0.08420801
+  }
+}

@@ -116,9 +116,9 @@ pub struct PreflopGenInfo {
 pub struct PreflopHeader {
     /// Format version; readers reject what they don't know.
     pub version: u32,
-    /// The ruleset id, e.g. `"cash100"` (also the directory name).
+    /// The ruleset id, e.g. `"cash89"` (also the directory name).
     pub ruleset: String,
-    /// Human label, e.g. `"6-max cash, 100bb"`.
+    /// Human label, e.g. `"6-max cash, 89bb"`.
     pub label: String,
     /// Verbatim echo of the ruleset TOML this was solved under (provenance;
     /// the trainer never interprets it).

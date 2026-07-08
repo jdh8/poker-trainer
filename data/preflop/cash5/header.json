@@ -14,6 +14,7 @@
     "id": "cash5",
     "jam_from_level": 0,
     "label": "6-max cash, 5bb",
+    "limp_scope": "sb",
     "open_to_bb": [
       2.0,
       2.5,
@@ -34,24 +35,23 @@
       "export_reach": 0.0002,
       "seed": 1,
       "starter_reach": 0.0002,
-      "traversals": 500000000
+      "traversals": 100000000
     },
     "squeeze_mult": [
       4.0
     ],
     "stack_bb": 5.0,
     "threebet_mult": [
-      2.0,
       3.0,
       4.0
     ]
   },
-  "config_hash": "66bb09b7",
+  "config_hash": "1b1e7a36",
   "ev_unit": "bb",
   "generator": {
     "version": "0.1.0",
-    "traversals": 500000000,
+    "traversals": 100000000,
     "seed": 1,
-    "strategy_drift": 0.06255311
+    "strategy_drift": 0.07755846
   }
 }

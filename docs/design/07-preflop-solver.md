@@ -37,23 +37,27 @@ The header written next to every solve echoes the config verbatim and carries
 its FNV-1a `config_hash`; `gen` skips rulesets whose hash already matches
 (the solve-gen resumability contract).
 
-Shipped rulesets: the cash depth ladder `cash{5,10,15,20,32,50,75,100,150}` —
-6-max, 5% rake capped at 3bb, chip-EV, limps enabled. 32bb is the geometric
-mean of 50 and 20. `jam_from_level` rises with depth (150/100/75bb jam only vs
-a 3-bet; 50/32bb offer the jam vs an open; 20bb and shorter are open-jam/fold),
-so the short rungs are effectively push/fold while still allowing a limp.
+Shipped rulesets: the cash depth ladder `cash{5,8,13,21,34,55,89,144}` — 6-max,
+5% rake capped at 3bb, chip-EV, SB-only limps, 3-bet menu `{3, 4}×`. A Fibonacci
+ladder (each rung ≈ ×φ), shifted one index up from the HU set so 89bb is the
+flagship and 144bb the deep rung (decisions below). `jam_from_level` rises with
+depth (144/89/55bb jam only vs a 3-bet; 34bb offers the jam vs an open; 21bb and
+shorter are open-jam/fold), so the short rungs are effectively push/fold while
+still allowing the SB's limp.
 
 ## The betting tree (`game.rs`)
 
 A pure state machine — never materialized. Integer centi-bb pot math. Rules,
 each a ruleset knob with a named ceiling:
 
-- **Limps**: an unopened seat may fold, limp (call the big blind), or open.
-  In a limped, unraised pot the BB has its option — **check** (`x`, closes the
-  round to a flop) or raise over the limpers (open menu, absolute bb). A walk
-  still ends the hand when everyone folds to the BB. `no_limps = true` restores
-  the classic push/fold tree (fold-or-raise, no BB option) — used by the HU
-  Nash reference.
+- **Limps** (`limp_scope`): an unopened seat may fold, limp (call the big
+  blind), or open. `all` lets every seat complete (the multiway limped pots);
+  `sb` (the cash-ladder default) keeps only the small blind's completion — one
+  2-way branch; `none` is the classic push/fold tree (fold-or-raise, no BB
+  option), used by the HU Nash reference (`no_limps = true` is the back-compat
+  shorthand for it). In a limped, unraised pot the BB has its option —
+  **check** (`x`, closes the round to a flop) or raise over the limpers (open
+  menu, absolute bb). A walk still ends the hand when everyone folds to the BB.
 - Raise ladder: open (menu, absolute bb) → 3-bet (menu × the open; a single
   squeeze size once the open has a caller) → 4-bet (single size × the 3-bet)
   → 5-bet (single size × the 4-bet) → 6-bet jam-only. All-in joins the menu
@@ -74,33 +78,32 @@ Measured trees under the shipped menus (`preflop-gen tree`, pinned by
 
 | ruleset | decisions | distinct states | edges | fold-wins | all-in SD (multi) | flops (multi) | depth |
 |---|---|---|---|---|---|---|---|
-| cash150 | 7,281,536 | 1,184,149 | 15,762,495 | 1,199,455 | 6,242,838 (3,675,714) | 1,038,667 (626,276) | 31 |
-| cash100 | 7,281,536 | 1,184,149 | 15,762,495 | 1,199,455 | 6,242,838 (3,675,714) | 1,038,667 (626,276) | 31 |
-| cash75 | 7,281,536 | 1,184,149 | 15,762,495 | 1,199,455 | 6,242,838 (3,675,714) | 1,038,667 (626,276) | 31 |
-| cash50 | 4,355,454 | 900,507 | 9,422,529 | 711,653 | 3,739,640 (2,210,154) | 615,783 (372,476) | 31 |
-| cash32 | 2,320,842 | 629,260 | 5,014,533 | 372,881 | 1,997,466 (1,188,916) | 323,345 (197,074) | 27 |
-| cash20 | 656,116 | 274,598 | 1,413,375 | 101,175 | 567,942 (343,725) | 88,143 (54,721) | 26 |
-| cash15 | 364,328 | 188,438 | 784,131 | 55,507 | 316,002 (192,574) | 48,295 (30,072) | 22 |
-| cash10 | 147,048 | 92,542 | 316,251 | 22,187 | 127,784 (78,421) | 19,233 (11,985) | 22 |
-| cash5 | 24,380 | 20,446 | 51,987 | 3,259 | 21,494 (13,725) | 2,855 (1,881) | 17 |
+| cash144 | 885,384 | 311,682 | 1,907,869 | 137,107 | 765,294 (460,644) | 120,085 (74,724) | 26 |
+| cash89 | 885,384 | 311,682 | 1,907,869 | 137,107 | 765,294 (460,644) | 120,085 (74,724) | 26 |
+| cash55 | 673,940 | 254,423 | 1,451,617 | 103,743 | 582,956 (351,698) | 90,979 (56,770) | 26 |
+| cash34 | 175,394 | 105,715 | 376,051 | 25,269 | 153,046 (94,580) | 22,343 (14,370) | 22 |
+| cash21 | 70,076 | 50,301 | 149,853 | 9,707 | 61,456 (38,540) | 8,615 (5,632) | 21 |
+| cash13 | 18,832 | 16,936 | 40,017 | 2,359 | 16,714 (10,848) | 2,113 (1,440) | 16 |
+| cash8 | 3,572 | 3,572 | 7,569 | 431 | 3,192 (2,128) | 375 (254) | 12 |
+| cash5 | 1,876 | 1,876 | 3,945 | 199 | 1,696 (1,164) | 175 (126) | 11 |
 
-(Limps + the BB option add the passive-pot branches at every depth, roughly
-7× the old no-limp counts at 100bb. cash75/100/150 share an identical tree
-shape — same `jam_from_level`, and no raise size reaches any of the stacks — so
-only their equilibria differ. The `jam_from_level` ladder makes the shallower rungs
-collapse the deep 4-bet/5-bet branches into the jam; at 5–20bb the tree is
-essentially open-jam/fold plus the limp.)
+(SB-only limps keep just the one 2-way completed branch — the multiway limped
+pots that made the old all-seat tree ~8× larger at ~100bb are gone. cash89/144
+share an identical tree shape — same `jam_from_level`, and no raise size reaches
+either stack — so only their equilibria differ. The `jam_from_level` ladder makes
+the shallower rungs collapse the deep 4-bet/5-bet branches into the jam; at
+5–21bb the tree is essentially open-jam/fold plus the SB limp.)
 
-## Limp scope — SB-only (decided 2026-07-08, not yet built)
+## Limp scope — SB-only (shipped 2026-07-08)
 
-The shipped ladder above enables limps at **every** seat, which *is* the ~7×
-blow-up: early-position limps spawn multiway limped pots (4/5/6-way flops plus a
-multiway BB option). Decided refinement: gate limps to **SB only** (the last
-unopened non-BB seat). An SB complete is heads-up vs BB — one branch, a 2-way
-flop — so this keeps the single strategically load-bearing limp while shedding
-almost all of the 7×. Encoded as a limp-*scope* knob (`none` = today's
-`no_limps` push/fold · `sb` = new default for the cash ladder · `all` = the
-current multiway behaviour).
+Limps are gated to the **SB only** (`limp_scope = "sb"`, the cash-ladder
+default). All-seat limps *were* the ~7× blow-up: early-position limps spawn
+multiway limped pots (4/5/6-way flops plus a multiway BB option). An SB complete
+is heads-up vs BB — one branch, a 2-way flop — so `sb` keeps the single
+strategically load-bearing limp while shedding almost all of it (the measured
+shrink at ~89–100bb was ~8×). The knob's other settings: `none` = push/fold (the
+HU Nash reference; `no_limps = true` is the shorthand) · `all` = the full
+multiway behaviour.
 
 Deliberately **no per-seat open menus** — one global `open_to_bb = [2, 2.5, 3]`
 for all seats, SB included. An isolated SB-vs-BB solve (100bb, cash rake, tested
@@ -109,14 +112,14 @@ every other seat's: 2.5 and 3 both live, the 2bb open a harmless ~0.6%
 EV-neutral crumb, and offering 3.5/4 drew ~27% frequency for **+0.002–0.004 bb**
 (noise) — flat EV above 2.5bb, i.e. size-*indifference*, not a wish to open
 bigger. SB's ideal menu `{limp, 2.5, 3}` is thus the global menu minus one 0.6%
-button; a per-seat-menu refactor to delete that crumb isn't worth it. Building
-`sb` scope will re-pin the tree counts and re-commit the ladder's starter
-charts.
+button; a per-seat-menu refactor to delete that crumb isn't worth it, so `sb`
+keeps the one global menu and just drops the non-SB limps.
 
-## Re-raise menu — 3-bet `{3, 4}`, multiplier-sized (decided 2026-07-08, not yet built)
+## Re-raise menu — 3-bet `{3, 4}`, multiplier-sized (shipped 2026-07-08)
 
-Shipped `threebet_mult = [2, 3, 4]` carries a dead button and loses nothing by
-trimming to two. From the SB-vs-BB and `[BTN,SB,BB]` diagnostics:
+The ladder ships `threebet_mult = [3, 4]`; the old `[2, 3, 4]` carried a dead
+button and lost nothing by trimming to two. From the SB-vs-BB and `[BTN,SB,BB]`
+diagnostics:
 
 - **Drop the 2× min-3-bet.** ≤0.5% in *every* 3-bet spot measured — IP (BTN vs
   CO), both OOP blinds, and blind-vs-blind. A 2×-the-open 3-bet is too small to
@@ -143,11 +146,11 @@ the ceiling and watch: mass that **climbs** to the new top is real; mass that
 **spreads** is indifferent. This called three sizing decisions in a row (SB open
 3.5/4, OOP 3-bet 5/6) — run it before widening any menu.
 
-## Depth ladder — Fibonacci, shifted up one from HU (decided 2026-07-08, not yet built)
+## Depth ladder — Fibonacci, shifted up one from HU (shipped 2026-07-08)
 
-The shipped cash ladder `{5,10,15,20,32,50,75,100,150}` is ad-hoc — though the
-doc already reaches for log-spacing ("32 is the geometric mean of 20 and 50").
-Formalize that instinct. The HU reference is already pure Fibonacci
+The old cash ladder `{5,10,15,20,32,50,75,100,150}` was ad-hoc — though it
+already reached for log-spacing ("32 is the geometric mean of 20 and 50"). The
+ladder now formalizes that instinct. The HU reference is already pure Fibonacci
 `heads-up{3,5,8,13,21,34,55,89}` (constant ×φ ≈ 1.618 per rung — uniform
 log-spacing of stack depth). Give 6-max the **same ladder shifted up one
 Fibonacci index**:
@@ -172,13 +175,13 @@ formats stay one clean step apart, so "HU-89 vs 6max-89" names one depth.
   expensive tree (longest raise ladder before all-in) — add it when someone
   actually trains that deep.
 
-**Zero marginal cost.** The SB-only-limp and `threebet_mult = [3, 4]` decisions
-above already force a full re-solve of every rung; re-depthing to Fibonacci rides
-that same pass, so the new depths cost no extra generation time. `jam_from_level`
-re-assigns per new depth (deep rungs jam only vs a 3-bet, mid rungs offer the jam
-vs an open, short rungs open-jam/fold — exact thresholds tuned at build). Re-pins
-the shipped tree counts and re-commits the ladder's starter charts, same as the
-menu changes.
+**Zero marginal cost.** The SB-only-limp and `threebet_mult = [3, 4]` changes
+already forced a full re-solve of every rung; re-depthing to Fibonacci rode that
+same pass, so the new depths cost no extra generation time. `jam_from_level` is
+assigned per depth: 144/89/55 jam only vs a 3-bet, 34 offers the jam vs an open,
+21 and shorter are open-jam/fold. Solved at 100M traversals/rung — the ~8×
+smaller SB-only tree converges as well at 100M as the old all-limp ladder did at
+500M (~113 vs ~69 visits per decision node).
 
 ## Node addressing (path grammar)
 
