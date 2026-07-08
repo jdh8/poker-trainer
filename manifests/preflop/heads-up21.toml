@@ -18,7 +18,7 @@ rake_rate = 0.0                # HU reference: 0 rake (also unlocks exact exploi
 rake_cap_bb = 0.0
 
 [solver]
-traversals = 10000000          # fast preview tier; bump to 100M+ for a polished commit
+traversals = 1_000_000_000
 seed = 1
 export_reach = 0.0002
 starter_reach = 0.0002
