@@ -119,8 +119,8 @@ pub fn class_combos_cards(i: usize) -> Vec<[Card; 2]> {
 /// Hero's equity against a villain *range* given the villain seat's per-class
 /// `reach` (as produced by [`PreflopCharts::class_reach`]): sample up to `cap`
 /// villain combos with per-combo weight `reach[class]` — dropping combos that
-/// collide with the hero or flop — and average equity over the sample. Returns
-/// `0.5` when the range is empty after card removal.
+/// collide with the hero or `board` (3–5 cards) — and average equity over the
+/// sample. Returns `0.5` when the range is empty after card removal.
 ///
 /// Sampling proportional to reach lets the unweighted [`crate::eval::equity_vs_range`]
 /// stand in for a reach-weighted mean, so there's no separate weighted path.
@@ -130,13 +130,13 @@ pub fn class_combos_cards(i: usize) -> Vec<[Card; 2]> {
 /// boundary needs a tighter read.
 pub fn equity_vs_reach(
     hero: [Card; 2],
-    flop: [Card; 3],
+    board: &[Card],
     reach: &[f32],
     rng: &mut impl RngExt,
     iters: u32,
     cap: usize,
 ) -> f64 {
-    let dead = |v: &[Card; 2]| v.iter().any(|c| hero.contains(c) || flop.contains(c));
+    let dead = |v: &[Card; 2]| v.iter().any(|c| hero.contains(c) || board.contains(c));
     let mut combos: Vec<[Card; 2]> = Vec::new();
     let mut weights: Vec<f32> = Vec::new();
     for (i, &w) in reach.iter().take(CLASSES).enumerate() {
@@ -168,7 +168,7 @@ pub fn equity_vs_reach(
         }
         sample.push(combos[idx]);
     }
-    crate::eval::equity_vs_range(hero, flop, &sample, iters)
+    crate::eval::equity_vs_range(hero, board, &sample, iters)
 }
 
 /// The path token of a stored action label (the inverse of the generator's
@@ -439,7 +439,7 @@ mod tests {
         // Villain always holds 22 — trip-less AA on K Q 7 should dominate.
         let mut reach = vec![0.0f32; CLASSES];
         reach[class_index_of("22").unwrap()] = 1.0;
-        let eq = equity_vs_reach(hero, flop, &reach, &mut rng, 200, 60);
+        let eq = equity_vs_reach(hero, &flop, &reach, &mut rng, 200, 60);
         assert!(
             eq > 0.8,
             "AA vs a pure-22 range on K Q 7 should dominate: {eq}"
@@ -447,7 +447,7 @@ mod tests {
 
         // Empty range (all reach zero) => the 0.5 fallback.
         let zero = vec![0.0f32; CLASSES];
-        assert_eq!(equity_vs_reach(hero, flop, &zero, &mut rng, 50, 20), 0.5);
+        assert_eq!(equity_vs_reach(hero, &flop, &zero, &mut rng, 50, 20), 0.5);
     }
 
     fn sample_header() -> PreflopHeader {

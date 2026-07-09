@@ -16,6 +16,7 @@
     <a href="#preflop">Preflop charts</a>
     <a href="#equity">Equity calculator</a>
     <a href="#pot-odds">Pot-odds drill</a>
+    <a href="#flop-equity">Flop equity</a>
     <a href="#grid">GTO strategy grid</a>
   </nav>
 </header>
@@ -69,6 +70,26 @@
     <button id="po-fold" class="answer">Fold</button>
   </div>
   <div id="po-reveal"></div>
+</section>
+
+<section id="flop-equity">
+  <h2>Flop equity explorer</h2>
+  <p>Pick a heads-up preflop line — that fixes both players' arrival ranges — then
+     enter your hand and any board (flop through river) to see your Monte-Carlo
+     equity vs villain's <em>whole</em> range. Add a bet size for a pot-odds
+     call/fold. No solve, so it's an equity read, not a betting strategy — that's
+     the GTO grid below.</p>
+  <label class="inline">Table <select id="fe-source"></select></label>
+  <label class="inline">Line <select id="fe-line"></select></label>
+  <label class="inline">You are <select id="fe-pos">
+    <option value="oop">OOP (BB)</option>
+    <option value="ip">IP (SB)</option>
+  </select></label>
+  <label class="inline">Your hand <input id="fe-hero" value="AsKh" size="6"></label>
+  <label class="inline">Board <input id="fe-board" value="Td9d6h" size="12"></label>
+  <label class="inline">Villain bet (bb) <input id="fe-bet" value="" size="4"></label>
+  <button id="fe-run">Compute</button>
+  <div id="fe-out"></div>
 </section>
 
 <section id="grid">

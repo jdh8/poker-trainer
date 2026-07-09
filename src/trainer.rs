@@ -289,7 +289,7 @@ pub fn run_pot_odds_drill(preflop: Option<&str>) {
 
         let eq = preflop::equity_vs_reach(
             hero,
-            flop,
+            &flop,
             &villain_reach,
             &mut rng,
             EQ_ITERS,
@@ -1410,7 +1410,7 @@ fn group_by_subrange<'a>(
             let eq = if villain.is_empty() {
                 0.5
             } else {
-                eval::equity_vs_range(hole, flop, villain, EQ_ITERS)
+                eval::equity_vs_range(hole, &flop, villain, EQ_ITERS)
             };
             by_bucket
                 .entry(eval::classify_hand(hole, flop))

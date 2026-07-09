@@ -328,7 +328,7 @@ pub fn live_combos(range: Vec<[Card; 2]>, flop: [Card; 3]) -> Vec<[Card; 2]> {
 pub fn combo_equities(hero: &[[Card; 2]], villain: &[[Card; 2]], flop: [Card; 3]) -> Vec<f64> {
     let sample = &villain[..villain.len().min(OPP_CAP)];
     hero.iter()
-        .map(|&h| equity_vs_range(h, flop, sample, EQ_ITERS))
+        .map(|&h| equity_vs_range(h, &flop, sample, EQ_ITERS))
         .collect()
 }
 

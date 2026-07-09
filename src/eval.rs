@@ -4,29 +4,31 @@ use rand::seq::IndexedRandom;
 use rs_poker::core::{Card, CoreRank, Deck, Hand, Rankable, Suit};
 use std::cmp::Ordering;
 
-/// Hero's equity vs a specific villain hand on a *fixed* flop, by Monte Carlo
-/// over random turn+river runouts. Returns a win-share in `[0.0, 1.0]`, with
-/// ties counted as half.
+/// Hero's equity vs a specific villain hand on a *fixed* board (3–5 cards), by
+/// Monte Carlo over random runouts. Returns a win-share in `[0.0, 1.0]`, with
+/// ties counted as half. A full 5-card board is exact, so `iters` collapses to
+/// one deterministic showdown.
 ///
 /// `rs_poker`'s built-in `MonteCarloGame` can't hold a fixed board, so we run
-/// the loop ourselves: deal turn+river from the remaining deck, rank both
+/// the loop ourselves: deal the remaining runout from the deck, rank both
 /// 7-card hands, tally.
-pub fn equity(hero: [Card; 2], villain: [Card; 2], flop: [Card; 3], iters: u32) -> f64 {
-    let known = [
-        hero[0], hero[1], villain[0], villain[1], flop[0], flop[1], flop[2],
-    ];
+pub fn equity(hero: [Card; 2], villain: [Card; 2], board: &[Card], iters: u32) -> f64 {
+    debug_assert!((3..=5).contains(&board.len()), "board must be 3–5 cards");
+    let known: Vec<Card> = hero.iter().chain(&villain).chain(board).copied().collect();
     let remaining: Vec<Card> = Deck::default()
         .into_iter()
         .filter(|c| !known.contains(c))
         .collect();
 
+    let n_runout = 5 - board.len();
+    let iters = if n_runout == 0 { 1 } else { iters }; // 5-card board is exact
     let mut rng = rand::rng();
     let mut score = 0.0; // win = 1.0, tie = 0.5, loss = 0.0
     for _ in 0..iters {
-        // two distinct cards for turn+river (`sample` = without replacement)
-        let tr: Vec<Card> = remaining.sample(&mut rng, 2).copied().collect();
-        let hero_rank = seven(hero, flop, &tr).rank();
-        let villain_rank = seven(villain, flop, &tr).rank();
+        // distinct runout cards (`sample` = without replacement)
+        let tr: Vec<Card> = remaining.sample(&mut rng, n_runout).copied().collect();
+        let hero_rank = seven(hero, board, &tr).rank();
+        let villain_rank = seven(villain, board, &tr).rank();
         score += match hero_rank.cmp(&villain_rank) {
             Ordering::Greater => 1.0,
             Ordering::Equal => 0.5,
@@ -37,38 +39,34 @@ pub fn equity(hero: [Card; 2], villain: [Card; 2], flop: [Card; 3], iters: u32) 
 }
 
 /// Mean equity of `hero` vs every combo in `villain_range` that doesn't collide
-/// with the hero's cards or the flop. `0.5` if nothing is left to play against.
+/// with the hero's cards or the board (3–5 cards). `0.5` if nothing is left to
+/// play against.
 ///
 /// ponytail: O(hero × villain) Monte Carlo — fine because the range drill runs
 /// this once at startup; keep per-pair `iters` low and the variance averages out
 /// across the many villain combos.
 pub fn equity_vs_range(
     hero: [Card; 2],
-    flop: [Card; 3],
+    board: &[Card],
     villain_range: &[[Card; 2]],
     iters: u32,
 ) -> f64 {
-    let blocked = |v: &[Card; 2]| v.iter().any(|c| hero.contains(c) || flop.contains(c));
+    let blocked = |v: &[Card; 2]| v.iter().any(|c| hero.contains(c) || board.contains(c));
     let live: Vec<&[Card; 2]> = villain_range.iter().filter(|v| !blocked(v)).collect();
     if live.is_empty() {
         return 0.5;
     }
     live.iter()
-        .map(|v| equity(hero, **v, flop, iters))
+        .map(|v| equity(hero, **v, board, iters))
         .sum::<f64>()
         / live.len() as f64
 }
 
-fn seven(hole: [Card; 2], flop: [Card; 3], turn_river: &[Card]) -> Hand {
-    Hand::new_with_cards(vec![
-        hole[0],
-        hole[1],
-        flop[0],
-        flop[1],
-        flop[2],
-        turn_river[0],
-        turn_river[1],
-    ])
+fn seven(hole: [Card; 2], board: &[Card], runout: &[Card]) -> Hand {
+    let mut cards = vec![hole[0], hole[1]];
+    cards.extend_from_slice(board);
+    cards.extend_from_slice(runout);
+    Hand::new_with_cards(cards)
 }
 
 /// Coarse made-hand strength of a hole pair on a flop, for the range drill.
@@ -192,7 +190,7 @@ mod tests {
         let hero = [card("As"), card("Ks")];
         let villain = [card("2c"), card("2d")];
         let flop = [card("Qs"), card("Js"), card("Ts")];
-        assert_eq!(equity(hero, villain, flop, 1000), 1.0);
+        assert_eq!(equity(hero, villain, &flop, 1000), 1.0);
     }
 
     #[test]
@@ -206,9 +204,23 @@ mod tests {
             [card("Ad"), card("Kd")],
             [card("As"), card("2h")], // collides with hero -> skipped
         ];
-        assert_eq!(equity_vs_range(hero, flop, &range, 200), 1.0);
+        assert_eq!(equity_vs_range(hero, &flop, &range, 200), 1.0);
         // Empty / fully-blocked range -> neutral 0.5.
-        assert_eq!(equity_vs_range(hero, flop, &[], 200), 0.5);
+        assert_eq!(equity_vs_range(hero, &flop, &[], 200), 0.5);
+    }
+
+    #[test]
+    fn turn_and_river_boards_are_exact() {
+        // A 5-card board leaves no runout: equity is a single deterministic
+        // showdown, so 1 iter and 1000 iters must agree exactly.
+        let hero = [card("As"), card("Ks")]; // pair of aces
+        let villain = [card("Qh"), card("Jd")]; // pair of queens
+        let river = [card("Ah"), card("7c"), card("2d"), card("5s"), card("9h")];
+        assert_eq!(equity(hero, villain, &river, 1), 1.0);
+        assert_eq!(equity(hero, villain, &river, 1000), 1.0);
+        // A 4-card (turn) board still averages a one-card runout.
+        let turn = [card("Ah"), card("7c"), card("2d"), card("5s")];
+        assert_eq!(equity(hero, villain, &turn, 500), 1.0);
     }
 
     fn hole(a: &str, b: &str) -> [Card; 2] {

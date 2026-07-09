@@ -1,7 +1,7 @@
 // Framework-free glue: wasm exports return JSON strings, we parse and render.
 // The GTO grid and preflop chart sections never touch wasm — they fetch the
 // committed JSON directly.
-import init, { equity_report, equity_vs_reach } from './pkg/poker_trainer_web.js';
+import init, { equity_report, equity_vs_reach, made_hand } from './pkg/poker_trainer_web.js';
 
 const $ = id => document.getElementById(id);
 const SUITS = { s: ['♠', 'spade'], h: ['♥', 'heart'], d: ['♦', 'diamond'], c: ['♣', 'club'] };
@@ -171,6 +171,27 @@ function preflopPotOddsSpot() {
   };
 }
 
+// HU ruleset ids, grouped by family (asc) then shallow->deep — shared by the
+// pot-odds drill and the flop equity explorer.
+function huIds(ids) {
+  const depth = id => +id.match(/(\d+)$/)[1];
+  const family = id => id.replace(/-?\d+$/, '');
+  return ids.filter(id => id.includes('-hu'))
+    .sort((a, b) => family(a) === family(b) ? depth(a) - depth(b)
+      : family(a) < family(b) ? -1 : 1);
+}
+
+// Fetch one HU ruleset's header + starter-tier nodes (path -> record).
+async function loadHuTable(id) {
+  const [header, lines] = await Promise.all([
+    fetch(`preflop/${id}/header.json`).then(r => r.json()),
+    fetch(`preflop/${id}/starter.jsonl`).then(r => r.text()),
+  ]);
+  const nodes = {};
+  for (const l of lines.split('\n')) if (l.trim()) { const n = JSON.parse(l); nodes[n.path] = n; }
+  return { header, nodes, stack: header.config.stack_bb ?? null };
+}
+
 async function poInit() {
   let ids;
   try { ids = await (await fetch('preflop/index.json')).json(); }
@@ -178,11 +199,7 @@ async function poInit() {
     $('po-spot').innerHTML = '<p>Preflop charts aren’t staged — run the data build to enable this drill.</p>';
     return;
   }
-  const depth = id => +id.match(/(\d+)$/)[1];
-  const family = id => id.replace(/-?\d+$/, '');
-  const hu = ids.filter(id => id.includes('-hu'))
-    .sort((a, b) => family(a) === family(b) ? depth(a) - depth(b)
-      : family(a) < family(b) ? -1 : 1);
+  const hu = huIds(ids);
   if (!hu.length) return;
   const sel = $('po-source');
   sel.innerHTML = hu.map(id => `<option value="${id}">${id}</option>`).join('');
@@ -193,18 +210,134 @@ async function poInit() {
     $('po-actions').hidden = true;
     $('po-spot').innerHTML = '';
     $('po-reveal').innerHTML = '';
-    const [header, lines] = await Promise.all([
-      fetch(`preflop/${poSource}/header.json`).then(r => r.json()),
-      fetch(`preflop/${poSource}/starter.jsonl`).then(r => r.text()),
-    ]);
-    poHeader = header;
-    const nodes = {};
-    for (const l of lines.split('\n')) if (l.trim()) { const n = JSON.parse(l); nodes[n.path] = n; }
-    poNodes = nodes;
-    poStack = header.config.stack_bb ?? null;
+    const t = await loadHuTable(poSource);
+    poHeader = t.header;
+    poNodes = t.nodes;
+    poStack = t.stack;
   };
   sel.onchange = loadSource;
   // Default to cash-hu89 when present, else the shallowest HU set; load it now.
+  sel.value = hu.includes('cash-hu89') ? 'cash-hu89' : hu[0];
+  await loadSource();
+}
+
+// ---- flop equity explorer (JS line walk; equity vs range via wasm) ----------
+// Pick a HU preflop line (fixes both arrival ranges), enter your hand + a board
+// (flop through river), and score your equity vs villain's whole range. Postflop
+// the BB is OOP and the SB (button) is IP.
+
+let feNodes = null, feStack = null, feLines = [];
+
+// Both seats' per-class arrival reach along a fixed line (token path), the JS
+// mirror of PreflopCharts::class_reach for two seats at once. null if a token
+// isn't in the committed starter tier.
+function reachForLine(tokens) {
+  const reach = { SB: new Float32Array(169).fill(1), BB: new Float32Array(169).fill(1) };
+  let prefix = '';
+  for (const tok of tokens) {
+    const node = feNodes[prefix];
+    if (!node) return null;
+    const ai = node.actions.findIndex(l => pfTok(l) === tok);
+    if (ai < 0) return null;
+    const rs = reach[node.seat], fr = node.freqs[ai];
+    for (let c = 0; c < 169; c++) rs[c] *= fr[c];
+    prefix = prefix ? `${prefix}-${tok}` : tok;
+  }
+  return reach;
+}
+
+// Every action line that closes to a flop (check-through or a called raise) as
+// {tokens, label, pot}. Fold/all-in lines and pruned nodes drop out; the pot is
+// what's in the middle when the flop is dealt.
+function enumerateFlopLines(nodes) {
+  const out = [];
+  const walk = (path, tokens, labels) => {
+    const node = nodes[path];
+    if (!node) return;   // pruned/missing
+    node.actions.forEach((label) => {
+      const tok = pfTok(label);
+      const nextTokens = [...tokens, tok];
+      const nextLabels = [...labels, `${node.seat} ${pfVerb(label)}`];
+      if (label === 'Fold' || label === 'All-in') return;   // dead line
+      // A check, or a called raise past the root (a root call is the SB limp —
+      // BB still acts), opens the flop. Mirrors the pot-odds sampler.
+      let pot = null;
+      if (label === 'Check') pot = node.pot_bb;
+      else if (label === 'Call' && path !== '') pot = node.pot_bb + node.to_call_bb;
+      if (pot !== null) {
+        if (feStack && pot >= 2 * feStack) return;   // coarse all-in guard
+        out.push({ tokens: nextTokens, label: nextLabels.join(', '), pot });
+        return;   // flop reached — stop this branch
+      }
+      walk(path ? `${path}-${tok}` : tok, nextTokens, nextLabels);
+    });
+  };
+  walk('', [], []);
+  return out;
+}
+
+$('fe-run').onclick = () => {
+  const out = $('fe-out');
+  if (!feNodes) { out.textContent = 'Charts still loading…'; return; }
+  const li = feLines[+$('fe-line').value];
+  if (!li) { out.textContent = 'No flop-closing line for this table — pick another.'; return; }
+  const hero = $('fe-hero').value.trim();
+  const board = $('fe-board').value.trim().replace(/\s+/g, '');
+  const heroOop = $('fe-pos').value === 'oop';
+  const heroList = hero.match(/.{2}/g) || [], boardList = board.match(/.{2}/g) || [];
+  const dup = heroList.find(c => boardList.includes(c));
+  if (dup) { out.textContent = `Your ${dup} is also on the board.`; return; }
+  const reach = reachForLine(li.tokens);
+  if (!reach) { out.textContent = 'This line isn’t in the committed starter charts.'; return; }
+  const villainReach = heroOop ? reach.SB : reach.BB;   // OOP=BB, so villain=IP=SB
+  out.textContent = 'Computing…';
+  setTimeout(() => {   // let the label paint before the synchronous MC loop
+    try {
+      const equity = equity_vs_reach(hero, board, villainReach);
+      const pot = li.pot;
+      const bet = parseFloat($('fe-bet').value) || 0;
+      let verdict = '';
+      if (bet > 0) {
+        const required = bet / (pot + 2 * bet);
+        const callEv = equity * (pot + bet) - (1 - equity) * bet;
+        verdict = `<p>Facing <b>${bet.toFixed(1)}bb</b> into ${pot.toFixed(1)}bb: you need <b>${pct(required)}</b> → ` +
+          `<b>${equity >= required ? 'CALL' : 'FOLD'}</b> (call EV ${callEv >= 0 ? '+' : ''}${callEv.toFixed(2)}bb).</p>`;
+      }
+      const n = boardList.length;
+      const bucket = n === 3 ? ` · you have <b>${made_hand(hero, board)}</b>` : '';
+      out.innerHTML =
+        `<p class="spotline">Hero ${cardsHTML(heroList)} (${heroOop ? 'OOP / BB' : 'IP / SB'}) · ` +
+        `Board ${cardsHTML(boardList)} · Pot ${pot.toFixed(1)}bb${bucket}</p>` +
+        `<p>Equity vs villain's whole range: <b>${pct(equity)}</b> ` +
+        (n === 5 ? '<small>(exact — full board)</small>' : `<small>(Monte-Carlo, ${5 - n}-card runout)</small>`) + '</p>' +
+        verdict;
+    } catch (e) {
+      out.textContent = 'Error: ' + (e.message || e);
+    }
+  }, 20);
+};
+
+async function feInit() {
+  let ids;
+  try { ids = await (await fetch('preflop/index.json')).json(); }
+  catch {
+    $('fe-out').innerHTML = '<p>Preflop charts aren’t staged — run the data build to enable this.</p>';
+    return;
+  }
+  const hu = huIds(ids);
+  if (!hu.length) return;
+  const sel = $('fe-source');
+  sel.innerHTML = hu.map(id => `<option value="${id}">${id}</option>`).join('');
+  const loadSource = async () => {
+    const t = await loadHuTable(sel.value);
+    feNodes = t.nodes;
+    feStack = t.stack;
+    feLines = enumerateFlopLines(feNodes);
+    $('fe-line').innerHTML = feLines.map((l, i) =>
+      `<option value="${i}">${l.label} — pot ${l.pot.toFixed(1)}bb</option>`).join('');
+    $('fe-out').innerHTML = '';
+  };
+  sel.onchange = loadSource;
   sel.value = hu.includes('cash-hu89') ? 'cash-hu89' : hu[0];
   await loadSource();
 }
@@ -468,5 +601,6 @@ async function grInit() {
 
 await init();
 poInit();
+feInit();
 pfInit();
 grInit();

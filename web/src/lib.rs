@@ -8,7 +8,7 @@
 //! The internal `*_impl` functions return plain Rust types so the
 //! `#[cfg(test)]` module runs natively (rlib), no browser needed.
 
-use poker_trainer::{preflop, report};
+use poker_trainer::{eval, preflop, report};
 use rs_poker::core::Card;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
@@ -71,14 +71,29 @@ fn parse_cards<const N: usize>(s: &str) -> Result<[Card; N], String> {
     Ok(v.try_into().unwrap())
 }
 
-fn equity_vs_reach_impl(hero: &str, flop: &str, reach: &[f32]) -> Result<f64, String> {
+/// Parse a board of 3–5 cards (flop, turn, or river) from concatenated 2-char
+/// codes like `"Td9d6h"` (flop) or `"Td9d6h2sKc"` (river).
+fn parse_board(s: &str) -> Result<Vec<Card>, String> {
+    if !s.len().is_multiple_of(2) {
+        return Err(format!("{s:?} is not whole cards"));
+    }
+    let n = s.len() / 2;
+    if !(3..=5).contains(&n) {
+        return Err(format!("board needs 3–5 cards (flop to river), got {n}"));
+    }
+    (0..n)
+        .map(|i| Card::try_from(&s[2 * i..2 * i + 2]).map_err(|_| format!("bad card in {s:?}")))
+        .collect()
+}
+
+fn equity_vs_reach_impl(hero: &str, board: &str, reach: &[f32]) -> Result<f64, String> {
     if reach.len() != preflop::CLASSES {
         return Err(format!("reach needs {} class weights", preflop::CLASSES));
     }
     let mut rng = rand::rng();
     Ok(preflop::equity_vs_reach(
         parse_cards(hero)?,
-        parse_cards(flop)?,
+        &parse_board(board)?,
         reach,
         &mut rng,
         EQ_ITERS,
@@ -86,14 +101,28 @@ fn equity_vs_reach_impl(hero: &str, flop: &str, reach: &[f32]) -> Result<f64, St
     ))
 }
 
-/// Hero's equity vs the villain's *range* on a flop — what the pot-odds drill
-/// scores against. That drill samples a spot in JS (walking the committed
-/// preflop charts) and builds the villain seat's per-class reach — its 169
-/// arrival weights in grid order — then asks wasm for the equity. `hero`/`flop`
-/// are concatenated 2-char codes like `"AsKh"` (2 cards, then 3).
+/// Hero's equity vs the villain's *range* on a board — what the pot-odds drill
+/// and flop equity explorer score against. The caller builds the villain seat's
+/// per-class reach (its 169 arrival weights in grid order) by walking the
+/// committed preflop charts, then asks wasm for the equity. `hero` is a 2-card
+/// code like `"AsKh"`; `board` is 3–5 cards (flop `"Td9d6h"` through river), so
+/// the explorer can advance the runout.
 #[wasm_bindgen]
-pub fn equity_vs_reach(hero: &str, flop: &str, reach: &[f32]) -> Result<f64, JsError> {
-    equity_vs_reach_impl(hero, flop, reach).map_err(|e| JsError::new(&e))
+pub fn equity_vs_reach(hero: &str, board: &str, reach: &[f32]) -> Result<f64, JsError> {
+    equity_vs_reach_impl(hero, board, reach).map_err(|e| JsError::new(&e))
+}
+
+fn made_hand_impl(hero: &str, flop: &str) -> Result<String, String> {
+    Ok(eval::classify_hand(parse_cards(hero)?, parse_cards(flop)?).to_string())
+}
+
+/// Hero's coarse made-hand bucket on a *flop* — `Value` / `Overpair` /
+/// `TopPair` / `Pair` / `Draw` / `Air`, from `eval::classify_hand`. Flop only
+/// (3 cards): the top-pair and draw semantics are flop concepts, so the explorer
+/// shows this label only before the turn.
+#[wasm_bindgen]
+pub fn made_hand(hero: &str, flop: &str) -> Result<String, JsError> {
+    made_hand_impl(hero, flop).map_err(|e| JsError::new(&e))
 }
 
 #[cfg(test)]
@@ -129,7 +158,34 @@ mod tests {
         assert!(equity_vs_reach_impl("AhAs", "KdQc", &reach).is_err()); // board too short
         assert!(equity_vs_reach_impl("Zz", "KdQc7h", &reach).is_err()); // bad card code
         assert!(equity_vs_reach_impl("AhAs", "KdQc7h", &[0.0; 10]).is_err()); // wrong reach len
-        // The export serializes.
+                                                                              // The export serializes.
         assert!(equity_vs_reach("AhAs", "KdQc7h", &reach).is_ok());
+    }
+
+    #[test]
+    fn equity_vs_reach_advances_to_turn_and_river() {
+        // Hero flops a royal flush; villain (pure 22) is drawing dead at every
+        // board length, so equity is exactly 1.0 on flop, turn, and river.
+        let mut reach = vec![0.0f32; preflop::CLASSES];
+        reach[preflop::class_index_of("22").unwrap()] = 1.0;
+        assert_eq!(equity_vs_reach_impl("AsKs", "QsJsTs", &reach).unwrap(), 1.0);
+        assert_eq!(
+            equity_vs_reach_impl("AsKs", "QsJsTs8d", &reach).unwrap(),
+            1.0
+        );
+        assert_eq!(
+            equity_vs_reach_impl("AsKs", "QsJsTs8d4c", &reach).unwrap(),
+            1.0
+        );
+        // Six board cards is past the river — rejected.
+        assert!(equity_vs_reach_impl("AsKs", "QsJsTs8d4c7h", &reach).is_err());
+    }
+
+    #[test]
+    fn made_hand_labels_the_flop() {
+        // Top set is Value; an overpair is Overpair; a bad card is rejected.
+        assert_eq!(made_hand_impl("KsKh", "Kd9c4s").unwrap(), "Value");
+        assert_eq!(made_hand_impl("AsAh", "Kd9c4s").unwrap(), "Overpair");
+        assert!(made_hand_impl("AsAh", "Kd9c").is_err()); // not a flop
     }
 }
