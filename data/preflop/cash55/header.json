@@ -35,7 +35,7 @@
       "export_reach": 0.0002,
       "seed": 1,
       "starter_reach": 0.0002,
-      "traversals": 100000000
+      "traversals": 1000000000
     },
     "squeeze_mult": [
       4.0
@@ -46,12 +46,12 @@
       4.0
     ]
   },
-  "config_hash": "232c9067",
+  "config_hash": "f26541ba",
   "ev_unit": "bb",
   "generator": {
     "version": "0.1.0",
-    "traversals": 100000000,
+    "traversals": 1000000000,
     "seed": 1,
-    "strategy_drift": 0.07731283
+    "strategy_drift": 0.08189881
   }
 }

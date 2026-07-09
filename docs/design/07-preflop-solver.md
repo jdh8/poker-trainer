@@ -216,9 +216,10 @@ formats stay one clean step apart, so "HU-89 vs 6max-89" names one depth.
 already forced a full re-solve of every rung; re-depthing to Fibonacci rode that
 same pass, so the new depths cost no extra generation time. `jam_from_level` is
 assigned per depth: 144/89/55 jam only vs a 3-bet, 34 offers the jam vs an open,
-21 and shorter are open-jam/fold. Solved at 100M traversals/rung — the ~8×
-smaller SB-only tree converges as well at 100M as the old all-limp ladder did at
-500M (~113 vs ~69 visits per decision node).
+21 and shorter are open-jam/fold. Solved at 1G traversals/rung — a 10× bump on
+the initial 100M pass; the ~8× smaller SB-only tree already converged as well at
+100M as the old all-limp ladder did at 500M, so 1G is headroom for the rare
+multiway lines.
 
 ## Node addressing (path grammar)
 
@@ -292,21 +293,19 @@ deliberately changed. Custom local rulesets are gitignored wholesale.
   while still inflating the contested pot).
 - **Convergence**: HU rulesets have exact best-response exploitability
   (per-player, constant-sum-corrected). 6-max runs the manifest's hand budget
-  (100M hands) and records the probe-set strategy drift in the header
+  (1G hands) and records the probe-set strategy drift in the header
   provenance. Wall-clock is **terminal-bound, not tree-bound**: the multiway
   all-in Monte-Carlo dominates, so push/fold rungs — which funnel most
-  traversals into 3–6-way jams — cost the most despite the smallest trees. All
-  eight rungs land at 54–74 min at 100M (cash5, 1.9k states, is the *slowest*;
-  cash144, 885k states, is not), so a fanned-out batch finishes in ~75 min on
-  spare cores. The ~8× smaller SB-only tree earns back the 5× budget cut vs the
-  old all-limp ladder: 100M gives ~113 visits/decision node against its 500M
-  ~69. Caveat: the drift is an L∞ (max) over a handful of high-reach probe
-  nodes, so it floors around 0.06–0.10 — one genuinely-indifferent hand pins it
-  — and does **not** track distance to equilibrium; macro shapes (RFI%, defense
-  frequencies) stabilize early while the fine mixes keep moving. Raise
-  `traversals` on just the deep rungs (55/89/144) if the rarely-reached lines
-  still look noisy — there is no cheap header signal, diff against a hotter
-  solve to tell.
+  traversals into 3–6-way jams — cost the most despite the smallest trees. At
+  1G, single-threaded, the eight rungs run ~8.7–13 h each (cash5, 1.9k states,
+  is the *slowest* at ~13 h; cash144, 885k states, is not), fanned across spare
+  cores as one overnight batch. Caveat: the drift is an L∞ (max) over a handful
+  of high-reach probe nodes, so it floors around 0.06–0.09 — one
+  genuinely-indifferent hand pins it — and does **not** track distance to
+  equilibrium; macro shapes (RFI%, defense frequencies) stabilize early while
+  the fine mixes keep moving. Push beyond 1G on just the deep rungs (55/89/144)
+  if the rarely-reached lines still look noisy — there is no cheap header
+  signal, diff against a hotter solve to tell.
 
 ## Consumers
 
