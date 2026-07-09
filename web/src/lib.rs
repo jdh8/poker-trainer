@@ -116,6 +116,35 @@ pub fn deal_pot_odds() -> String {
     serde_json::to_string(&deal_pot_odds_impl()).unwrap()
 }
 
+// ---- single-hand equity (for the preflop-sourced pot-odds drill) ------------
+
+fn equity_of_impl(hero: &str, villain: &str, board: &str) -> Result<f64, String> {
+    fn cards<const N: usize>(s: &str) -> Result<[Card; N], String> {
+        if s.len() != 2 * N {
+            return Err(format!("{s:?} needs {N} cards"));
+        }
+        let v = (0..N)
+            .map(|i| Card::try_from(&s[2 * i..2 * i + 2]).map_err(|_| format!("bad card in {s:?}")))
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(v.try_into().unwrap())
+    }
+    Ok(eval::equity(
+        cards(hero)?,
+        cards(villain)?,
+        cards(board)?,
+        ITERS,
+    ))
+}
+
+/// Hero-vs-villain equity on a flop — the specific-hand Monte-Carlo the
+/// preflop-sourced pot-odds drill needs. That drill samples the cards in JS
+/// (walking the committed preflop charts), then asks wasm for the equity. Args
+/// are concatenated 2-char codes like `"AsKh"`: hero/villain 2 cards, board 3.
+#[wasm_bindgen]
+pub fn equity_of(hero: &str, villain: &str, board: &str) -> Result<f64, JsError> {
+    equity_of_impl(hero, villain, board).map_err(|e| JsError::new(&e))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -137,6 +166,16 @@ mod tests {
         assert!(equity_report_impl("not a range", "KK", "Td9d6h").is_err());
         // TT on a Txx flop leaves one live combo, but a range that is 100%
         // board cards would be empty; the closest legal probe is fine to skip.
+    }
+
+    #[test]
+    fn equity_of_is_sane() {
+        // Set of aces crushes a pair of deuces on a dry board.
+        let e = equity_of_impl("AhAs", "2c2d", "AdKhQs").unwrap();
+        assert!(e > 0.9, "trip aces vs 22 should crush: {e}");
+        assert!(equity_of_impl("AhAs", "2c2d", "AdKh").is_err()); // board too short
+        assert!(equity_of_impl("Zz", "2c2d", "AdKhQs").is_err()); // bad card code
+        assert!(equity_of("AhAs", "2c2d", "AdKhQs").is_ok()); // export serializes
     }
 
     #[test]

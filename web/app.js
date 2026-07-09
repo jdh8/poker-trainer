@@ -1,7 +1,7 @@
 // Framework-free glue: wasm exports return JSON strings, we parse and render.
 // The GTO grid and preflop chart sections never touch wasm — they fetch the
 // committed JSON directly.
-import init, { equity_report, deal_pot_odds } from './pkg/poker_trainer_web.js';
+import init, { equity_report, deal_pot_odds, equity_of } from './pkg/poker_trainer_web.js';
 
 const $ = id => document.getElementById(id);
 const SUITS = { s: ['♠', 'spade'], h: ['♥', 'heart'], d: ['♦', 'diamond'], c: ['♣', 'club'] };
@@ -45,14 +45,27 @@ $('eq-run').onclick = () => {
 // ---- pot-odds drill ---------------------------------------------------------
 
 let poSpot = null, poRight = 0, poTotal = 0;
+// Preflop-sourced mode (empty = the fixed-10bb wasm drill): a HU ruleset's
+// path->node map, its header, and effective stack for the all-in guard.
+let poSource = '', poNodes = null, poHeader = null, poStack = null;
 
 $('po-deal').onclick = () => {
-  poSpot = JSON.parse(deal_pot_odds());
-  $('po-spot').innerHTML =
-    `<p class="spotline">Your hand: ${cardsHTML(poSpot.hero)} &nbsp; Flop: ${cardsHTML(poSpot.flop)}</p>` +
-    `<p>Pot ${poSpot.pot.toFixed(0)}bb. Villain bets <b>${poSpot.bet.toFixed(1)}bb</b> — ` +
-    `call ${poSpot.bet.toFixed(1)} to win ${(poSpot.pot + poSpot.bet).toFixed(1)}, ` +
-    `so you need <b>${pct(poSpot.required)}</b> equity.</p>`;
+  const spot = poSource ? preflopPotOddsSpot() : JSON.parse(deal_pot_odds());
+  if (!spot) {   // preflop mode only: 200 sims never reached a non-all-in flop
+    $('po-spot').innerHTML = '<p>This ruleset rarely reaches a non-all-in flop — ' +
+      'try a deeper HU set like cash-hu89.</p>';
+    $('po-actions').hidden = true;
+    $('po-reveal').innerHTML = '';
+    return;
+  }
+  poSpot = spot;
+  const line = spot.line && spot.line.length
+    ? `<p class="spotline">Preflop: ${spot.line.join(', ')}.</p>` : '';
+  $('po-spot').innerHTML = line +
+    `<p class="spotline">Your hand: ${cardsHTML(spot.hero)} &nbsp; Flop: ${cardsHTML(spot.flop)}</p>` +
+    `<p>Pot ${spot.pot.toFixed(1)}bb. Villain bets <b>${spot.bet.toFixed(1)}bb</b> — ` +
+    `call ${spot.bet.toFixed(1)} to win ${(spot.pot + spot.bet).toFixed(1)}, ` +
+    `so you need <b>${pct(spot.required)}</b> equity.</p>`;
   $('po-actions').hidden = false;
   $('po-reveal').innerHTML = '';
 };
@@ -71,6 +84,112 @@ function poAnswer(called) {
 }
 $('po-call').onclick = () => poAnswer(true);
 $('po-fold').onclick = () => poAnswer(false);
+
+// ---- preflop-sourced pot-odds (JS forward-sim; equity via wasm equity_of) ----
+// The random drill above uses a fixed 10bb pot; picking a HU ruleset in
+// #po-source instead draws each spot from its solved preflop equilibrium.
+// This mirrors `drill pot-odds --preflop <hu>` (trainer.rs) — the sim reuses the
+// same chart nodes the browser below walks; only the 10k-iter equity is wasm.
+const BET_FRACTIONS = [0.33, 0.5, 0.75, 1.0, 1.5];
+
+// Grid index of a two-card holding — matches preflop::class_index (RANKS below,
+// defined for the grid): suited ? hi*13+lo : lo*13+hi, hi=min rank, lo=max.
+const clsIdx = (a, b) => {
+  const x = RANKS.indexOf(a[0]), y = RANKS.indexOf(b[0]);
+  const hi = Math.min(x, y), lo = Math.max(x, y);
+  return a[1] === b[1] ? hi * 13 + lo : lo * 13 + hi;
+};
+
+// Forward-simulate one HU preflop hand to a flop; null on a dead line (fold /
+// all-in) or a pruned node — caller retries. Port of sample_preflop_flop_spot.
+function samplePreflopSpot() {
+  const deck = [];
+  for (const r of RANKS) for (const s of 'shdc') deck.push(r + s);
+  for (let i = deck.length - 1; i > 0; i--) {   // Fisher–Yates
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  const sb = [deck[0], deck[1]], bb = [deck[2], deck[3]];
+  const sbCls = clsIdx(sb[0], sb[1]), bbCls = clsIdx(bb[0], bb[1]);
+
+  let path = '';
+  const line = [];
+  for (;;) {
+    const node = poNodes[path];
+    if (!node) return null;                       // pruned/missing => abort
+    const cls = node.seat === 'SB' ? sbCls : bbCls;
+    const w = node.freqs.map(f => f[cls]);
+    const wsum = w.reduce((a, b) => a + b, 0);
+    if (wsum <= 0) return null;                    // this class never arrives here
+    let roll = Math.random() * wsum, ai = w.length - 1;
+    for (let i = 0; i < w.length; i++) { roll -= w[i]; if (roll < 0) { ai = i; break; } }
+    const label = node.actions[ai];
+    line.push(`${node.seat} ${pfVerb(label)}`);
+
+    // hu_step: fold/all-in dead; check or a called raise opens a flop; a call at
+    // the root is the SB limp (BB still acts); anything else continues.
+    if (label === 'Fold' || label === 'All-in') return null;
+    let pot = null;
+    if (label === 'Check') pot = node.pot_bb;
+    else if (label === 'Call' && path !== '') pot = node.pot_bb + node.to_call_bb;
+    if (pot !== null) {
+      // ponytail: starter-tier only on the deployed site; deep lines self-prune
+      // via retry. Coarse all-in guard — deep HU sets (cash-hu89) don't hit it.
+      if (poStack && pot >= 2 * poStack) return null;
+      return { sb, bb, flop: [deck[4], deck[5], deck[6]], pot, line };
+    }
+    path = path === '' ? pfTok(label) : `${path}-${pfTok(label)}`; // SB limp or a raise
+  }
+}
+
+// A fully scored spot in deal_pot_odds()'s shape (+ a preflop `line`), or null
+// if 200 sims never reached a bettable flop.
+function preflopPotOddsSpot() {
+  let s = null;
+  for (let i = 0; i < 200 && !s; i++) s = samplePreflopSpot();
+  if (!s) return null;
+  const [hero, villain] = Math.random() < 0.5 ? [s.sb, s.bb] : [s.bb, s.sb];
+  const pot = s.pot;
+  const bet = pot * BET_FRACTIONS[Math.floor(Math.random() * BET_FRACTIONS.length)];
+  const required = bet / (pot + 2 * bet);
+  const equity = equity_of(hero.join(''), villain.join(''), s.flop.join(''));
+  return {
+    hero, villain, flop: s.flop, pot, bet, required, equity,
+    should_call: equity >= required,
+    call_ev: equity * (pot + bet) - (1 - equity) * bet,
+    line: s.line,
+  };
+}
+
+async function poInit() {
+  let ids;
+  try { ids = await (await fetch('preflop/index.json')).json(); }
+  catch { return; }   // charts not staged; the random wasm drill still works
+  const depth = id => +id.match(/(\d+)$/)[1];
+  const family = id => id.replace(/-?\d+$/, '');
+  const hu = ids.filter(id => id.includes('-hu'))
+    .sort((a, b) => family(a) === family(b) ? depth(a) - depth(b)
+      : family(a) < family(b) ? -1 : 1);
+  const sel = $('po-source');
+  sel.innerHTML = '<option value="">Random (10bb pot)</option>' +
+    hu.map(id => `<option value="${id}">${id}</option>`).join('');
+  sel.onchange = async () => {
+    poSource = sel.value;
+    poSpot = null;
+    $('po-actions').hidden = true;
+    $('po-spot').innerHTML = '';
+    $('po-reveal').innerHTML = '';
+    if (!poSource) { poNodes = null; return; }
+    const [header, lines] = await Promise.all([
+      fetch(`preflop/${poSource}/header.json`).then(r => r.json()),
+      fetch(`preflop/${poSource}/starter.jsonl`).then(r => r.text()),
+    ]);
+    poHeader = header;
+    poNodes = {};
+    for (const l of lines.split('\n')) if (l.trim()) { const n = JSON.parse(l); poNodes[n.path] = n; }
+    poStack = header.config.stack_bb ?? null;
+  };
+}
 
 // ---- preflop chart browser (fetches data/preflop/, no wasm) ------------------
 
@@ -330,5 +449,6 @@ async function grInit() {
 // ---- boot -------------------------------------------------------------------
 
 await init();
+poInit();
 pfInit();
 grInit();
