@@ -39,11 +39,12 @@ build and serve it locally.
 
 ### Preflop charts
 
-`drill preflop` and the web browser read solved 6-max charts from
-`data/preflop/<ruleset>/`. Committed rule sets: the cash depth ladder
-`cash{5,10,15,20,32,50,75,100,150}` (6-max, 5% rake, chip-EV, limps enabled;
-the shallow rungs play push/fold), pick one with `--ruleset`. They're produced by
-the permissive in-repo MCCFR generator
+`drill preflop` and the web browser read solved preflop charts from
+`data/preflop/<ruleset>/`. Four committed families, each a Fibonacci depth ladder
+(chip-EV, `--ruleset <id>`): **Cash 6-max** `cash{5..144}` and **MTT 6-max**
+`mtt{5..144}` (six-handed), plus **Cash HU** `cash-hu{3..144}` and **MTT HU**
+`mtt-hu{3..55}` (heads-up). Cash tiers take 5% rake capped 3bb; MTT tiers take a
+1 BB Big Blind Ante. They're produced by the permissive in-repo MCCFR generator
 ([design 07](docs/design/07-preflop-solver.md)):
 
 ```sh

@@ -1,0 +1,23 @@
+# Heads-up tournament (SB vs BB), 3bb effective, chip-EV. 1 BB Big Blind Ante
+# (BBA), no rake, no ICM (design 07). Short, jam-heavy final-table/SNG heads-up;
+# the SB completes the button. ante_bb is the total dead ante (not per-player).
+id = "mtt-hu3"
+label = "MTT HU, 3bb (1 BB ante)"
+seats = ["SB", "BB"]           # n=2: seat 0 = SB = button, acts first; seat 1 = BB
+stack_bb = 3.0
+sb = 0.5
+bb = 1.0
+ante_bb = 1.0                   # 1 BB Big Blind Ante, total (not per-player)
+open_to_bb = [2.0, 2.5, 3.0]
+threebet_mult = [3.0]           # single 3-bet size keeps the short HU tree small/fast
+squeeze_mult = [3.0]            # unreachable in HU (no caller) but validation needs >1.0
+fourbet_mult = [2.3]
+fivebet_mult = [2.2]
+jam_from_level = 0              # 0 push/fold · 1 jam-vs-open · 2 jam-vs-3bet
+limp_scope = "sb"               # the SB completes the button (design 07)
+
+[solver]
+traversals = 1_000_000_000
+seed = 1
+export_reach = 0.0002
+starter_reach = 0.0002

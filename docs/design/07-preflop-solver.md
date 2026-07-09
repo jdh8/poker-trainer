@@ -53,6 +53,18 @@ total is table-size-independent, each 6-max chart already subsumes the
 short-handed endgame (its UTG+HJ-fold node *is* the 4-max BBA game). See §Rake &
 ante.
 
+The heads-up ladders split the same way. **Cash HU** `cash-hu{3,5,8,13,21,34,55,89,144}`
+is the raked HU cash game — `seats = ["SB", "BB"]`, the SB completes the button
+(`limp_scope = "sb"`), `{3, 4}×` 3-bet menu, 5% rake capped 3bb, chip-EV.
+**MTT HU** `mtt-hu{3,5,8,13,21,34,55}` is the short, jam-heavy tournament game —
+same seats, a **1 BB Big Blind Ante** (`ante_bb = 1.0`, no rake), single 3-bet
+size, deeper `jam_from_level` floor. They replace the old zero-rake
+`heads-up{3..89}` push/fold *tier*: the `no_limps` push/fold game survives as the
+published-Nash validation reference (inline in the M3 cross-check, §Convergence),
+it is just no longer shipped as a browsable data set. The web Table select now
+reads **Cash 6-max · Cash HU · MTT 6-max · MTT HU** (the raked Cash HU trades the
+old reference's exact-exploitability property for a realistic economy).
+
 ## Rake & ante — real-world calibration
 
 Both economy knobs are pinned to a 2024–2026 survey of popular platforms and series
@@ -79,7 +91,8 @@ field, and for chip-EV who posts is irrelevant (the "only-BB-posts" mechanic mat
 under ICM, which the chip-EV tier defers). Because the total ante is table-size-independent,
 each 6-max chart **subsumes the shorter tables** — its UTG+HJ-fold node (pot
 `0.5 + 1.0 + 1.0 = 2.5bb`, CO/BTN/SB/BB to act) *is* the 4-max BBA game — so no separate
-short-handed tier is needed. Cash/HU tiers are unaffected (`ante_bb = 0` either way). A true
+short-handed tier is needed. The cash tiers (6-max and HU) are unaffected
+(`ante_bb = 0`); the HU tournament tier (`mtt-hu*`) takes the same 1 BB BBA. A true
 ICM tier (add `icm_payouts`, where BB-posting would then matter) stays the open extension.
 
 ## The betting tree (`game.rs`)
@@ -187,9 +200,10 @@ the ceiling and watch: mass that **climbs** to the new top is real; mass that
 
 The old cash ladder `{5,10,15,20,32,50,75,100,150}` was ad-hoc — though it
 already reached for log-spacing ("32 is the geometric mean of 20 and 50"). The
-ladder now formalizes that instinct. The HU reference is already pure Fibonacci
-`heads-up{3,5,8,13,21,34,55,89}` (constant ×φ ≈ 1.618 per rung — uniform
-log-spacing of stack depth). Give 6-max the **same ladder shifted up one
+ladder now formalizes that instinct. The HU push/fold reference game was already
+pure Fibonacci `{3,5,8,13,21,34,55,89}` (constant ×φ ≈ 1.618 per rung — uniform
+log-spacing of stack depth; the shipped HU tiers have since split into Cash HU
+`{3..144}` and MTT HU `{3..55}`, above). Give 6-max the **same ladder shifted up one
 Fibonacci index**:
 
 ```
@@ -291,8 +305,9 @@ deliberately changed. Custom local rulesets are gitignored wholesale.
   ICM(E[stack]) ≈ E[ICM(stack)] approximation. `stack_bb` is the post-ante
   betting stack (antes are sunk, so they cancel from every action comparison
   while still inflating the contested pot).
-- **Convergence**: HU rulesets have exact best-response exploitability
-  (per-player, constant-sum-corrected). 6-max runs the manifest's hand budget
+- **Convergence**: unraked HU rulesets have exact best-response exploitability
+  (per-player, constant-sum-corrected; the `no_limps` game is the M3 Nash
+  cross-check). 6-max — and the raked Cash HU tier — run the manifest's hand budget
   (1G hands) and records the probe-set strategy drift in the header
   provenance. Wall-clock is **terminal-bound, not tree-bound**: the multiway
   all-in Monte-Carlo dominates, so push/fold rungs — which funnel most

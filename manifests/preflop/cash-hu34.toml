@@ -1,0 +1,26 @@
+# Heads-up cash (SB vs BB), 34bb effective, chip-EV. 5% rake capped 3bb
+# (design 07): the SB completes/opens/raises/jams or folds, BB responds; the
+# SB may limp the button. Raked HU cash — replaces the old zero-rake push/fold
+# reference tier (and its exact-exploitability property).
+id = "cash-hu34"
+label = "Cash HU, 34bb"
+seats = ["SB", "BB"]            # n=2: seat 0 = SB = button, acts first; seat 1 = BB
+stack_bb = 34.0
+sb = 0.5
+bb = 1.0
+ante_bb = 0.0
+open_to_bb = [2.0, 2.5, 3.0]
+threebet_mult = [3.0, 4.0]      # × the open-to amount: 3× IP, 4× OOP (design 07)
+squeeze_mult = [4.0]            # unreachable in HU (no caller) but validation needs >1.0
+fourbet_mult = [2.3]            # × the 3-bet-to amount; larger 4-bets collapse into the jam
+fivebet_mult = [2.2]            # × the 4-bet-to amount; a 6-bet is jam-only
+jam_from_level = 1              # 0 push/fold · 1 jam-vs-open · 2 jam-vs-3bet
+limp_scope = "sb"               # the SB completes the button (design 07)
+rake_rate = 0.05                # no flop no drop: fold-wins are unraked
+rake_cap_bb = 3.0
+
+[solver]
+traversals = 1_000_000_000
+seed = 1
+export_reach = 0.0002
+starter_reach = 0.0002

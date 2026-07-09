@@ -189,16 +189,18 @@ async function pfInit() {
     $('pf-head').textContent = 'Preflop charts not staged — see web/README for the local copy step.';
     return;
   }
-  // ids encode family + depth: "cash20" -> ["cash", 20], "heads-up21" -> ["heads-up", 21].
+  // ids encode family + depth: "cash89" -> ["cash", 89], "cash-hu89" -> ["cash-hu", 89].
   const parse = id => { const m = id.match(/^(.*?)-?(\d+)$/); return m ? [m[1], +m[2]] : [id, 0]; };
-  const title = s => s.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  // Table display names: bare cash/mtt are 6-max, the -hu families are heads-up.
+  const FAMILY_LABEL = { cash: 'Cash 6-max', 'cash-hu': 'Cash HU', mtt: 'MTT 6-max', 'mtt-hu': 'MTT HU' };
+  const label = f => FAMILY_LABEL[f] || f.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
   // Two cascading selects: Table (family, asc) -> Depth (blind level, desc).
   const fams = {};
   for (const id of ids) { const [fam] = parse(id); (fams[fam] ||= []).push(id); }
   const famNames = Object.keys(fams).sort();
   for (const f of famNames) fams[f].sort((a, b) => parse(b)[1] - parse(a)[1]);
-  $('pf-family').innerHTML = famNames.map(f => `<option value="${f}">${title(f)}</option>`).join('');
+  $('pf-family').innerHTML = famNames.map(f => `<option value="${f}">${label(f)}</option>`).join('');
 
   const fillDepths = fam =>
     $('pf-depth').innerHTML = fams[fam].map(id => `<option value="${id}">${parse(id)[1]} BB</option>`).join('');
