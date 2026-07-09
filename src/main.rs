@@ -174,19 +174,28 @@ struct SolveArgs {
     /// Rake cap in bb for --board.
     #[arg(long)]
     rake_cap: Option<f32>,
+    /// Ground --board in a solved preflop line: `<ruleset>:<line>`, e.g.
+    /// cash-hu55:r2.5-c. Ranges/pot/stack/rake come from that equilibrium
+    /// (as `export-range` would emit) instead of --formation's authored guess;
+    /// the remaining overrides still apply on top. List lines with `export-range
+    /// --ruleset <id>`.
+    #[arg(long)]
+    from: Option<String>,
 }
 
 impl SolveArgs {
     /// `Some(request)` when `--board` is given, else `None` (use the library).
-    /// A bad formation or missing range file prints and exits — there's
+    /// A bad formation/spec or missing range file prints and exits — there's
     /// nothing to drill without a config.
     fn into_request(self) -> Option<SolveRequest> {
         let flop = self.board?;
-        let mut config =
-            SpotConfig::for_formation(&self.formation, "data/ranges").unwrap_or_else(|e| {
+        let mut config = match &self.from {
+            Some(spec) => grounded_config(spec),
+            None => SpotConfig::for_formation(&self.formation, "data/ranges").unwrap_or_else(|e| {
                 eprintln!("{e}");
                 std::process::exit(2);
-            });
+            }),
+        };
         let overrides = [
             (&mut config.oop_range, self.oop),
             (&mut config.ip_range, self.ip),
@@ -280,6 +289,101 @@ fn main() {
     }
 }
 
+/// Position-derived solve inputs for a flop-closing preflop `line`: both live
+/// seats (OOP, IP), their per-class arrival reaches + weighted range strings,
+/// the pot, effective stack, and rake — everything `solve-gen solve` needs,
+/// plus the reaches for hero/hand provenance.
+struct LineSpot {
+    oop_seat: String,
+    ip_seat: String,
+    oop_reach: Vec<f32>,
+    ip_reach: Vec<f32>,
+    oop_range: String,
+    ip_range: String,
+    pot: f32,
+    stack: f32,
+    rake_rate: f32,
+    rake_cap: f32,
+}
+
+/// Condense a solved preflop `line` into its two-player flop [`LineSpot`].
+/// `Err` (user-facing) if the line isn't a clean two-player flop close or an
+/// ancestor node was pruned — everything the caller should report and bail on.
+fn derive_line_spot(charts: &PreflopCharts, line: &str) -> Result<LineSpot, String> {
+    let (oop_seat, ip_seat) = charts.flop_seats(line).ok_or_else(|| {
+        format!(
+            "{line:?} isn't a two-player flop line (list lines with: export-range --ruleset <id>)"
+        )
+    })?;
+    let pot = charts.flop_pot_bb(line).ok_or_else(|| {
+        format!("{line:?} doesn't close to a flop (more action follows, or it's a fold/all-in)")
+    })?;
+    let reach = |seat: &str| {
+        charts
+            .seat_reach(line, seat)
+            .ok_or_else(|| format!("{line:?} has a pruned/missing ancestor node"))
+    };
+    let oop_reach = reach(&oop_seat)?;
+    let ip_reach = reach(&ip_seat)?;
+    let oop_range = weighted_range_string(&oop_reach);
+    let ip_range = weighted_range_string(&ip_reach);
+    if oop_range.is_empty() || ip_range.is_empty() {
+        return Err(format!(
+            "{line:?} is unreachable for a live seat under the equilibrium"
+        ));
+    }
+    let stack = charts
+        .stack_bb()
+        .ok_or_else(|| "ruleset config lacks stack_bb".to_string())?
+        - charts.line_commitment_bb(line);
+    let (rake_rate, rake_cap) = charts.rake();
+    Ok(LineSpot {
+        oop_seat,
+        ip_seat,
+        oop_reach,
+        ip_reach,
+        oop_range,
+        ip_range,
+        pot,
+        stack,
+        rake_rate,
+        rake_cap,
+    })
+}
+
+/// Base [`SpotConfig`] for a `<ruleset>:<line>` spec (the `--from` flag): the
+/// `srp-btn-bb` shell — solver-default sizes and a formation solve-gen's
+/// `for_formation` accepts, so the cache key matches the `export-range`-emitted
+/// command — with ranges/pot/stack/rake replaced by the preflop equilibrium.
+/// Prints and exits on a bad spec (there's nothing to solve without it).
+fn grounded_config(spec: &str) -> SpotConfig {
+    let die = |msg: String| -> ! {
+        eprintln!("{msg}");
+        std::process::exit(2);
+    };
+    let (ruleset, line) = spec.split_once(':').unwrap_or_else(|| {
+        die(format!(
+            "--from expects <ruleset>:<line>, e.g. cash-hu55:r2.5-c (got {spec:?})"
+        ))
+    });
+    let charts = PreflopCharts::load(format!("data/preflop/{ruleset}"))
+        .unwrap_or_else(|e| die(e.to_string()));
+    let s = derive_line_spot(&charts, line).unwrap_or_else(|e| die(e));
+    eprintln!(
+        "# grounded in {} line {line} — OOP={} IP={} pot={:.2}bb eff_stack={:.2}bb rake={}/{}bb",
+        charts.header.label, s.oop_seat, s.ip_seat, s.pot, s.stack, s.rake_rate, s.rake_cap
+    );
+    let mut config = SpotConfig::for_formation("srp-btn-bb", "data/ranges")
+        .unwrap_or_else(|e| die(e.to_string()));
+    config.oop_range = s.oop_range;
+    config.ip_range = s.ip_range;
+    config.pot_bb = s.pot;
+    config.stack_bb = s.stack;
+    config.rake_rate = s.rake_rate;
+    config.rake_cap_bb = s.rake_cap;
+    config
+}
+
 /// `export-range`: bridge a solved preflop line into `solve-gen solve` inputs.
 /// Ranges/pot/stack are flop-independent (they're the preflop arrival), so the
 /// flop only enters the emitted command. `--hero`/`--hand` only relabel the
@@ -319,36 +423,18 @@ fn run_export_range(
         return;
     };
 
-    let (oop_seat, ip_seat) = charts.flop_seats(line).unwrap_or_else(|| {
-        die(format!(
-            "{line:?} isn't a two-player flop line in {ruleset} \
-             (list lines with: export-range --ruleset {ruleset})"
-        ))
-    });
-    let pot = charts.flop_pot_bb(line).unwrap_or_else(|| {
-        die(format!(
-            "{line:?} doesn't close to a flop (more action follows, or it's a fold/all-in)"
-        ))
-    });
-    let reach = |seat: &str| {
-        charts
-            .seat_reach(line, seat)
-            .unwrap_or_else(|| die(format!("{line:?} has a pruned/missing ancestor node")))
-    };
-    let oop_reach = reach(&oop_seat);
-    let ip_reach = reach(&ip_seat);
-    let oop = weighted_range_string(&oop_reach);
-    let ip = weighted_range_string(&ip_reach);
-    if oop.is_empty() || ip.is_empty() {
-        die(format!(
-            "{line:?} is unreachable for a live seat under the equilibrium"
-        ));
-    }
-    let stack = charts
-        .stack_bb()
-        .unwrap_or_else(|| die("ruleset config lacks stack_bb".into()))
-        - charts.line_commitment_bb(line);
-    let (rake_rate, rake_cap) = charts.rake();
+    let LineSpot {
+        oop_seat,
+        ip_seat,
+        oop_reach,
+        ip_reach,
+        oop_range: oop,
+        ip_range: ip,
+        pot,
+        stack,
+        rake_rate,
+        rake_cap,
+    } = derive_line_spot(&charts, line).unwrap_or_else(|e| die(e));
 
     // Provenance on stderr; the copy-pasteable args/command on stdout.
     eprintln!("# {} — line {line}", charts.header.label);
