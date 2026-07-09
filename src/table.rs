@@ -9,6 +9,7 @@
 //! renders the grid and walks the cursor / cycles nodes.
 
 use crate::eval::{classify_hand, Bucket};
+use crate::report::is_aggressive;
 use crate::solution::SolvedSpot;
 use crate::trainer::{fmt_hand_str, parse_hole};
 use crate::tree::{RunoutSummary, TreeNode, TreeSession};
@@ -1004,11 +1005,6 @@ fn auto_lock_path(node: &TreeNode) -> PathBuf {
     } else {
         format!("{board}-{}.locks.json", slug.join("-"))
     })
-}
-
-/// Is this action label a bet/raise (as opposed to check/call/fold)?
-fn is_aggressive(label: &str) -> bool {
-    label.starts_with("Bet") || label.starts_with("Raise") || label.starts_with("All-in")
 }
 
 /// Lock presets (design doc 06): whole-node cell edits derived from each

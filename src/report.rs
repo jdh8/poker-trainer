@@ -56,7 +56,9 @@ struct Row {
 }
 
 /// Is this action label a bet/raise/jam (aggressive), by its first word?
-fn is_aggressive(label: &str) -> bool {
+/// Shared with the table TUI — first-word + case-insensitive so it covers
+/// every label vocabulary (`Bet`/`Raise`/`All-in`, `jam`/`shove`, lowercased).
+pub(crate) fn is_aggressive(label: &str) -> bool {
     matches!(
         label
             .split_whitespace()

@@ -442,25 +442,11 @@ pub fn run_preflop_drill(ruleset: &str) {
             println!("  Action: {}.", line.join(", "));
         }
         println!("  Your hand: {} {}", fmt(hero[0]), fmt(hero[1]));
-        for (i, label) in node.actions.iter().enumerate() {
-            println!("    {}) {}", i + 1, label);
-        }
-
-        let Some(input) = prompt("  Your action? (number) > ") else {
-            break;
+        let chosen = match read_pick(&node.actions) {
+            Pick::At(i) => i,
+            Pick::Quit => break,
+            Pick::Retry => continue,
         };
-        if matches!(input.as_str(), "" | "q" | "quit") {
-            break;
-        }
-        let Some(chosen) = input
-            .parse::<usize>()
-            .ok()
-            .filter(|n| (1..=node.actions.len()).contains(n))
-        else {
-            println!("  (enter 1..{}, or q to quit)\n", node.actions.len());
-            continue;
-        };
-        let chosen = chosen - 1;
 
         let freqs = node.freqs_for(class);
         played += 1;
@@ -549,25 +535,11 @@ pub fn run_gto_drill(req: Option<SolveRequest>) {
         println!("  Board: {}", fmt_hand_str(&spot.board.join("")));
         println!("  Pot {:.1}bb. {}.", spot.pot_bb, spot.villain_action);
         println!("  Your hand: {}", fmt_hand_str(&hand.hand));
-        for (i, label) in ns.actions.iter().enumerate() {
-            println!("    {}) {}", i + 1, label);
-        }
-
-        let Some(input) = prompt("  Your action? (number) > ") else {
-            break;
+        let chosen = match read_pick(&ns.actions) {
+            Pick::At(i) => i,
+            Pick::Quit => break,
+            Pick::Retry => continue,
         };
-        if matches!(input.as_str(), "" | "q" | "quit") {
-            break;
-        }
-        let Some(chosen) = input
-            .parse::<usize>()
-            .ok()
-            .filter(|n| (1..=ns.actions.len()).contains(n))
-        else {
-            println!("  (enter 1..{}, or q to quit)\n", ns.actions.len());
-            continue;
-        };
-        let chosen = chosen - 1;
 
         let best = ns.best();
         let ev_loss = ns.ev_loss(chosen);
@@ -1451,6 +1423,42 @@ fn prompt(msg: &str) -> Option<String> {
         return None; // EOF
     }
     Some(line.trim().to_lowercase())
+}
+
+/// Outcome of a numbered-action prompt.
+enum Pick {
+    /// 0-based index into `actions`.
+    At(usize),
+    /// Empty line, `q`/`quit`, or EOF — end the drill.
+    Quit,
+    /// Non-numeric or out of range (hint already printed) — re-prompt.
+    Retry,
+}
+
+/// Print `actions` numbered from 1, read a choice, and map it to a 0-based
+/// index. Single source for the drill-loop input contract (see also `report`'s
+/// `is_aggressive`: two copies of this diverged once).
+fn read_pick(actions: &[String]) -> Pick {
+    for (i, label) in actions.iter().enumerate() {
+        println!("    {}) {}", i + 1, label);
+    }
+    let Some(input) = prompt("  Your action? (number) > ") else {
+        return Pick::Quit;
+    };
+    if matches!(input.as_str(), "" | "q" | "quit") {
+        return Pick::Quit;
+    }
+    match input
+        .parse::<usize>()
+        .ok()
+        .filter(|n| (1..=actions.len()).contains(n))
+    {
+        Some(n) => Pick::At(n - 1),
+        None => {
+            println!("  (enter 1..{}, or q to quit)\n", actions.len());
+            Pick::Retry
+        }
+    }
 }
 
 /// Print the end-of-session accuracy line.
