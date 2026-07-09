@@ -75,6 +75,14 @@ enum Cmd {
         #[arg(long, default_value = "data/preflop")]
         out: PathBuf,
     },
+    /// Refresh data/preflop/index.json from the solved ruleset dirs, without
+    /// solving anything. Safe to run while other solves are in flight (e.g. to
+    /// list rulesets built one-off via `solve`).
+    Index {
+        /// Output data directory.
+        #[arg(long, default_value = "data/preflop")]
+        out: PathBuf,
+    },
 }
 
 /// The committed exact HU equity table (solves need it).
@@ -221,6 +229,11 @@ fn main() -> Result<(), String> {
                 }
                 solve_one(toml_path, &dir, false, None)?;
             }
+            export::write_index(&out).map_err(|e| e.to_string())?;
+            println!("index refreshed: {}", out.join("index.json").display());
+            Ok(())
+        }
+        Cmd::Index { out } => {
             export::write_index(&out).map_err(|e| e.to_string())?;
             println!("index refreshed: {}", out.join("index.json").display());
             Ok(())

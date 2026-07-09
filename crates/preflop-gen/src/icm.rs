@@ -342,7 +342,7 @@ mod tests {
             stack_bb = 25.0
             sb = 0.5
             bb = 1.0
-            ante_bb = 0.25
+            ante_bb = 1.0
             open_to_bb = [2.0, 2.5, 3.0]
             threebet_mult = [2.0, 3.0, 4.0]
             squeeze_mult = [4.0]

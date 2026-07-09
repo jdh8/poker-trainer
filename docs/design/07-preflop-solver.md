@@ -45,6 +45,14 @@ depth (144/89/55bb jam only vs a 3-bet; 34bb offers the jam vs an open; 21bb and
 shorter are open-jam/fold), so the short rungs are effectively push/fold while
 still allowing the SB's limp.
 
+The tournament ladder `mtt{5,8,13,21,34,55,89,144}` mirrors it — same 6-max seats,
+depths, menus and SB-only limps — but swaps cash's rake for a **1 BB Big Blind
+Ante** (`ante_bb = 1.0`, chip-EV, no ICM). `ante_bb` is the *total* dead ante
+(not per-player), so a BBA is one field independent of seat count; because the
+total is table-size-independent, each 6-max chart already subsumes the
+short-handed endgame (its UTG+HJ-fold node *is* the 4-max BBA game). See §Rake &
+ante.
+
 ## Rake & ante — real-world calibration
 
 Both economy knobs are pinned to a 2024–2026 survey of popular platforms and series
@@ -62,14 +70,17 @@ Both economy knobs are pinned to a 2024–2026 survey of popular platforms and s
   via the **big blind ante = 1bb**, online via a per-player ~⅛-bb ante; both put ≈1bb of
   dead money in the pot, making it ~40% bigger preflop and **widening** correct ranges.
 
-**Tournament ladder — the one open extension** (capability idle, not missing: `ante_bb` +
-ICM already solve — see §Solver core, and the "future per-seat stacks" caveat). Its regime
-barely overlaps cash — a tournament's decision-weighted play sits at **~10–40bb with an
-ante**, not 100bb without one — so it is a distinct chart set, not a variation. When built:
-set `rake_rate = 0` (tournament juice is an entry fee, not a per-pot drop); reproduce the
-BB-ante's total with a per-player `ante_bb ≈ 1/seats` (dead antes are equal by total for
-chip-EV, so no `game.rs` change — the "only-BB-posts" mechanic matters only under ICM);
-cluster depths jam-heavy in ~10–40bb.
+**Tournament ladder — shipped** (`mtt{5..144}`, chip-EV). Its regime barely overlaps cash —
+a tournament's decision-weighted play sits at **~10–40bb with an ante**, not 100bb without
+one — so it is a distinct chart set, not a variation. It sets `rake_rate = 0` (tournament
+juice is an entry fee, not a per-pot drop) and a **1 BB Big Blind Ante**. `ante_bb` is now
+the *total* dead ante (`ante_bb = 1.0`), not per-player: a BBA is one table-size-independent
+field, and for chip-EV who posts is irrelevant (the "only-BB-posts" mechanic matters only
+under ICM, which the chip-EV tier defers). Because the total ante is table-size-independent,
+each 6-max chart **subsumes the shorter tables** — its UTG+HJ-fold node (pot
+`0.5 + 1.0 + 1.0 = 2.5bb`, CO/BTN/SB/BB to act) *is* the 4-max BBA game — so no separate
+short-handed tier is needed. Cash/HU tiers are unaffected (`ante_bb = 0` either way). A true
+ICM tier (add `icm_payouts`, where BB-posting would then matter) stays the open extension.
 
 ## The betting tree (`game.rs`)
 

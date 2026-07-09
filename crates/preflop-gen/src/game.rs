@@ -89,8 +89,9 @@ pub struct Ruleset {
     pub sb: f32,
     /// Big blind (the unit everything else is measured in).
     pub bb: f32,
-    /// Ante per player, dead in the pot (0 for cash; a tournament ruleset
-    /// sets it).
+    /// Total dead ante in the pot (a big blind ante), in bb, added once — not
+    /// per-player (0 for cash; a tournament ruleset sets it, e.g. 1.0 for a
+    /// 1bb BBA).
     #[serde(default)]
     pub ante_bb: f32,
     /// Open-raise sizes, absolute bb ("raise to").
@@ -340,11 +341,11 @@ impl State {
         !self.folded & ((1u16 << rs.n()) - 1) as u8
     }
 
-    /// Total pot in centi-bb: all commitments (folded seats' included) plus
-    /// every seat's dead ante.
+    /// Total pot in centi-bb: all commitments (folded seats' included) plus the
+    /// dead ante (a total big blind ante, added once — not per-seat).
     pub fn pot(&self, rs: &Ruleset) -> u32 {
         let n = rs.n();
-        self.committed[..n].iter().sum::<u32>() + n as u32 * to_cb(rs.ante_bb)
+        self.committed[..n].iter().sum::<u32>() + to_cb(rs.ante_bb)
     }
 
     /// How the closed round resolves; `None` while someone still acts.
@@ -608,18 +609,18 @@ mod tests {
         .unwrap()
     }
 
-    /// A 6-max ruleset with a dead ante — no shipped cash ruleset has one,
-    /// so ante/pot math is covered inline.
+    /// A 6-max ruleset with a dead ante (a 1bb big blind ante), so the total-
+    /// ante pot math is covered inline.
     fn six_max_ante() -> Ruleset {
         toml::from_str(
             r#"
             id = "ante6"
-            label = "6-max 40bb, 0.25 ante"
+            label = "6-max 40bb, 1bb BBA"
             seats = ["UTG", "HJ", "CO", "BTN", "SB", "BB"]
             stack_bb = 40.0
             sb = 0.5
             bb = 1.0
-            ante_bb = 0.25
+            ante_bb = 1.0
             open_to_bb = [2.0, 2.5, 3.0]
             threebet_mult = [2.0, 3.0, 4.0]
             squeeze_mult = [4.0]
@@ -697,11 +698,11 @@ mod tests {
     #[test]
     fn pot_counts_antes_and_dead_blinds() {
         let rs = six_max_ante();
-        // Root pot: 0.5 + 1.0 blinds + 6 × 0.25 ante = 3bb.
-        assert_eq!(State::root(&rs).pot(&rs), 300);
+        // Root pot: 0.5 + 1.0 blinds + 1bb total BBA = 2.5bb (added once, not ×n).
+        assert_eq!(State::root(&rs).pot(&rs), 250);
         // UTG opens 2.5bb, HJ folds: their commitments both stay in the pot.
         let st = replay(&rs, "r2.5-f").unwrap();
-        assert_eq!(st.pot(&rs), 550);
+        assert_eq!(st.pot(&rs), 500);
         assert_eq!(st.to_act(), Some(2));
     }
 
@@ -850,6 +851,23 @@ mod tests {
         assert_eq!(manifest("cash34").jam_from_level, 1);
         assert_eq!(manifest("cash89").jam_from_level, 2);
         assert_eq!(manifest("cash144").jam_from_level, 2);
+    }
+
+    #[test]
+    fn shipped_mtt_manifests_are_6max_bba_chip_ev() {
+        // Tournament tier: a 1 BB Big Blind Ante (ante_bb is the total dead
+        // ante), no rake, no ICM — same 6-max ladder as cash (design 07).
+        for id in [
+            "mtt5", "mtt8", "mtt13", "mtt21", "mtt34", "mtt55", "mtt89", "mtt144",
+        ] {
+            let rs = manifest(id);
+            assert_eq!(rs.id, id);
+            assert_eq!(rs.n(), 6);
+            assert_eq!(rs.ante_bb, 1.0); // 1 BB Big Blind Ante (total, not per-seat)
+            assert_eq!(rs.rake_rate, 0.0); // tournaments unraked
+            assert!(rs.icm_payouts.is_none()); // chip-EV, not ICM
+            assert_eq!(rs.limp_scope, LimpScope::Sb); // SB-only limps (design 07)
+        }
     }
 
     #[test]

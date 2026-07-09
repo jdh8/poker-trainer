@@ -126,24 +126,27 @@ regimes barely overlap.**
 1. **Rake is validated as-is.** 5% capped at 3 bb, fold-wins unraked = the online-cash
    norm. No action.
 2. **`ante_bb = 0` is correct for the cash ladder.** Cash is blinds-only.
-3. **The gap: the trainer ships zero tournament rulesets, yet antes are universal in
-   tournaments.** The engine already supports `ante_bb` + ICM (design 07 §Solver core), so
-   the capability is idle, not missing. Because the tournament regime (~10–40 BB,
-   ante-present) barely overlaps the cash regime (~100 BB, no ante), an ante ladder would
-   train a **genuinely different, wider** range set — not a variation on the cash charts.
+3. **Shipped: the `mtt{5..144}` tournament ladder.** Antes are universal in tournaments, so
+   the trainer now ships a chip-EV tier with a **1 BB Big Blind Ante** (design 07). Because
+   the tournament regime (~10–40 BB, ante-present) barely overlaps the cash regime (~100 BB,
+   no ante), it trains a **genuinely different, wider** range set — not a variation on the
+   cash charts.
 
-**Implementation notes for whenever a tournament ladder is actually built (not now):**
+**How the shipped `mtt` ladder models it:**
 
-- Tournament "rake" is an **entry fee**, not a per-pot drop → a tournament ruleset sets
+- Tournament "rake" is an **entry fee**, not a per-pot drop → the mtt rulesets set
   `rake_rate = 0` (the juice is sunk at buy-in and doesn't enter per-hand EV).
-- The engine's `ante_bb` is a **per-player dead ante** (matches the traditional/online
-  model). The BBA's total-1-BB effect is reproduced by `ante_bb ≈ 1/seats`
-  (6-max → 0.167): dead antes are strategically equivalent by *total* amount for chip-EV,
-  so **no `game.rs` change is needed** for a first cut. A true "only the BB posts 1 BB"
-  mechanic matters only under ICM (whose stack the ante leaves).
-- Depths should cluster in **~10–40 BB, jam-heavy**, not the cash Fibonacci ladder's deep
-  rungs. ICM (already implemented) is where bubble/final-table realism lives; a chip-EV
-  ante ladder is the cheaper first cut.
+- `ante_bb` was **redefined as the *total* dead ante** (a big blind ante), added once — not
+  per-player. So a 1 BB BBA is `ante_bb = 1.0` at any seat count: one field, table-size-
+  independent. For chip-EV who posts the ante is irrelevant — only the total dead money
+  matters — so the "only the BB posts 1 BB" mechanic is deferred to a future ICM tier (where
+  whose stack the ante leaves does matter). Every shipped cash/HU manifest has `ante_bb = 0`,
+  so the redefinition moves no committed chart.
+- The mtt ladder reuses cash's 6-max seats and Fibonacci depths. A total BBA is table-size-
+  independent, so each 6-max chart already subsumes the short-handed endgame (its
+  UTG+HJ-fold node *is* the 4-max BBA game) — no separate short-handed ladder needed. ICM
+  (already implemented) is where bubble/final-table realism would go: add `icm_payouts` per
+  rung for that tier.
 
 ## Sources
 

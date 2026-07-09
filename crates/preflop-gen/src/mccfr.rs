@@ -275,11 +275,11 @@ impl<'a> Solver<'a> {
             let vals = self.best_response(State::root(self.rs), hero, &reach, &weight);
             gain += vals.iter().sum::<f64>() / total;
         }
-        // Constant-sum: u_SB + u_BB = 2 × ante at every terminal (the antes
-        // flow back out of the pot), so BR-sum minus the constant measures
-        // total distance from equilibrium; halve it for the usual per-player
-        // exploitability.
-        (gain - 2.0 * f64::from(self.rs.ante_bb)) / 2.0
+        // Constant-sum: u_SB + u_BB = the total ante at every terminal (the
+        // dead ante flows back out of the pot), so BR-sum minus the constant
+        // measures total distance from equilibrium; halve it for the usual
+        // per-player exploitability.
+        (gain - f64::from(self.rs.ante_bb)) / 2.0
     }
 
     /// BR values for `hero`, summed over villain classes: returns per-hero-
