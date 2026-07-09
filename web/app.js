@@ -80,8 +80,8 @@ let pfPath = [];      // action tokens from the root
 
 const pfTok = l => l === 'Fold' ? 'f' : l === 'Call' ? 'c' : l === 'All-in' ? 'ai'
   : 'r' + l.replace('Raise to ', '').replace('bb', '');
-const pfVerb = l => l === 'Fold' ? 'folds' : l === 'Call' ? 'calls' : l === 'All-in' ? 'jams'
-  : l.toLowerCase().replace('raise', 'raises');
+const pfVerb = l => l === 'Fold' ? 'folds' : l === 'Call' ? 'calls' : l === 'Check' ? 'checks'
+  : l === 'All-in' ? 'jams' : l.toLowerCase().replace('raise', 'raises');
 
 async function pfLoad(id) {
   const [header, lines] = await Promise.all([

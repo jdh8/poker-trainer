@@ -52,27 +52,202 @@ fn call_ev(eq: f64, pot: f64, bet: f64) -> f64 {
     eq * (pot + bet) - (1.0 - eq) * bet
 }
 
-/// Entry point for `poker-trainer drill pot-odds`.
-pub fn run_pot_odds_drill() {
+/// One step of a heads-up preflop forward simulation ([`sample_preflop_flop_spot`]):
+/// given the acting node's geometry and the sampled action, does the betting
+/// continue, die (fold/all-in — no bettable flop), or close into a flop of the
+/// returned pot (bb)?
+enum Step {
+    Flop(f64),
+    Continue,
+    Dead,
+}
+
+/// Heads-up preflop betting closure. HU acts SB→BB→…; a `Call` closes the round
+/// **except** the SB's opening complete at the root (`""`), where BB keeps the
+/// option. `All-in` dies so the sim aborts before any jam is called — an all-in
+/// pot (no postflop bet decision) never leaks through.
+fn hu_step(node_path: &str, pot_bb: f32, to_call_bb: f32, action: &str) -> Step {
+    match action {
+        "Fold" | "All-in" => Step::Dead,
+        "Check" => Step::Flop(pot_bb as f64),
+        "Call" if node_path.is_empty() => Step::Continue, // SB open-limp
+        "Call" => Step::Flop((pot_bb + to_call_bb) as f64),
+        _ => Step::Continue, // a raise
+    }
+}
+
+/// A flop spot drawn from a solved heads-up preflop line: both hands, the flop,
+/// the pot the preflop betting closed into, and the terminal action path.
+struct PreflopFlopSpot {
+    sb: [Card; 2],
+    bb: [Card; 2],
+    flop: [Card; 3],
+    pot: f64,
+    path: String,
+}
+
+/// Forward-simulate one heads-up preflop hand from the chart root, sampling each
+/// seat's action from the equilibrium (`freqs[action][class]`). Returns the flop
+/// spot the betting closes into, or `None` if the hand ended preflop
+/// (fold/all-in) or hit a pruned node — the caller just retries.
+fn sample_preflop_flop_spot<R: RngExt>(
+    charts: &PreflopCharts,
+    stack_bb: Option<f64>,
+    rng: &mut R,
+) -> Option<PreflopFlopSpot> {
+    let mut deck = Deck::default();
+    let sb = [deck.deal(rng).unwrap(), deck.deal(rng).unwrap()];
+    let bb = [deck.deal(rng).unwrap(), deck.deal(rng).unwrap()];
+    let sb_class = preflop::class_index(sb);
+    let bb_class = preflop::class_index(bb);
+
+    let mut path = String::new();
+    loop {
+        let node = charts.node(&path)?; // pruned/missing => abort this attempt
+        let class = if node.seat == "SB" {
+            sb_class
+        } else {
+            bb_class
+        };
+        // Sample an action ∝ this class's frequencies at the node.
+        let weights: Vec<f32> = node.freqs.iter().map(|f| f[class]).collect();
+        let wsum: f32 = weights.iter().sum();
+        if wsum <= 0.0 {
+            return None; // this class never arrives here
+        }
+        let mut roll = rng.random_range(0.0..wsum);
+        let ai = weights
+            .iter()
+            .position(|w| {
+                roll -= w;
+                roll < 0.0
+            })
+            .unwrap_or(weights.len() - 1);
+        let action = &node.actions[ai];
+        let tok = preflop::label_token(action);
+
+        match hu_step(&path, node.pot_bb, node.to_call_bb, action) {
+            Step::Dead => return None,
+            Step::Flop(pot) => {
+                // ponytail: coarse all-in guard; deep HU rulesets (cash-hu89)
+                // don't hit it. Precise commitment tracking if we add
+                // short-stack HU (a "Raise to X" can be all-in yet unlabeled).
+                if stack_bb.is_some_and(|s| pot >= 2.0 * s) {
+                    return None;
+                }
+                let flop = [
+                    deck.deal(rng).unwrap(),
+                    deck.deal(rng).unwrap(),
+                    deck.deal(rng).unwrap(),
+                ];
+                let terminal = if path.is_empty() {
+                    tok
+                } else {
+                    format!("{path}-{tok}")
+                };
+                return Some(PreflopFlopSpot {
+                    sb,
+                    bb,
+                    flop,
+                    pot,
+                    path: terminal,
+                });
+            }
+            Step::Continue => {
+                if !path.is_empty() {
+                    path.push('-');
+                }
+                path.push_str(&tok);
+            }
+        }
+    }
+}
+
+/// Load a heads-up preflop chart set for `--preflop`, rejecting non-HU rulesets.
+fn load_hu_charts(ruleset: &str) -> Result<PreflopCharts, String> {
+    let charts =
+        PreflopCharts::load(format!("data/preflop/{ruleset}")).map_err(|e| e.to_string())?;
+    match charts.header.config.get("seats").and_then(|s| s.as_array()) {
+        Some(seats) if seats.len() == 2 => Ok(charts),
+        _ => Err(format!(
+            "pot-odds --preflop supports heads-up rulesets only (cash-hu*, mtt-hu*); \
+             {ruleset} is not heads-up"
+        )),
+    }
+}
+
+/// Entry point for `poker-trainer drill pot-odds`. With `preflop = Some(ruleset)`,
+/// each flop spot — pot size and both hands — is drawn from a solved heads-up
+/// preflop equilibrium instead of a fixed pot and random cards.
+pub fn run_pot_odds_drill(preflop: Option<&str>) {
     let mut rng = rand::rng();
     let mut spots = 0u32;
     let mut correct = 0u32;
 
+    let charts = match preflop {
+        Some(ruleset) => match load_hu_charts(ruleset) {
+            Ok(c) => Some(c),
+            Err(e) => {
+                eprintln!("{e}");
+                return;
+            }
+        },
+        None => None,
+    };
+    let stack_bb = charts
+        .as_ref()
+        .and_then(|c| c.header.config.get("stack_bb").and_then(|v| v.as_f64()));
+
     println!("poker-trainer — pot-odds drill (flop only).");
+    if let Some(c) = &charts {
+        println!("Spots drawn from {} preflop equilibrium.", c.header.label);
+    }
     println!("Should you call? Type c)all or f)old. Empty line or q quits.\n");
 
     loop {
-        // Deal everything from one fresh deck so nothing collides.
-        let mut deck = Deck::default();
-        let mut draw = || deck.deal(&mut rng).unwrap();
-        let hero = [draw(), draw()];
-        let villain = [draw(), draw()];
-        let flop = [draw(), draw(), draw()];
+        // Build a spot: hero/villain hands, flop, pot, and an optional preflop
+        // action line to display.
+        let (hero, villain, flop, pot, line);
+        match &charts {
+            Some(c) => {
+                let Some(spot) =
+                    (0..200).find_map(|_| sample_preflop_flop_spot(c, stack_bb, &mut rng))
+                else {
+                    eprintln!(
+                        "  (this ruleset rarely reaches a non-all-in flop — \
+                         try a deeper HU set like cash-hu89)"
+                    );
+                    break;
+                };
+                // Hero is a random seat; villain is the other.
+                (hero, villain) = if rng.random_range(0..2) == 0 {
+                    (spot.sb, spot.bb)
+                } else {
+                    (spot.bb, spot.sb)
+                };
+                flop = spot.flop;
+                pot = spot.pot;
+                line = Some(preflop_line(c, &spot.path));
+            }
+            None => {
+                // Deal everything from one fresh deck so nothing collides.
+                let mut deck = Deck::default();
+                let mut draw = || deck.deal(&mut rng).unwrap();
+                hero = [draw(), draw()];
+                villain = [draw(), draw()];
+                flop = [draw(), draw(), draw()];
+                pot = POT;
+                line = None;
+            }
+        }
 
-        let bet = POT * *BET_FRACTIONS.choose(&mut rng).unwrap();
-        let req = required_equity(POT, bet);
+        let bet = pot * *BET_FRACTIONS.choose(&mut rng).unwrap();
+        let req = required_equity(pot, bet);
 
         println!("Spot #{}", spots + 1);
+        if let Some(line) = line.as_ref().filter(|l| !l.is_empty()) {
+            println!("  Preflop:   {}.", line.join(", "));
+        }
         println!("  Your hand: {} {}", fmt(hero[0]), fmt(hero[1]));
         println!(
             "  Flop:      {} {} {}",
@@ -80,21 +255,21 @@ pub fn run_pot_odds_drill() {
             fmt(flop[1]),
             fmt(flop[2])
         );
-        println!("  Pot {POT:.0}bb. Villain bets {bet:.1}bb.");
+        println!("  Pot {pot:.1}bb. Villain bets {bet:.1}bb.");
         println!(
             "  Call {:.1} to win {:.1}  ->  need {:.0}% equity.",
             bet,
-            POT + bet,
+            pot + bet,
             req * 100.0
         );
         print!("  call or fold? > ");
         io::stdout().flush().unwrap();
 
-        let mut line = String::new();
-        if io::stdin().read_line(&mut line).unwrap() == 0 {
+        let mut input = String::new();
+        if io::stdin().read_line(&mut input).unwrap() == 0 {
             break; // EOF (Ctrl-D)
         }
-        let called = match line.trim().to_lowercase().as_str() {
+        let called = match input.trim().to_lowercase().as_str() {
             "c" | "call" => true,
             "f" | "fold" => false,
             "" | "q" | "quit" => break,
@@ -121,7 +296,7 @@ pub fn run_pot_odds_drill() {
         println!(
             "  Best play: {} (call EV {:+.2}bb).  You said {} -> {}\n",
             if should_call { "CALL" } else { "FOLD" },
-            call_ev(eq, POT, bet),
+            call_ev(eq, pot, bet),
             if called { "call" } else { "fold" },
             if right { "correct" } else { "wrong" }
         );
@@ -146,6 +321,7 @@ fn preflop_line(charts: &PreflopCharts, path: &str) -> Vec<String> {
                 let verb = match node.actions[ai].as_str() {
                     "Fold" => "folds".into(),
                     "Call" => "calls".into(),
+                    "Check" => "checks".into(),
                     "All-in" => "jams".into(),
                     raise => raise.to_lowercase().replacen("raise", "raises", 1),
                 };
@@ -1376,6 +1552,54 @@ mod tests {
     fn pot_odds_formula() {
         // Pot 10, bet 7: call 7 to win 17, break-even = 7 / (10 + 14) = 7/24.
         assert!((required_equity(10.0, 7.0) - 7.0 / 24.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn hu_step_closes_only_on_call_or_check() {
+        // Fold / all-in: no bettable flop.
+        assert!(matches!(hu_step("r2.5", 5.0, 2.5, "Fold"), Step::Dead));
+        assert!(matches!(hu_step("", 1.5, 0.5, "All-in"), Step::Dead));
+        // BB checks behind a limp -> flop at the current pot (2bb).
+        assert!(matches!(hu_step("c", 2.0, 0.0, "Check"), Step::Flop(p) if (p - 2.0).abs() < 1e-9));
+        // SB's opening complete does NOT close (BB keeps the option).
+        assert!(matches!(hu_step("", 1.5, 0.5, "Call"), Step::Continue));
+        // BB calls a 2.5bb open -> flop of 5bb (pot 2.5 + to_call 2.5).
+        assert!(
+            matches!(hu_step("r2.5", 2.5, 2.5, "Call"), Step::Flop(p) if (p - 5.0).abs() < 1e-9)
+        );
+        // A raise continues.
+        assert!(matches!(
+            hu_step("", 1.5, 0.5, "Raise to 2.5bb"),
+            Step::Continue
+        ));
+    }
+
+    #[test]
+    fn preflop_flop_spots_are_heads_up_consistent() {
+        // The committed cash-hu89 starter is heads-up; a sampled flop spot must
+        // have a real pot and seven distinct, non-colliding cards.
+        let charts = load_hu_charts("cash-hu89").expect("cash-hu89 is heads-up");
+        let mut rng = rand::rng();
+        let spot = (0..10_000)
+            .find_map(|_| sample_preflop_flop_spot(&charts, Some(89.0), &mut rng))
+            .expect("cash-hu89 reaches a flop");
+        assert!(spot.pot >= 2.0, "pot {} too small", spot.pot);
+        let cards = [
+            spot.sb[0],
+            spot.sb[1],
+            spot.bb[0],
+            spot.bb[1],
+            spot.flop[0],
+            spot.flop[1],
+            spot.flop[2],
+        ];
+        for (i, a) in cards.iter().enumerate() {
+            for b in &cards[i + 1..] {
+                assert_ne!(a, b, "duplicate card {a}");
+            }
+        }
+        // A 6-max ruleset is rejected.
+        assert!(load_hu_charts("cash89").is_err());
     }
 
     fn ns(freqs: Vec<f32>, evs: Vec<f32>) -> NodeStrategy {

@@ -23,6 +23,11 @@ enum Command {
         #[arg(long, default_value = "cash89")]
         ruleset: String,
 
+        /// Pot-odds drill only: draw flop spots from this heads-up preflop
+        /// chart set (e.g. cash-hu89) instead of a fixed pot and random cards.
+        #[arg(long)]
+        preflop: Option<String>,
+
         #[command(flatten)]
         solve: SolveArgs,
     },
@@ -198,10 +203,11 @@ fn main() {
             mode,
             solve,
             ruleset,
+            preflop,
         } => {
             let req = solve.into_request();
             match mode {
-                Mode::PotOdds => trainer::run_pot_odds_drill(),
+                Mode::PotOdds => trainer::run_pot_odds_drill(preflop.as_deref()),
                 Mode::Gto => trainer::run_gto_drill(req),
                 Mode::Range => trainer::run_range_drill(req),
                 Mode::Hand => trainer::run_hand_drill(req),
