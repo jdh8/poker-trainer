@@ -68,6 +68,20 @@ pub fn class_index(hand: [Card; 2]) -> usize {
     }
 }
 
+/// Parse a card string like `"AhKh"` or `"Td 9d 6h"` into its cards (any
+/// count). `None` if the whitespace-stripped length is odd/zero or any two-char
+/// code is invalid. Doesn't check for duplicates — callers that care do.
+pub fn parse_cards(text: &str) -> Option<Vec<Card>> {
+    let compact: String = text.chars().filter(|c| !c.is_whitespace()).collect();
+    if compact.is_empty() || !compact.len().is_multiple_of(2) {
+        return None;
+    }
+    (0..compact.len())
+        .step_by(2)
+        .map(|i| Card::try_from(&compact[i..i + 2]).ok())
+        .collect()
+}
+
 /// How many concrete combos class `i` has: 6 per pair, 4 suited, 12 offsuit.
 pub fn class_combos(i: usize) -> u32 {
     let (r, c) = (i / 13, i % 13);
@@ -349,18 +363,18 @@ impl PreflopCharts {
         self.nodes.values()
     }
 
-    /// The acting seat's per-class arrival probability at `path`: the product
-    /// of that seat's own past action frequencies along the line (export
-    /// prunes children before parents, so every stored node's ancestors are
-    /// stored too).
+    /// `seat`'s per-class arrival probability along `line`: the product of that
+    /// seat's own past action frequencies. Unlike [`class_reach`](Self::class_reach)
+    /// this names the seat explicitly and only reads the line's *ancestors*, so
+    /// `line` may be a flop-closing line whose tail action has no decision node
+    /// (the `export-range` case). `None` if an ancestor node is pruned/missing.
     // ponytail: blocker effects on reach are ignored — class-level by design.
-    pub fn class_reach(&self, path: &str) -> Option<Vec<f32>> {
-        let seat = &self.node(path)?.seat;
+    pub fn seat_reach(&self, line: &str, seat: &str) -> Option<Vec<f32>> {
         let mut reach = vec![1.0f32; CLASSES];
         let mut prefix = String::new();
-        for tok in path.split('-').filter(|t| !t.is_empty()) {
+        for tok in line.split('-').filter(|t| !t.is_empty()) {
             let node = self.node(&prefix)?;
-            if &node.seat == seat {
+            if node.seat == seat {
                 let ai = node.actions.iter().position(|l| label_token(l) == tok)?;
                 for (r, f) in reach.iter_mut().zip(&node.freqs[ai]) {
                     *r *= f;
@@ -373,6 +387,175 @@ impl PreflopCharts {
         }
         Some(reach)
     }
+
+    /// The acting seat's per-class arrival probability at `path` (the product
+    /// of that seat's own past action frequencies). Requires a stored node at
+    /// `path` to name the seat; use [`seat_reach`](Self::seat_reach) for a line
+    /// past the last decision.
+    pub fn class_reach(&self, path: &str) -> Option<Vec<f32>> {
+        let seat = self.node(path)?.seat.clone();
+        self.seat_reach(path, &seat)
+    }
+
+    /// A ruleset-config number, e.g. `stack_bb`, `bb`, `ante_bb`.
+    fn cfg_f32(&self, key: &str) -> Option<f32> {
+        self.header
+            .config
+            .get(key)
+            .and_then(|v| v.as_f64())
+            .map(|v| v as f32)
+    }
+
+    /// Starting stack (bb) from the ruleset config.
+    pub fn stack_bb(&self) -> Option<f32> {
+        self.cfg_f32("stack_bb")
+    }
+
+    /// Postflop rake `(rate, cap_bb)` from the ruleset config (0 if unset) — the
+    /// same rake the preflop equilibrium was solved under.
+    pub fn rake(&self) -> (f32, f32) {
+        (
+            self.cfg_f32("rake_rate").unwrap_or(0.0),
+            self.cfg_f32("rake_cap_bb").unwrap_or(0.0),
+        )
+    }
+
+    /// The two seats that reach the flop on `line`, as `(oop, ip)` ordered by
+    /// postflop action (the button acts last). `None` unless exactly two seats
+    /// stay live (i.e. `line` is a clean two-player flop) and the seats config
+    /// is present. Card-removal aside, this is position-only.
+    pub fn flop_seats(&self, line: &str) -> Option<(String, String)> {
+        let seats: Vec<String> = self
+            .header
+            .config
+            .get("seats")?
+            .as_array()?
+            .iter()
+            .filter_map(|s| s.as_str().map(String::from))
+            .collect();
+        // Replay the line's fold tokens to find who's still in at the flop.
+        let mut folded = std::collections::HashSet::new();
+        let mut prefix = String::new();
+        for tok in line.split('-').filter(|t| !t.is_empty()) {
+            let node = self.node(&prefix)?;
+            if tok == "f" {
+                folded.insert(node.seat.clone());
+            }
+            if !prefix.is_empty() {
+                prefix.push('-');
+            }
+            prefix.push_str(tok);
+        }
+        let live: Vec<&String> = seats.iter().filter(|s| !folded.contains(*s)).collect();
+        if live.len() != 2 {
+            return None;
+        }
+        // Postflop order = the preflop seat order rotated so the seat after the
+        // button leads and the button acts last. The button is BTN, or the SB
+        // heads-up (where the SB *is* the button).
+        let btn = if seats.iter().any(|s| s == "BTN") {
+            "BTN"
+        } else {
+            "SB"
+        };
+        let bi = seats.iter().position(|s| s == btn)?;
+        let order: Vec<&String> = seats[bi + 1..].iter().chain(&seats[..=bi]).collect();
+        let rank = |s: &String| order.iter().position(|p| *p == s);
+        if rank(live[0])? <= rank(live[1])? {
+            Some((live[0].clone(), live[1].clone()))
+        } else {
+            Some((live[1].clone(), live[0].clone()))
+        }
+    }
+
+    /// Pot (bb) when `line` closes to a flop: the last decision's `pot_bb` for a
+    /// check-through, `pot_bb + to_call_bb` for a called raise. `None` if the
+    /// line doesn't close to a flop — a decision still follows (incl. the root
+    /// SB limp), or it's a fold/all-in terminal.
+    pub fn flop_pot_bb(&self, line: &str) -> Option<f32> {
+        if self.node(line).is_some() {
+            return None; // a decision follows — not a flop yet
+        }
+        let (parent, last) = line.rsplit_once('-').unwrap_or(("", line));
+        let node = self.node(parent)?;
+        match last {
+            "x" => Some(node.pot_bb),
+            "c" => Some(node.pot_bb + node.to_call_bb),
+            _ => None,
+        }
+    }
+
+    /// Each live player's total preflop commitment (bb) on `line`: the highest
+    /// bet-to level reached — both live players matched it to see the flop —
+    /// floored at the big blind, plus any ante. Effective postflop stack is
+    /// [`stack_bb`](Self::stack_bb) minus this (heads-up: `stack − pot/2`; with
+    /// a folded blind's dead money, `stack − raise_to ≠ pot/2`).
+    // ponytail: ante is a flat per-player post; assumes equal starting stacks —
+    // per-seat commitment tracking if we model short-stack/ICM spots.
+    pub fn line_commitment_bb(&self, line: &str) -> f32 {
+        let bb = self.cfg_f32("bb").unwrap_or(1.0);
+        let ante = self.cfg_f32("ante_bb").unwrap_or(0.0);
+        let max_to = line
+            .split('-')
+            .filter_map(|t| t.strip_prefix('r'))
+            .filter_map(|s| s.parse::<f32>().ok())
+            .fold(bb, f32::max);
+        max_to + ante
+    }
+
+    /// Every action line that closes to a flop, as `(line, pot_bb)`, sorted.
+    /// Fold/all-in branches drop out.
+    // ponytail: a pruned continuation can masquerade as a flop close; fine for
+    // the committed starter tier — regenerate charts.jsonl for rarer/deeper lines.
+    pub fn flop_lines(&self) -> Vec<(String, f32)> {
+        let mut out = Vec::new();
+        self.collect_flop_lines("", &mut out);
+        out.sort_by(|a, b| a.0.cmp(&b.0));
+        out
+    }
+
+    fn collect_flop_lines(&self, path: &str, out: &mut Vec<(String, f32)>) {
+        let Some(node) = self.node(path) else { return };
+        for label in &node.actions {
+            let tok = label_token(label);
+            if tok == "f" || tok == "ai" {
+                continue;
+            }
+            let child = if path.is_empty() {
+                tok.clone()
+            } else {
+                format!("{path}-{tok}")
+            };
+            if self.node(&child).is_some() {
+                self.collect_flop_lines(&child, out);
+            } else if let Some(pot) = self.flop_pot_bb(&child) {
+                out.push((child, pot));
+            }
+        }
+    }
+}
+
+/// Render a per-class arrival `reach` (0..) as a weighted solver range string,
+/// `"AA:0.6200,AKs:0.8000,…"` — one entry per class with positive reach, each
+/// weight scaled so the range's max is 1 (absolute scale doesn't change the
+/// equilibrium, and this uses the solver's full `[0,1]` resolution). Combos
+/// whose scaled weight rounds below `0.0001` drop out. Empty if every class has
+/// zero reach.
+pub fn weighted_range_string(reach: &[f32]) -> String {
+    let max = reach.iter().copied().fold(0.0f32, f32::max);
+    if max <= 0.0 {
+        return String::new();
+    }
+    reach
+        .iter()
+        .take(CLASSES)
+        .enumerate()
+        .filter_map(|(i, &w)| {
+            let scaled = w / max;
+            (scaled >= 1e-4).then(|| format!("{}:{scaled:.4}", class_name(i)))
+        })
+        .collect::<Vec<_>>()
+        .join(",")
 }
 
 #[cfg(test)]
@@ -402,6 +585,17 @@ mod tests {
         assert_eq!(idx("Ks", "Ad"), 13); // AKo, order-independent
         assert_eq!(idx("7d", "2c"), class_index_of("72o").unwrap());
         assert_eq!(idx("2c", "2d"), 168);
+    }
+
+    #[test]
+    fn parse_cards_reads_hands_and_boards() {
+        assert_eq!(parse_cards("AhKh").map(|c| c.len()), Some(2));
+        assert_eq!(parse_cards("Td 9d 6h").map(|c| c.len()), Some(3));
+        assert_eq!(parse_cards("AhK"), None); // odd length
+        assert_eq!(parse_cards("Zx"), None); // bad rank/suit
+        assert_eq!(parse_cards(""), None);
+        let h = parse_cards("AsKs").unwrap();
+        assert_eq!(class_index([h[0], h[1]]), class_index_of("AKs").unwrap());
     }
 
     #[test]
@@ -574,6 +768,113 @@ mod tests {
         assert!(charts.class_reach("nope").is_none());
 
         fs::remove_dir_all(&dir).unwrap();
+    }
+
+    /// A tiny heads-up tree: SB opens 2.5bb (or folds) at the root, BB calls
+    /// (or folds); `r2.5-c` closes to a flop. Distinct freqs per seat/action so
+    /// the reach products are checkable.
+    fn write_hu_ruleset(dir: &Path) {
+        fs::create_dir_all(dir).unwrap();
+        let mut header = sample_header();
+        header.ruleset = "hu".into();
+        header.config = serde_json::json!({
+            "seats": ["SB", "BB"],
+            "sb": 0.5, "bb": 1.0, "ante_bb": 0.0, "stack_bb": 55.0,
+            "rake_rate": 0.05, "rake_cap_bb": 3.0,
+        });
+        fs::write(
+            dir.join("header.json"),
+            serde_json::to_string(&header).unwrap(),
+        )
+        .unwrap();
+        let mk = |path: &str, seat: &str, actions: Vec<&str>, freqs: Vec<f32>, to_call: f32| {
+            PreflopNode {
+                path: path.into(),
+                seat: seat.into(),
+                pot_bb: 3.5,
+                to_call_bb: to_call,
+                reach: 1.0,
+                actions: actions.into_iter().map(String::from).collect(),
+                freqs: freqs.iter().map(|&f| vec![f; CLASSES]).collect(),
+                evs: None,
+            }
+        };
+        let nodes = [
+            mk(
+                "",
+                "SB",
+                vec!["Fold", "Raise to 2.5bb"],
+                vec![0.4, 0.6],
+                0.0,
+            ),
+            mk("r2.5", "BB", vec!["Fold", "Call"], vec![0.3, 0.7], 1.5),
+        ];
+        let lines: Vec<String> = nodes
+            .iter()
+            .map(|n| serde_json::to_string(n).unwrap())
+            .collect();
+        fs::write(dir.join("starter.jsonl"), lines.join("\n")).unwrap();
+    }
+
+    #[test]
+    fn export_range_bridges_a_hu_line() {
+        let dir = std::env::temp_dir().join(format!("pt-preflop-export-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        write_hu_ruleset(&dir);
+        let charts = PreflopCharts::load(&dir).unwrap();
+        let line = "r2.5-c";
+
+        // Each seat's reach is the product of *its own* action frequencies.
+        assert!(charts
+            .seat_reach(line, "SB")
+            .unwrap()
+            .iter()
+            .all(|&r| (r - 0.6).abs() < 1e-6));
+        assert!(charts
+            .seat_reach(line, "BB")
+            .unwrap()
+            .iter()
+            .all(|&r| (r - 0.7).abs() < 1e-6));
+
+        // OOP=BB, IP=SB (the SB is the button heads-up).
+        assert_eq!(charts.flop_seats(line), Some(("BB".into(), "SB".into())));
+
+        // Pot = both players' 2.5bb; effective stack = 55 − 2.5 = 52.5 = stack − pot/2.
+        let pot = charts.flop_pot_bb(line).unwrap();
+        assert!((pot - 5.0).abs() < 1e-6);
+        assert!((charts.line_commitment_bb(line) - 2.5).abs() < 1e-6);
+        assert!((charts.stack_bb().unwrap() - pot / 2.0 - 52.5).abs() < 1e-6);
+        assert_eq!(charts.rake(), (0.05, 3.0));
+
+        // The line is discoverable and non-flop-closing paths are rejected.
+        assert_eq!(charts.flop_lines(), vec![("r2.5-c".to_string(), 5.0)]);
+        assert!(charts.flop_pot_bb("r2.5").is_none()); // a decision still follows
+        assert!(charts.flop_seats("r2.5-f").is_none()); // BB folds — one live seat
+
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn line_commitment_is_max_bet_to_plus_ante() {
+        let dir = std::env::temp_dir().join(format!("pt-preflop-commit-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        write_hu_ruleset(&dir);
+        let charts = PreflopCharts::load(&dir).unwrap();
+        // Highest bet-to level wins; a folded blind is dead money, not commitment,
+        // so a 100bb open-fold-call commits only the raise-to (≠ pot/2).
+        assert!((charts.line_commitment_bb("f-f-f-r2.5-f-c") - 2.5).abs() < 1e-6);
+        assert!((charts.line_commitment_bb("r2.5-r8-c") - 8.0).abs() < 1e-6);
+        assert!((charts.line_commitment_bb("c-x") - 1.0).abs() < 1e-6); // limp: floor at bb
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn weighted_range_string_scales_to_max_one() {
+        let mut reach = vec![0.0f32; CLASSES];
+        reach[0] = 0.6; // AA
+        reach[1] = 0.3; // AKs
+        assert_eq!(weighted_range_string(&reach), "AA:1.0000,AKs:0.5000");
+        assert_eq!(weighted_range_string(&vec![0.0; CLASSES]), "");
     }
 
     #[test]

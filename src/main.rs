@@ -1,4 +1,7 @@
 use clap::{Args, Parser, Subcommand, ValueEnum};
+use poker_trainer::preflop::{
+    class_index, class_name, parse_cards, weighted_range_string, PreflopCharts,
+};
 use poker_trainer::solution::{SolveRequest, SpotConfig};
 use poker_trainer::{analyze, report, stats, trainer};
 use std::path::PathBuf;
@@ -98,6 +101,35 @@ enum Command {
         /// Flop, e.g. Td9d6h.
         #[arg(long)]
         board: String,
+    },
+    /// Ground a postflop solve in a preflop line: print the `solve-gen solve`
+    /// arguments (weighted arrival ranges + pot + effective stack + rake) for a
+    /// flop-closing line of a solved chart set. Omit --line to list the lines.
+    /// Name your seat with --hero to see the spot as hero vs. villain (and which
+    /// side, OOP/IP, is yours); add --hand to check how often you get there.
+    ExportRange {
+        /// Solved preflop chart set under data/preflop/ (e.g. cash-hu55,
+        /// cash89). Any line where exactly two seats reach the flop works.
+        #[arg(long)]
+        ruleset: String,
+        /// Flop-closing action line, e.g. "r2.5-c" (SB opens 2.5bb, BB calls).
+        /// Omit to list the ruleset's flop-closing lines.
+        #[arg(long)]
+        line: Option<String>,
+        /// A flop (e.g. Td9d6h): prints a ready-to-run solve-gen command instead
+        /// of just the range/pot/stack arguments.
+        #[arg(long)]
+        flop: Option<String>,
+        /// Hero's seat, e.g. SB or BTN — must be one of the two seats that reach
+        /// the flop. Reframes the output as hero/villain and reports which side
+        /// (OOP/IP) is yours. The emitted solve args are unchanged.
+        #[arg(long)]
+        hero: Option<String>,
+        /// Hero's hole cards, e.g. AhKh (needs --hero) — reports how often hero
+        /// reaches this line with that hand. Provenance only: the solve is over
+        /// hero's whole range.
+        #[arg(long)]
+        hand: Option<String>,
     },
 }
 
@@ -232,5 +264,170 @@ fn main() {
             jsonl,
         } => analyze::run(&files, dry_run, &solve_budget, jsonl.as_deref()),
         Command::Equity { oop, ip, board } => report::run_equity(&oop, &ip, &board),
+        Command::ExportRange {
+            ruleset,
+            line,
+            flop,
+            hero,
+            hand,
+        } => run_export_range(
+            &ruleset,
+            line.as_deref(),
+            flop.as_deref(),
+            hero.as_deref(),
+            hand.as_deref(),
+        ),
+    }
+}
+
+/// `export-range`: bridge a solved preflop line into `solve-gen solve` inputs.
+/// Ranges/pot/stack are flop-independent (they're the preflop arrival), so the
+/// flop only enters the emitted command. `--hero`/`--hand` only relabel the
+/// stderr provenance — the emitted args are position-derived, unchanged.
+/// Nothing here links the solver — it just prints strings.
+fn run_export_range(
+    ruleset: &str,
+    line: Option<&str>,
+    flop: Option<&str>,
+    hero: Option<&str>,
+    hand: Option<&str>,
+) {
+    let charts = PreflopCharts::load(format!("data/preflop/{ruleset}")).unwrap_or_else(|e| {
+        eprintln!("{e}");
+        std::process::exit(2);
+    });
+    let die = |msg: String| -> ! {
+        eprintln!("{msg}");
+        std::process::exit(2);
+    };
+
+    let Some(line) = line else {
+        let lines = charts.flop_lines();
+        if lines.is_empty() {
+            die(format!(
+                "no flop-closing lines in {ruleset}'s committed charts \
+                 (regenerate charts.jsonl for rarer/deeper lines)"
+            ));
+        }
+        println!(
+            "Flop-closing lines for {} — pass one to --line:",
+            charts.header.label
+        );
+        for (l, pot) in lines {
+            println!("  {l}\t(pot {pot:.1}bb)");
+        }
+        return;
+    };
+
+    let (oop_seat, ip_seat) = charts.flop_seats(line).unwrap_or_else(|| {
+        die(format!(
+            "{line:?} isn't a two-player flop line in {ruleset} \
+             (list lines with: export-range --ruleset {ruleset})"
+        ))
+    });
+    let pot = charts.flop_pot_bb(line).unwrap_or_else(|| {
+        die(format!(
+            "{line:?} doesn't close to a flop (more action follows, or it's a fold/all-in)"
+        ))
+    });
+    let reach = |seat: &str| {
+        charts
+            .seat_reach(line, seat)
+            .unwrap_or_else(|| die(format!("{line:?} has a pruned/missing ancestor node")))
+    };
+    let oop_reach = reach(&oop_seat);
+    let ip_reach = reach(&ip_seat);
+    let oop = weighted_range_string(&oop_reach);
+    let ip = weighted_range_string(&ip_reach);
+    if oop.is_empty() || ip.is_empty() {
+        die(format!(
+            "{line:?} is unreachable for a live seat under the equilibrium"
+        ));
+    }
+    let stack = charts
+        .stack_bb()
+        .unwrap_or_else(|| die("ruleset config lacks stack_bb".into()))
+        - charts.line_commitment_bb(line);
+    let (rake_rate, rake_cap) = charts.rake();
+
+    // Provenance on stderr; the copy-pasteable args/command on stdout.
+    eprintln!("# {} — line {line}", charts.header.label);
+    match hero {
+        Some(h) => {
+            // Which of the two flop seats is hero, and thus which side is theirs.
+            let (side, hero_seat, hero_reach, villain_seat, villain_side) =
+                if h.eq_ignore_ascii_case(&oop_seat) {
+                    ("OOP", &oop_seat, &oop_reach, &ip_seat, "IP")
+                } else if h.eq_ignore_ascii_case(&ip_seat) {
+                    ("IP", &ip_seat, &ip_reach, &oop_seat, "OOP")
+                } else {
+                    die(format!(
+                        "hero {h:?} isn't live at the flop on {line:?} \
+                         ({oop_seat} is OOP, {ip_seat} is IP)"
+                    ));
+                };
+            eprintln!(
+                "# hero={hero_seat} ({side})  villain={villain_seat} ({villain_side})  \
+                 pot={pot:.2}bb  eff_stack={stack:.2}bb  rake={rake_rate}/{rake_cap}bb"
+            );
+            eprintln!("# hero's strategy is the {side} range below.");
+            if let Some(hand) = hand {
+                report_hand(hand, flop, line, hero_reach);
+            }
+        }
+        None => {
+            if hand.is_some() {
+                die("--hand needs --hero (whose range is the hand in?)".into());
+            }
+            eprintln!(
+                "# OOP={oop_seat}  IP={ip_seat}  pot={pot:.2}bb  eff_stack={stack:.2}bb  \
+                 rake={rake_rate}/{rake_cap}bb"
+            );
+        }
+    }
+    let args = format!(
+        "--oop \"{oop}\" --ip \"{ip}\" --pot {pot:.2} --stack {stack:.2} \
+         --rake-rate {rake_rate} --rake-cap {rake_cap}"
+    );
+    match flop {
+        Some(flop) => println!("cargo run -p solve-gen --release -- solve --flop {flop} {args}"),
+        None => println!("{args}"),
+    }
+}
+
+/// Report (to stderr) how often hero reaches the line holding `hand`, using
+/// hero's per-class arrival `reach`. Exits on a malformed hand or one that
+/// collides with `flop` — an impossible holding is a user error worth catching.
+fn report_hand(hand: &str, flop: Option<&str>, line: &str, reach: &[f32]) {
+    let die = |msg: String| -> ! {
+        eprintln!("{msg}");
+        std::process::exit(2);
+    };
+    let cards = match parse_cards(hand).as_deref() {
+        Some([a, b]) if a != b => [*a, *b],
+        _ => die(format!(
+            "--hand {hand:?} isn't two distinct cards, e.g. AhKh"
+        )),
+    };
+    if let Some(flop) = flop {
+        if let Some(board) = parse_cards(flop) {
+            if cards.iter().any(|c| board.contains(c)) {
+                die(format!(
+                    "hero's hand {hand} shares a card with the flop {flop}"
+                ));
+            }
+        }
+    }
+    let class = class_index(cards);
+    let w = reach[class];
+    eprintln!(
+        "# hero holds {hand} ({}) — reaches {line} with class weight {w:.3}",
+        class_name(class)
+    );
+    if w < 1e-3 {
+        eprintln!(
+            "# note: {} ~never continues this line under the equilibrium",
+            class_name(class)
+        );
     }
 }
