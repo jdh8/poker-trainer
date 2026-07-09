@@ -9,17 +9,33 @@
 <body>
 <header>
   <h1>poker-trainer</h1>
-  <p class="tagline">A catalog of the trainer's human-facing examples, running in your browser.
-     The poker logic is the Rust crate compiled to WebAssembly; the GTO grid reads the
-     committed solver snapshots.</p>
+  <p class="tagline">Browse the solver's preflop charts GTO-Wizard-style — pick a table,
+     walk the action line, read each hand off the 13×13 grid. Plus an equity calculator,
+     a pot-odds drill, and the postflop GTO grid, all running in your browser.</p>
   <nav>
+    <a href="#preflop">Preflop charts</a>
     <a href="#equity">Equity calculator</a>
     <a href="#pot-odds">Pot-odds drill</a>
-    <a href="#preflop">Preflop charts</a>
     <a href="#grid">GTO strategy grid</a>
   </nav>
 </header>
 <main>
+
+<section id="preflop">
+  <h2>Preflop charts</h2>
+  <p>Browse the solved preflop trees (<code>data/preflop/</code>, computed by the
+     in-repo <code>preflop-gen</code> MCCFR solver) GTO-Wizard-style: pick a table and
+     stack depth, walk the action line, read each hand's mixed strategy off the 13×13
+     grid. Dimmed cells can't reach the spot; click a cell for frequencies and EV.</p>
+  <label class="inline">Table <select id="pf-family"></select></label>
+  <label class="inline">Depth <select id="pf-depth"></select></label>
+  <div id="pf-crumbs"></div>
+  <div id="pf-head"></div>
+  <div id="pf-actions"></div>
+  <div id="pf-legend"></div>
+  <div id="pf-grid"></div>
+  <div id="pf-detail"></div>
+</section>
 
 <section id="equity">
   <h2>Equity calculator</h2>
@@ -50,22 +66,6 @@
     <button id="po-fold" class="answer">Fold</button>
   </div>
   <div id="po-reveal"></div>
-</section>
-
-<section id="preflop">
-  <h2>Preflop charts</h2>
-  <p>Browse the solved preflop trees (<code>data/preflop/</code>, computed by the
-     in-repo <code>preflop-gen</code> MCCFR solver) GTO-Wizard-style: pick a table and
-     stack depth, walk the action line, read each hand's mixed strategy off the 13×13
-     grid. Dimmed cells can't reach the spot; click a cell for frequencies and EV.</p>
-  <label class="inline">Table <select id="pf-family"></select></label>
-  <label class="inline">Depth <select id="pf-depth"></select></label>
-  <div id="pf-crumbs"></div>
-  <div id="pf-head"></div>
-  <div id="pf-actions"></div>
-  <div id="pf-legend"></div>
-  <div id="pf-grid"></div>
-  <div id="pf-detail"></div>
 </section>
 
 <section id="grid">
