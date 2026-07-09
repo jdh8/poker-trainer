@@ -68,6 +68,13 @@ pub struct SolvedSpot {
     pub strategies: Vec<HandStrategy>,
 }
 
+impl SolvedSpot {
+    /// The spot's formation id — pre-v2 configless files were all `srp-btn-bb`.
+    pub fn formation(&self) -> &str {
+        self.config.as_ref().map_or("srp-btn-bb", |c| &c.formation)
+    }
+}
+
 /// The full postflop game config, shared by both crates (design doc 02): it's
 /// the CLI's resolved knobs, the `serve`/`solve` request body, the cache-key
 /// input ([`SpotConfig::hash8`]), and the provenance embedded in every

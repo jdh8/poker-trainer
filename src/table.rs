@@ -273,6 +273,15 @@ fn baseline_map(grid: &Grid) -> HashMap<(usize, usize), f32> {
     m
 }
 
+/// Linear RGB blend from `a` to `b` at `u` in `[0, 1]`, as a terminal color.
+fn lerp(a: [f32; 3], b: [f32; 3], u: f32) -> Color {
+    Color::Rgb(
+        (a[0] + (b[0] - a[0]) * u) as u8,
+        (a[1] + (b[1] - a[1]) * u) as u8,
+        (a[2] + (b[2] - a[2]) * u) as u8,
+    )
+}
+
 /// EV-delta color: green as EV rises, red as it falls, gray near zero, scaled
 /// by the grid's largest absolute change so the ramp always spans the data.
 fn delta_color(d: f32, scale: f32) -> Color {
@@ -287,11 +296,7 @@ fn delta_color(d: f32, scale: f32) -> Color {
     } else {
         [200.0, 60.0, 50.0]
     };
-    Color::Rgb(
-        (gray[0] + (end[0] - gray[0]) * m) as u8,
-        (gray[1] + (end[1] - gray[1]) * m) as u8,
-        (gray[2] + (end[2] - gray[2]) * m) as u8,
-    )
+    lerp(gray, end, m)
 }
 
 /// Which per-cell reduction the grid shows, toggled by key (design doc 03):
@@ -310,13 +315,6 @@ pub enum Lens {
 /// the app's bet-red and call-green endpoints.
 fn heat_color(t: f32) -> Color {
     let t = t.clamp(0.0, 1.0);
-    let lerp = |a: [f32; 3], b: [f32; 3], u: f32| {
-        Color::Rgb(
-            (a[0] + (b[0] - a[0]) * u) as u8,
-            (a[1] + (b[1] - a[1]) * u) as u8,
-            (a[2] + (b[2] - a[2]) * u) as u8,
-        )
-    };
     let (red, yellow, green) = (
         [200.0, 60.0, 50.0],
         [220.0, 190.0, 60.0],
@@ -1657,8 +1655,25 @@ mod tests {
 
     #[test]
     fn snapshot_grid_carries_no_equity() {
-        let node = tree_node();
-        let grid = build_grid(&node.to_spot());
+        let mk = |hand: &str, f: Vec<f32>| HandStrategy {
+            hand: hand.into(),
+            strategy: NodeStrategy {
+                actions: vec!["Check".into(), "Bet 2.0bb".into()],
+                frequencies: f,
+                action_ev: vec![0.0, 0.0],
+            },
+        };
+        let spot = SolvedSpot {
+            label: "t".into(),
+            board: vec!["Td".into(), "9d".into(), "6h".into()],
+            pot_bb: 6.0,
+            hero_oop: false,
+            villain_action: "x".into(),
+            config: None,
+            generator: None,
+            strategies: vec![mk("AsKs", vec![0.4, 0.6]), mk("AhKh", vec![0.2, 0.8])],
+        };
+        let grid = build_grid(&spot);
         let aks = grid[0][1].as_ref().unwrap();
         assert!(aks.equity.is_nan());
         assert_eq!(aks.weight, 1.0);

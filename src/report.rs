@@ -142,11 +142,6 @@ fn summarize(spot: &SolvedSpot) -> Option<Row> {
     })
 }
 
-/// A spot's formation id; pre-v2 configless files were all `srp-btn-bb`.
-fn formation_of(spot: &SolvedSpot) -> &str {
-    spot.config.as_ref().map_or("srp-btn-bb", |c| &c.formation)
-}
-
 fn sort_rows(rows: &mut [Row], by: Sort) {
     match by {
         Sort::Texture => rows.sort_by(|a, b| a.texture.cmp(b.texture).then(a.flop.cmp(&b.flop))),
@@ -181,7 +176,7 @@ pub fn run_report(
     let mut rows: Vec<Row> = provider
         .spots()
         .iter()
-        .filter(|s| formation.as_deref().is_none_or(|f| formation_of(s) == f))
+        .filter(|s| formation.as_deref().is_none_or(|f| s.formation() == f))
         .filter(|s| node.is_none_or(|n| s.hero_oop == matches!(n, NodeSide::Oop)))
         .filter_map(summarize)
         .collect();
@@ -302,16 +297,7 @@ pub fn parse_range(s: &str) -> Result<Vec<[Card; 2]>, String> {
 
 /// Parse a packed board like "Td9d6h" into exactly three cards.
 pub fn parse_flop(board: &str) -> Option<[Card; 3]> {
-    let cards: Option<Vec<Card>> = board
-        .as_bytes()
-        .chunks(2)
-        .map(|c| {
-            std::str::from_utf8(c)
-                .ok()
-                .and_then(|s| Card::try_from(s).ok())
-        })
-        .collect();
-    cards?.try_into().ok()
+    crate::preflop::parse_cards(board)?.try_into().ok()
 }
 
 /// Drop combos that collide with the flop (dead cards).

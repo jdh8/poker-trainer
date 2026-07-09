@@ -36,8 +36,6 @@ pub struct NodeData {
     pub cfv_weight: Vec<f32>,
     /// Actions at this node (the row stride).
     pub actions: usize,
-    /// Traverser visits (diagnostics).
-    pub visits: u64,
 }
 
 impl NodeData {
@@ -48,7 +46,6 @@ impl NodeData {
             cfv_sum: vec![0.0; CLASSES * actions],
             cfv_weight: vec![0.0; CLASSES],
             actions,
-            visits: 0,
         }
     }
 
@@ -202,7 +199,6 @@ impl<'a> Solver<'a> {
                 node_value += f64::from(sigma[i]) * vals[i];
             }
             let node = self.infosets.get_mut(&key).expect("visited above");
-            node.visits += 1;
             node.cfv_weight[class] += w;
             let row = class * node.actions;
             for (i, v) in vals.iter().enumerate().take(acts.len()) {

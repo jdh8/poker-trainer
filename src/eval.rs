@@ -83,15 +83,8 @@ pub enum Bucket {
 
 impl std::fmt::Display for Bucket {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s = match self {
-            Bucket::Value => "Value",
-            Bucket::Overpair => "Overpair",
-            Bucket::TopPair => "TopPair",
-            Bucket::Pair => "Pair",
-            Bucket::Draw => "Draw",
-            Bucket::Air => "Air",
-        };
-        f.write_str(s)
+        // Each variant's Debug name is exactly its display label.
+        write!(f, "{self:?}")
     }
 }
 

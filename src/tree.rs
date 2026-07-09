@@ -6,7 +6,7 @@
 //! format — is the wire format (protocol v2, see [`PROTOCOL_V`]), which keeps
 //! the AGPL solver behind a process boundary exactly like the snapshot path.
 
-use crate::solution::{solve_gen_command, HandStrategy, NodeStrategy, SolveRequest, SolvedSpot};
+use crate::solution::{solve_gen_command, SolveRequest};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::io::{self, BufRead, BufReader, Write};
@@ -58,40 +58,6 @@ pub struct RunoutSummary {
     pub actions: Vec<String>,
     pub freqs: Vec<f32>,
     pub ev_bb: f32,
-}
-
-impl TreeNode {
-    /// Reshape into a [`SolvedSpot`] so the existing grid/render code applies
-    /// unchanged — a `TreeNode` and a snapshot reduce to the same `Cell` grid.
-    pub fn to_spot(&self) -> SolvedSpot {
-        let strategies = self
-            .hands
-            .iter()
-            .enumerate()
-            .map(|(j, hand)| HandStrategy {
-                hand: hand.clone(),
-                strategy: NodeStrategy {
-                    actions: self.actions.clone(),
-                    frequencies: self.freqs.iter().map(|per_hand| per_hand[j]).collect(),
-                    action_ev: self.evs.iter().map(|per_hand| per_hand[j]).collect(),
-                },
-            })
-            .collect();
-        SolvedSpot {
-            label: if self.line.is_empty() {
-                "(root)".into()
-            } else {
-                self.line.join(" · ")
-            },
-            board: self.board.clone(),
-            pot_bb: self.pot_bb,
-            hero_oop: self.player == "oop",
-            villain_action: self.line.last().cloned().unwrap_or_default(),
-            config: None,
-            generator: None,
-            strategies,
-        }
-    }
 }
 
 /// A live `solve-gen serve` subprocess holding one solved game.
@@ -217,47 +183,6 @@ fn parse_response(line: &str) -> io::Result<serde_json::Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn sample_node() -> TreeNode {
-        TreeNode {
-            player: "ip".into(),
-            board: vec!["Td".into(), "9d".into(), "6h".into()],
-            pot_bb: 6.0,
-            line: vec!["Check".into()],
-            actions: vec!["Check".into(), "Bet 2.0bb".into()],
-            hands: vec!["AsKs".into(), "AhKh".into()],
-            freqs: vec![vec![0.2, 0.4], vec![0.8, 0.6]],
-            evs: vec![vec![1.0, 1.1], vec![3.5, 3.6]],
-            ..Default::default()
-        }
-    }
-
-    #[test]
-    fn to_spot_reshapes_action_major_into_per_hand() {
-        let spot = sample_node().to_spot();
-        assert_eq!(spot.label, "Check");
-        assert_eq!(spot.villain_action, "Check");
-        assert!(!spot.hero_oop);
-        assert_eq!(spot.strategies.len(), 2);
-        let s = &spot.strategies[1];
-        assert_eq!(s.hand, "AhKh");
-        assert_eq!(s.strategy.frequencies, vec![0.4, 0.6]);
-        assert_eq!(s.strategy.action_ev, vec![1.1, 3.6]);
-    }
-
-    #[test]
-    fn to_spot_at_root_and_at_chance() {
-        let mut node = sample_node();
-        node.line.clear();
-        assert_eq!(node.to_spot().label, "(root)");
-
-        let chance = TreeNode {
-            player: "chance".into(),
-            dealable: vec!["2c".into()],
-            ..Default::default()
-        };
-        assert!(chance.to_spot().strategies.is_empty());
-    }
 
     #[test]
     fn parse_response_maps_errors_and_tolerates_new_fields() {

@@ -43,9 +43,6 @@ enum Cmd {
         /// Worker threads (default: all-but-two cores).
         #[arg(long)]
         threads: Option<usize>,
-        /// Time one class pair and exit (sizing the full run).
-        #[arg(long, hide = true)]
-        bench_pair: bool,
     },
     /// Solve one ruleset and export its charts (minutes; wrap 6-max runs in
     /// scripts/idle-run.sh on the shared box).
@@ -172,20 +169,7 @@ fn main() -> Result<(), String> {
             println!("  max depth           {:>12}", s.max_depth);
             Ok(())
         }
-        Cmd::Equity {
-            out,
-            threads,
-            bench_pair,
-        } => {
-            if bench_pair {
-                let t = std::time::Instant::now();
-                let e = equity::exact_pair_equity(0, 14); // AA vs KK
-                println!(
-                    "AA vs KK = {e:.8} in {:.2?} (×14365 pairs / threads)",
-                    t.elapsed()
-                );
-                return Ok(());
-            }
+        Cmd::Equity { out, threads } => {
             let threads = threads.unwrap_or_else(|| {
                 std::thread::available_parallelism().map_or(1, |n| n.get().saturating_sub(2).max(1))
             });

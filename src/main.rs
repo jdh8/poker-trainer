@@ -191,10 +191,9 @@ impl SolveArgs {
         let flop = self.board?;
         let mut config = match &self.from {
             Some(spec) => grounded_config(spec),
-            None => SpotConfig::for_formation(&self.formation, "data/ranges").unwrap_or_else(|e| {
-                eprintln!("{e}");
-                std::process::exit(2);
-            }),
+            None => {
+                SpotConfig::for_formation(&self.formation, "data/ranges").unwrap_or_else(|e| die(e))
+            }
         };
         let overrides = [
             (&mut config.oop_range, self.oop),
@@ -355,12 +354,15 @@ fn derive_line_spot(charts: &PreflopCharts, line: &str) -> Result<LineSpot, Stri
 /// `srp-btn-bb` shell — solver-default sizes and a formation solve-gen's
 /// `for_formation` accepts, so the cache key matches the `export-range`-emitted
 /// command — with ranges/pot/stack/rake replaced by the preflop equilibrium.
+/// Print `msg` to stderr and exit with status 2 — the shared "bad input, can't
+/// proceed" bailout for the `export-range`/`--from` paths.
+fn die(msg: impl std::fmt::Display) -> ! {
+    eprintln!("{msg}");
+    std::process::exit(2);
+}
+
 /// Prints and exits on a bad spec (there's nothing to solve without it).
 fn grounded_config(spec: &str) -> SpotConfig {
-    let die = |msg: String| -> ! {
-        eprintln!("{msg}");
-        std::process::exit(2);
-    };
     let (ruleset, line) = spec.split_once(':').unwrap_or_else(|| {
         die(format!(
             "--from expects <ruleset>:<line>, e.g. cash-hu55:r2.5-c (got {spec:?})"
@@ -396,14 +398,7 @@ fn run_export_range(
     hero: Option<&str>,
     hand: Option<&str>,
 ) {
-    let charts = PreflopCharts::load(format!("data/preflop/{ruleset}")).unwrap_or_else(|e| {
-        eprintln!("{e}");
-        std::process::exit(2);
-    });
-    let die = |msg: String| -> ! {
-        eprintln!("{msg}");
-        std::process::exit(2);
-    };
+    let charts = PreflopCharts::load(format!("data/preflop/{ruleset}")).unwrap_or_else(|e| die(e));
 
     let Some(line) = line else {
         let lines = charts.flop_lines();
@@ -463,7 +458,7 @@ fn run_export_range(
         }
         None => {
             if hand.is_some() {
-                die("--hand needs --hero (whose range is the hand in?)".into());
+                die("--hand needs --hero (whose range is the hand in?)");
             }
             eprintln!(
                 "# OOP={oop_seat}  IP={ip_seat}  pot={pot:.2}bb  eff_stack={stack:.2}bb  \
@@ -485,10 +480,6 @@ fn run_export_range(
 /// hero's per-class arrival `reach`. Exits on a malformed hand or one that
 /// collides with `flop` — an impossible holding is a user error worth catching.
 fn report_hand(hand: &str, flop: Option<&str>, line: &str, reach: &[f32]) {
-    let die = |msg: String| -> ! {
-        eprintln!("{msg}");
-        std::process::exit(2);
-    };
     let cards = match parse_cards(hand).as_deref() {
         Some([a, b]) if a != b => [*a, *b],
         _ => die(format!(

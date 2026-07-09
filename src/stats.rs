@@ -26,7 +26,6 @@ pub const GTO_ACTION_FREQ: f32 = 0.05;
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct StatRecord {
-    pub v: u32,
     /// Unix seconds.
     pub ts: u64,
     /// Which drill scored it: `"gto"`, `"range"`, `"hand"`, `"analyze"`, …
@@ -55,10 +54,9 @@ pub struct StatRecord {
 }
 
 impl StatRecord {
-    /// A v1 record stamped now; callers fill in the spot fields.
+    /// A record stamped now; callers fill in the spot fields.
     pub fn new(drill: &str) -> Self {
         Self {
-            v: 1,
             ts: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .map(|d| d.as_secs())

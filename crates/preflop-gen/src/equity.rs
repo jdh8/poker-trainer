@@ -116,31 +116,34 @@ pub fn gen_hu_table(threads: usize) -> Vec<f64> {
         .collect();
     let next = std::sync::atomic::AtomicUsize::new(0);
     let done = std::sync::atomic::AtomicUsize::new(0);
-    let results: Vec<std::sync::Mutex<Vec<(usize, usize, f64)>>> = (0..threads)
-        .map(|_| std::sync::Mutex::new(Vec::new()))
-        .collect();
 
-    std::thread::scope(|scope| {
-        for slot in &results {
-            scope.spawn(|| loop {
-                let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                let Some(&(a, b)) = pairs.get(i) else { break };
-                let eq = exact_pair_equity(a, b);
-                slot.lock().unwrap().push((a, b, eq));
-                let n = done.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
-                if n.is_multiple_of(100) {
-                    eprintln!("equity: {n}/{} pairs", pairs.len());
-                }
-            });
-        }
+    // Each worker pulls pairs off the shared counter into its own local Vec;
+    // no contention, so no lock — merge the joined locals afterwards.
+    let collected: Vec<Vec<(usize, usize, f64)>> = std::thread::scope(|scope| {
+        let handles: Vec<_> = (0..threads)
+            .map(|_| {
+                scope.spawn(|| {
+                    let mut local = Vec::new();
+                    loop {
+                        let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        let Some(&(a, b)) = pairs.get(i) else { break };
+                        local.push((a, b, exact_pair_equity(a, b)));
+                        let n = done.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
+                        if n.is_multiple_of(100) {
+                            eprintln!("equity: {n}/{} pairs", pairs.len());
+                        }
+                    }
+                    local
+                })
+            })
+            .collect();
+        handles.into_iter().map(|h| h.join().unwrap()).collect()
     });
 
     let mut table = vec![0.0f64; CLASSES * CLASSES];
-    for slot in &results {
-        for &(a, b, eq) in slot.lock().unwrap().iter() {
-            table[a * CLASSES + b] = eq;
-            table[b * CLASSES + a] = 1.0 - eq;
-        }
+    for &(a, b, eq) in collected.iter().flatten() {
+        table[a * CLASSES + b] = eq;
+        table[b * CLASSES + a] = 1.0 - eq;
     }
     table
 }

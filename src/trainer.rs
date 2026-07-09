@@ -24,15 +24,6 @@ use std::io::{self, Write};
 #[cfg(feature = "tui")]
 use std::path::PathBuf;
 
-/// A spot's formation id for history records; pre-v2 files carry no config and
-/// were all generated as BTN-vs-BB SRPs.
-fn spot_formation(spot: &SolvedSpot) -> String {
-    spot.config
-        .as_ref()
-        .map(|c| c.formation.clone())
-        .unwrap_or_else(|| "srp-btn-bb".into())
-}
-
 const BET_FRACTIONS: [f64; 5] = [0.33, 0.5, 0.75, 1.0, 1.5];
 
 /// The heads-up ruleset the pot-odds drill draws from when `--preflop` is omitted.
@@ -483,16 +474,7 @@ pub fn run_preflop_drill(ruleset: &str) {
             Some(ns) => {
                 let (best, loss) = (ns.best(), ns.ev_loss(chosen));
                 total_ev_loss += loss;
-                println!("\n  GTO mix:");
-                for i in 0..ns.actions.len() {
-                    println!(
-                        "    {:<16} {:>5.1}%   EV {:+.2}{unit}{}",
-                        ns.actions[i],
-                        ns.frequencies[i] * 100.0,
-                        ns.action_ev[i],
-                        if i == best { "   <- best" } else { "" }
-                    );
-                }
+                print_gto_mix(&ns, best, &unit);
                 println!(
                     "  You chose {} -> EV loss {:.2}{unit} (GTO plays it {:.1}%).\n",
                     ns.actions[chosen],
@@ -597,7 +579,7 @@ pub fn run_gto_drill(req: Option<SolveRequest>) {
 
         let (texture, bucket) = flop_context(&spot.board, &hand.hand);
         stats::record(&stats::StatRecord {
-            formation: spot_formation(spot),
+            formation: spot.formation().into(),
             flop: spot.board.join("").to_lowercase(),
             texture,
             street: "flop".into(),
@@ -611,16 +593,7 @@ pub fn run_gto_drill(req: Option<SolveRequest>) {
             ..stats::StatRecord::new("gto")
         });
 
-        println!("\n  GTO mix:");
-        for i in 0..ns.actions.len() {
-            println!(
-                "    {:<14} {:>5.1}%   EV {:+.2}bb{}",
-                ns.actions[i],
-                ns.frequencies[i] * 100.0,
-                ns.action_ev[i],
-                if i == best { "   <- best" } else { "" }
-            );
-        }
+        print_gto_mix(ns, best, "bb");
         println!(
             "  You chose {} -> EV loss {:.2}bb (GTO plays it {:.1}%).\n",
             ns.actions[chosen],
@@ -875,7 +848,7 @@ pub fn run_range_drill(req: Option<SolveRequest>) {
         // A bucket assignment is one decision: `hand`/`best` stay empty (no
         // single combo or best action speaks for the whole bucket).
         stats::record(&stats::StatRecord {
-            formation: spot_formation(spot),
+            formation: spot.formation().into(),
             flop: spot.board.join("").to_lowercase(),
             texture: texture.clone(),
             street: "flop".into(),
@@ -1284,6 +1257,21 @@ pub(crate) fn street_name(board_len: usize) -> &'static str {
     }
 }
 
+/// Print the "GTO mix:" block — each action's frequency and EV, with `<- best`
+/// on the highest-EV action. `unit` is the EV suffix (`"bb"` or a chips label).
+fn print_gto_mix(ns: &NodeStrategy, best: usize, unit: &str) {
+    println!("\n  GTO mix:");
+    for i in 0..ns.actions.len() {
+        println!(
+            "    {:<16} {:>5.1}%   EV {:+.2}{unit}{}",
+            ns.actions[i],
+            ns.frequencies[i] * 100.0,
+            ns.action_ev[i],
+            if i == best { "   <- best" } else { "" }
+        );
+    }
+}
+
 /// Index sampled from `weights` by a uniform `roll` in `[0, 1)`. Degenerate
 /// all-zero weights (an unreachable node) fall back to action 0.
 fn pick_weighted(weights: &[f32], roll: f32) -> usize {
@@ -1320,24 +1308,12 @@ fn texture_name(flop: [Card; 3]) -> String {
 
 /// Parse a 3-card board (`["6h","9d","Td"]`) into a flop array.
 fn parse_flop(board: &[String]) -> Option<[Card; 3]> {
-    parse_cards(&board.join(""))?.try_into().ok()
+    preflop::parse_cards(&board.join(""))?.try_into().ok()
 }
 
 /// Parse the hero's two hole cards from an `"AsKh"` string.
 pub(crate) fn parse_hole(hand: &str) -> Option<[Card; 2]> {
-    parse_cards(hand)?.try_into().ok()
-}
-
-/// Parse a packed card string (`"6h9dTd"`) into cards; `None` if any chunk fails.
-fn parse_cards(s: &str) -> Option<Vec<Card>> {
-    s.as_bytes()
-        .chunks(2)
-        .map(|c| {
-            std::str::from_utf8(c)
-                .ok()
-                .and_then(|cs| Card::try_from(cs).ok())
-        })
-        .collect()
+    preflop::parse_cards(hand)?.try_into().ok()
 }
 
 /// Which equity half of a strength bucket a combo lands in.
