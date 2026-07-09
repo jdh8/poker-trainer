@@ -11,6 +11,7 @@
 //! calls — BB to act. The root (first seat to act, nobody in yet) is `""`.
 
 use crate::solution::NodeStrategy;
+use rand::RngExt;
 use rs_poker::core::Card;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -75,6 +76,99 @@ pub fn class_combos(i: usize) -> u32 {
         std::cmp::Ordering::Less => 4,
         std::cmp::Ordering::Greater => 12,
     }
+}
+
+/// The concrete combos of class `i`, the list form of [`class_combos`]:
+/// 6 for a pair, 4 suited, 12 offsuit. Inverse of [`class_index`].
+pub fn class_combos_cards(i: usize) -> Vec<[Card; 2]> {
+    const SUITS: [char; 4] = ['s', 'h', 'd', 'c'];
+    let card = |rank: usize, suit: char| {
+        Card::try_from(format!("{}{suit}", RANKS[rank]).as_str()).expect("valid card code")
+    };
+    let (r, c) = (i / 13, i % 13);
+    let mut combos = Vec::new();
+    match r.cmp(&c) {
+        // pair: the 6 unordered suit pairs
+        std::cmp::Ordering::Equal => {
+            for (a, &s1) in SUITS.iter().enumerate() {
+                for &s2 in &SUITS[a + 1..] {
+                    combos.push([card(r, s1), card(r, s2)]);
+                }
+            }
+        }
+        // suited: higher rank `r`, lower rank `c`, matching suits
+        std::cmp::Ordering::Less => {
+            for &s in &SUITS {
+                combos.push([card(r, s), card(c, s)]);
+            }
+        }
+        // offsuit: higher rank `c`, lower rank `r`, mismatched suits
+        std::cmp::Ordering::Greater => {
+            for &s1 in &SUITS {
+                for &s2 in &SUITS {
+                    if s1 != s2 {
+                        combos.push([card(c, s1), card(r, s2)]);
+                    }
+                }
+            }
+        }
+    }
+    combos
+}
+
+/// Hero's equity against a villain *range* given the villain seat's per-class
+/// `reach` (as produced by [`PreflopCharts::class_reach`]): sample up to `cap`
+/// villain combos with per-combo weight `reach[class]` — dropping combos that
+/// collide with the hero or flop — and average equity over the sample. Returns
+/// `0.5` when the range is empty after card removal.
+///
+/// Sampling proportional to reach lets the unweighted [`crate::eval::equity_vs_range`]
+/// stand in for a reach-weighted mean, so there's no separate weighted path.
+///
+/// ponytail: reach is class-level (blocker effects ignored, like `class_reach`)
+/// and the estimate is sampled Monte Carlo — raise `cap`/`iters` if a decision
+/// boundary needs a tighter read.
+pub fn equity_vs_reach(
+    hero: [Card; 2],
+    flop: [Card; 3],
+    reach: &[f32],
+    rng: &mut impl RngExt,
+    iters: u32,
+    cap: usize,
+) -> f64 {
+    let dead = |v: &[Card; 2]| v.iter().any(|c| hero.contains(c) || flop.contains(c));
+    let mut combos: Vec<[Card; 2]> = Vec::new();
+    let mut weights: Vec<f32> = Vec::new();
+    for (i, &w) in reach.iter().take(CLASSES).enumerate() {
+        if w <= 0.0 {
+            continue;
+        }
+        for combo in class_combos_cards(i) {
+            if !dead(&combo) {
+                combos.push(combo);
+                weights.push(w);
+            }
+        }
+    }
+    let total: f32 = weights.iter().sum();
+    if combos.is_empty() || total <= 0.0 {
+        return 0.5;
+    }
+    // Draw `cap` combos ∝ reach (roulette), then take the unweighted mean equity.
+    let mut sample = Vec::with_capacity(cap);
+    for _ in 0..cap {
+        let mut r = rng.random::<f32>() * total;
+        let mut idx = combos.len() - 1;
+        for (j, &w) in weights.iter().enumerate() {
+            r -= w;
+            if r < 0.0 {
+                idx = j;
+                break;
+            }
+        }
+        sample.push(combos[idx]);
+    }
+    crate::eval::equity_vs_range(hero, flop, &sample, iters)
 }
 
 /// The path token of a stored action label (the inverse of the generator's
@@ -317,6 +411,43 @@ mod tests {
         assert_eq!(class_combos(0), 6);
         assert_eq!(class_combos(1), 4);
         assert_eq!(class_combos(13), 12);
+    }
+
+    #[test]
+    fn class_combos_cards_round_trip() {
+        for i in 0..CLASSES {
+            let combos = class_combos_cards(i);
+            assert_eq!(
+                combos.len() as u32,
+                class_combos(i),
+                "class {i} combo count"
+            );
+            for combo in combos {
+                let idx = class_index(combo);
+                assert_eq!(idx, i, "{combo:?} should map back to class {i}");
+            }
+        }
+    }
+
+    #[test]
+    fn equity_vs_reach_reads_the_range() {
+        let card = |s| Card::try_from(s).unwrap();
+        let hero = [card("Ah"), card("As")];
+        let flop = [card("Kd"), card("Qc"), card("7h")];
+        let mut rng = rand::rng();
+
+        // Villain always holds 22 — trip-less AA on K Q 7 should dominate.
+        let mut reach = vec![0.0f32; CLASSES];
+        reach[class_index_of("22").unwrap()] = 1.0;
+        let eq = equity_vs_reach(hero, flop, &reach, &mut rng, 200, 60);
+        assert!(
+            eq > 0.8,
+            "AA vs a pure-22 range on K Q 7 should dominate: {eq}"
+        );
+
+        // Empty range (all reach zero) => the 0.5 fallback.
+        let zero = vec![0.0f32; CLASSES];
+        assert_eq!(equity_vs_reach(hero, flop, &zero, &mut rng, 50, 20), 0.5);
     }
 
     fn sample_header() -> PreflopHeader {

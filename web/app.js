@@ -1,7 +1,7 @@
 // Framework-free glue: wasm exports return JSON strings, we parse and render.
 // The GTO grid and preflop chart sections never touch wasm — they fetch the
 // committed JSON directly.
-import init, { equity_report, deal_pot_odds, equity_of } from './pkg/poker_trainer_web.js';
+import init, { equity_report, equity_vs_reach } from './pkg/poker_trainer_web.js';
 
 const $ = id => document.getElementById(id);
 const SUITS = { s: ['♠', 'spade'], h: ['♥', 'heart'], d: ['♦', 'diamond'], c: ['♣', 'club'] };
@@ -45,13 +45,14 @@ $('eq-run').onclick = () => {
 // ---- pot-odds drill ---------------------------------------------------------
 
 let poSpot = null, poRight = 0, poTotal = 0;
-// Preflop-sourced mode (empty = the fixed-10bb wasm drill): a HU ruleset's
-// path->node map, its header, and effective stack for the all-in guard.
+// The selected HU ruleset's path->node map, its header, and effective stack for
+// the all-in guard (loaded on init and on every source change).
 let poSource = '', poNodes = null, poHeader = null, poStack = null;
 
 $('po-deal').onclick = () => {
-  const spot = poSource ? preflopPotOddsSpot() : JSON.parse(deal_pot_odds());
-  if (!spot) {   // preflop mode only: 200 sims never reached a non-all-in flop
+  if (!poNodes) return;   // charts still loading
+  const spot = preflopPotOddsSpot();
+  if (!spot) {   // 200 sims never reached a non-all-in flop
     $('po-spot').innerHTML = '<p>This ruleset rarely reaches a non-all-in flop — ' +
       'try a deeper HU set like cash-hu89.</p>';
     $('po-actions').hidden = true;
@@ -78,18 +79,18 @@ function poAnswer(called) {
   poTotal++; if (right) poRight++;
   $('po-score').textContent = `${poRight}/${poTotal} correct`;
   $('po-reveal').innerHTML =
-    `<p>Villain had ${cardsHTML(s.villain)} — your true equity ${pct(s.equity)} (needed ${pct(s.required)}).</p>` +
+    `<p>Your equity vs villain's range: <b>${pct(s.equity)}</b> (needed ${pct(s.required)}).</p>` +
     `<p>Best play: <b>${s.should_call ? 'CALL' : 'FOLD'}</b> (call EV ${s.call_ev >= 0 ? '+' : ''}${s.call_ev.toFixed(2)}bb). ` +
     `You said ${called ? 'call' : 'fold'} → <span class="${right ? 'verdict-good' : 'verdict-bad'}">${right ? 'correct' : 'wrong'}</span></p>`;
 }
 $('po-call').onclick = () => poAnswer(true);
 $('po-fold').onclick = () => poAnswer(false);
 
-// ---- preflop-sourced pot-odds (JS forward-sim; equity via wasm equity_of) ----
-// The random drill above uses a fixed 10bb pot; picking a HU ruleset in
-// #po-source instead draws each spot from its solved preflop equilibrium.
+// ---- pot-odds spot (JS forward-sim; equity vs range via wasm equity_vs_reach) ----
+// Each spot is drawn from the selected HU ruleset's solved preflop equilibrium.
 // This mirrors `drill pot-odds --preflop <hu>` (trainer.rs) — the sim reuses the
-// same chart nodes the browser below walks; only the 10k-iter equity is wasm.
+// same chart nodes the browser below walks, and wasm scores hero's equity
+// against the villain seat's whole range (its per-class reach), not one hand.
 const BET_FRACTIONS = [0.33, 0.5, 0.75, 1.0, 1.5];
 
 // Grid index of a two-card holding — matches preflop::class_index (RANKS below,
@@ -111,6 +112,9 @@ function samplePreflopSpot() {
   }
   const sb = [deck[0], deck[1]], bb = [deck[2], deck[3]];
   const sbCls = clsIdx(sb[0], sb[1]), bbCls = clsIdx(bb[0], bb[1]);
+  // Each seat's per-class arrival probability along the line (mirrors pfReach),
+  // accumulated as we walk — the villain seat's is scored against.
+  const reach = { SB: new Float32Array(169).fill(1), BB: new Float32Array(169).fill(1) };
 
   let path = '';
   const line = [];
@@ -125,6 +129,9 @@ function samplePreflopSpot() {
     for (let i = 0; i < w.length; i++) { roll -= w[i]; if (roll < 0) { ai = i; break; } }
     const label = node.actions[ai];
     line.push(`${node.seat} ${pfVerb(label)}`);
+    // Fold this action into the acting seat's reach over all 169 classes.
+    const fr = node.freqs[ai], rs = reach[node.seat];
+    for (let c = 0; c < 169; c++) rs[c] *= fr[c];
 
     // hu_step: fold/all-in dead; check or a called raise opens a flop; a call at
     // the root is the SB limp (BB still acts); anything else continues.
@@ -136,25 +143,28 @@ function samplePreflopSpot() {
       // ponytail: starter-tier only on the deployed site; deep lines self-prune
       // via retry. Coarse all-in guard — deep HU sets (cash-hu89) don't hit it.
       if (poStack && pot >= 2 * poStack) return null;
-      return { sb, bb, flop: [deck[4], deck[5], deck[6]], pot, line };
+      return { sb, bb, flop: [deck[4], deck[5], deck[6]], pot, line, sbReach: reach.SB, bbReach: reach.BB };
     }
     path = path === '' ? pfTok(label) : `${path}-${pfTok(label)}`; // SB limp or a raise
   }
 }
 
-// A fully scored spot in deal_pot_odds()'s shape (+ a preflop `line`), or null
-// if 200 sims never reached a bettable flop.
+// A fully scored spot (hero hand, flop, pot, bet, and equity vs villain's
+// range) plus a preflop `line`, or null if 200 sims never reached a bettable
+// flop. Hero is a random seat; villain's range is the other seat's reach.
 function preflopPotOddsSpot() {
   let s = null;
   for (let i = 0; i < 200 && !s; i++) s = samplePreflopSpot();
   if (!s) return null;
-  const [hero, villain] = Math.random() < 0.5 ? [s.sb, s.bb] : [s.bb, s.sb];
+  const heroIsSb = Math.random() < 0.5;
+  const hero = heroIsSb ? s.sb : s.bb;
+  const villainReach = heroIsSb ? s.bbReach : s.sbReach;
   const pot = s.pot;
   const bet = pot * BET_FRACTIONS[Math.floor(Math.random() * BET_FRACTIONS.length)];
   const required = bet / (pot + 2 * bet);
-  const equity = equity_of(hero.join(''), villain.join(''), s.flop.join(''));
+  const equity = equity_vs_reach(hero.join(''), s.flop.join(''), villainReach);
   return {
-    hero, villain, flop: s.flop, pot, bet, required, equity,
+    hero, flop: s.flop, pot, bet, required, equity,
     should_call: equity >= required,
     call_ev: equity * (pot + bet) - (1 - equity) * bet,
     line: s.line,
@@ -164,31 +174,39 @@ function preflopPotOddsSpot() {
 async function poInit() {
   let ids;
   try { ids = await (await fetch('preflop/index.json')).json(); }
-  catch { return; }   // charts not staged; the random wasm drill still works
+  catch {   // charts not staged: the drill needs them, so say so
+    $('po-spot').innerHTML = '<p>Preflop charts aren’t staged — run the data build to enable this drill.</p>';
+    return;
+  }
   const depth = id => +id.match(/(\d+)$/)[1];
   const family = id => id.replace(/-?\d+$/, '');
   const hu = ids.filter(id => id.includes('-hu'))
     .sort((a, b) => family(a) === family(b) ? depth(a) - depth(b)
       : family(a) < family(b) ? -1 : 1);
+  if (!hu.length) return;
   const sel = $('po-source');
-  sel.innerHTML = '<option value="">Random (10bb pot)</option>' +
-    hu.map(id => `<option value="${id}">${id}</option>`).join('');
-  sel.onchange = async () => {
+  sel.innerHTML = hu.map(id => `<option value="${id}">${id}</option>`).join('');
+  const loadSource = async () => {
     poSource = sel.value;
     poSpot = null;
+    poNodes = null;   // block Deal until the new set is in
     $('po-actions').hidden = true;
     $('po-spot').innerHTML = '';
     $('po-reveal').innerHTML = '';
-    if (!poSource) { poNodes = null; return; }
     const [header, lines] = await Promise.all([
       fetch(`preflop/${poSource}/header.json`).then(r => r.json()),
       fetch(`preflop/${poSource}/starter.jsonl`).then(r => r.text()),
     ]);
     poHeader = header;
-    poNodes = {};
-    for (const l of lines.split('\n')) if (l.trim()) { const n = JSON.parse(l); poNodes[n.path] = n; }
+    const nodes = {};
+    for (const l of lines.split('\n')) if (l.trim()) { const n = JSON.parse(l); nodes[n.path] = n; }
+    poNodes = nodes;
     poStack = header.config.stack_bb ?? null;
   };
+  sel.onchange = loadSource;
+  // Default to cash-hu89 when present, else the shallowest HU set; load it now.
+  sel.value = hu.includes('cash-hu89') ? 'cash-hu89' : hu[0];
+  await loadSource();
 }
 
 // ---- preflop chart browser (fetches data/preflop/, no wasm) ------------------

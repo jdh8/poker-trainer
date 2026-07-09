@@ -56,8 +56,10 @@
 
 <section id="pot-odds">
   <h2>Pot-odds drill</h2>
-  <p>You're dealt a hand, villain bets — call or fold? Scored against your true
-     (Monte-Carlo) equity vs villain's actual hand, like <code>drill pot-odds</code>.</p>
+  <p>You're dealt a hand from a solved heads-up preflop equilibrium, villain
+     bets — call or fold? Scored against your (Monte-Carlo) equity vs villain's
+     <em>whole range</em> at this node, not one lucky hand, like
+     <code>drill pot-odds</code>.</p>
   <label class="inline">Spot source <select id="po-source"></select></label>
   <button id="po-deal">Deal</button>
   <span id="po-score" class="score"></span>

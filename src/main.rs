@@ -23,8 +23,9 @@ enum Command {
         #[arg(long, default_value = "cash89")]
         ruleset: String,
 
-        /// Pot-odds drill only: draw flop spots from this heads-up preflop
-        /// chart set (e.g. cash-hu89) instead of a fixed pot and random cards.
+        /// Pot-odds drill only: draw flop spots (and villain's range) from this
+        /// heads-up preflop chart set, e.g. cash-hu89, mtt-hu21. Defaults to
+        /// cash-hu89.
         #[arg(long)]
         preflop: Option<String>,
 

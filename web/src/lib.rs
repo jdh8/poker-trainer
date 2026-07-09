@@ -8,22 +8,10 @@
 //! The internal `*_impl` functions return plain Rust types so the
 //! `#[cfg(test)]` module runs natively (rlib), no browser needed.
 
-use poker_trainer::{eval, report};
-use rand::seq::IndexedRandom;
-use rs_poker::core::{Card, Deck, Suit};
+use poker_trainer::{preflop, report};
+use rs_poker::core::Card;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
-
-/// A card as a 2-char code like `"As"` — JS maps suits to symbols and colors.
-fn card_str(c: Card) -> String {
-    let suit = match c.suit {
-        Suit::Spade => 's',
-        Suit::Heart => 'h',
-        Suit::Diamond => 'd',
-        Suit::Club => 'c',
-    };
-    format!("{}{}", char::from(c.value), suit)
-}
 
 // ---- equity calculator ------------------------------------------------------
 
@@ -65,90 +53,52 @@ pub fn equity_report(oop: &str, ip: &str, board: &str) -> Result<String, JsError
         .map_err(|e| JsError::new(&e))
 }
 
-// ---- pot-odds drill ---------------------------------------------------------
+// ---- villain-range equity (for the pot-odds drill) --------------------------
 
-// ponytail: these three mirror private one-liners in trainer.rs rather than
-// exporting trainer internals; the drill loop there owns them.
-const POT: f64 = 10.0;
-const BET_FRACTIONS: [f64; 5] = [0.33, 0.5, 0.75, 1.0, 1.5];
-const ITERS: u32 = 10_000;
+// ponytail: mirror the range-drill knobs in trainer.rs (EQ_ITERS/EQ_VILLAIN_CAP)
+// rather than exporting them; a browser call must stay synchronous, so keep the
+// per-combo runouts low and the sample capped.
+const EQ_ITERS: u32 = 40;
+const VILLAIN_CAP: usize = 150;
 
-#[derive(Serialize)]
-struct PotOddsSpot {
-    hero: [String; 2],
-    villain: [String; 2],
-    flop: [String; 3],
-    pot: f64,
-    bet: f64,
-    required: f64,
-    equity: f64,
-    should_call: bool,
-    call_ev: f64,
+fn parse_cards<const N: usize>(s: &str) -> Result<[Card; N], String> {
+    if s.len() != 2 * N {
+        return Err(format!("{s:?} needs {N} cards"));
+    }
+    let v = (0..N)
+        .map(|i| Card::try_from(&s[2 * i..2 * i + 2]).map_err(|_| format!("bad card in {s:?}")))
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(v.try_into().unwrap())
 }
 
-fn deal_pot_odds_impl() -> PotOddsSpot {
+fn equity_vs_reach_impl(hero: &str, flop: &str, reach: &[f32]) -> Result<f64, String> {
+    if reach.len() != preflop::CLASSES {
+        return Err(format!("reach needs {} class weights", preflop::CLASSES));
+    }
     let mut rng = rand::rng();
-    let mut deck = Deck::default();
-    let mut draw = || deck.deal(&mut rng).unwrap();
-    let hero = [draw(), draw()];
-    let villain = [draw(), draw()];
-    let flop = [draw(), draw(), draw()];
-    let bet = POT * *BET_FRACTIONS.choose(&mut rng).unwrap();
-    let required = bet / (POT + 2.0 * bet);
-    let equity = eval::equity(hero, villain, flop, ITERS);
-    PotOddsSpot {
-        hero: hero.map(card_str),
-        villain: villain.map(card_str),
-        flop: flop.map(card_str),
-        pot: POT,
-        bet,
-        required,
-        equity,
-        should_call: equity >= required,
-        call_ev: equity * (POT + bet) - (1.0 - equity) * bet,
-    }
-}
-
-/// One pot-odds spot, answer precomputed — the web port of `drill pot-odds`.
-/// JS hides `villain`/`equity`/`should_call`/`call_ev` until the user answers.
-#[wasm_bindgen]
-pub fn deal_pot_odds() -> String {
-    serde_json::to_string(&deal_pot_odds_impl()).unwrap()
-}
-
-// ---- single-hand equity (for the preflop-sourced pot-odds drill) ------------
-
-fn equity_of_impl(hero: &str, villain: &str, board: &str) -> Result<f64, String> {
-    fn cards<const N: usize>(s: &str) -> Result<[Card; N], String> {
-        if s.len() != 2 * N {
-            return Err(format!("{s:?} needs {N} cards"));
-        }
-        let v = (0..N)
-            .map(|i| Card::try_from(&s[2 * i..2 * i + 2]).map_err(|_| format!("bad card in {s:?}")))
-            .collect::<Result<Vec<_>, _>>()?;
-        Ok(v.try_into().unwrap())
-    }
-    Ok(eval::equity(
-        cards(hero)?,
-        cards(villain)?,
-        cards(board)?,
-        ITERS,
+    Ok(preflop::equity_vs_reach(
+        parse_cards(hero)?,
+        parse_cards(flop)?,
+        reach,
+        &mut rng,
+        EQ_ITERS,
+        VILLAIN_CAP,
     ))
 }
 
-/// Hero-vs-villain equity on a flop — the specific-hand Monte-Carlo the
-/// preflop-sourced pot-odds drill needs. That drill samples the cards in JS
-/// (walking the committed preflop charts), then asks wasm for the equity. Args
-/// are concatenated 2-char codes like `"AsKh"`: hero/villain 2 cards, board 3.
+/// Hero's equity vs the villain's *range* on a flop — what the pot-odds drill
+/// scores against. That drill samples a spot in JS (walking the committed
+/// preflop charts) and builds the villain seat's per-class reach — its 169
+/// arrival weights in grid order — then asks wasm for the equity. `hero`/`flop`
+/// are concatenated 2-char codes like `"AsKh"` (2 cards, then 3).
 #[wasm_bindgen]
-pub fn equity_of(hero: &str, villain: &str, board: &str) -> Result<f64, JsError> {
-    equity_of_impl(hero, villain, board).map_err(|e| JsError::new(&e))
+pub fn equity_vs_reach(hero: &str, flop: &str, reach: &[f32]) -> Result<f64, JsError> {
+    equity_vs_reach_impl(hero, flop, reach).map_err(|e| JsError::new(&e))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashSet;
 
     #[test]
     fn equity_report_favors_aces() {
@@ -169,27 +119,17 @@ mod tests {
     }
 
     #[test]
-    fn equity_of_is_sane() {
-        // Set of aces crushes a pair of deuces on a dry board.
-        let e = equity_of_impl("AhAs", "2c2d", "AdKhQs").unwrap();
-        assert!(e > 0.9, "trip aces vs 22 should crush: {e}");
-        assert!(equity_of_impl("AhAs", "2c2d", "AdKh").is_err()); // board too short
-        assert!(equity_of_impl("Zz", "2c2d", "AdKhQs").is_err()); // bad card code
-        assert!(equity_of("AhAs", "2c2d", "AdKhQs").is_ok()); // export serializes
-    }
-
-    #[test]
-    fn pot_odds_spot_is_consistent() {
-        let s = deal_pot_odds_impl();
-        let cards: HashSet<&String> = s
-            .hero
-            .iter()
-            .chain(s.villain.iter())
-            .chain(s.flop.iter())
-            .collect();
-        assert_eq!(cards.len(), 7, "cards collide");
-        assert!((s.required - s.bet / (s.pot + 2.0 * s.bet)).abs() < 1e-12);
-        assert_eq!(s.should_call, s.equity >= s.required);
-        assert!(s.equity > 0.0 && s.equity < 1.0);
+    fn equity_vs_reach_is_sane() {
+        // Villain's range is pure 22; trip-less AA on a K Q 7 board dominates.
+        let mut reach = vec![0.0f32; preflop::CLASSES];
+        reach[preflop::class_index_of("22").unwrap()] = 1.0;
+        let e = equity_vs_reach_impl("AhAs", "KdQc7h", &reach).unwrap();
+        assert!(e > 0.8, "AA vs a pure-22 range should dominate: {e}");
+        // Bad shapes are rejected.
+        assert!(equity_vs_reach_impl("AhAs", "KdQc", &reach).is_err()); // board too short
+        assert!(equity_vs_reach_impl("Zz", "KdQc7h", &reach).is_err()); // bad card code
+        assert!(equity_vs_reach_impl("AhAs", "KdQc7h", &[0.0; 10]).is_err()); // wrong reach len
+        // The export serializes.
+        assert!(equity_vs_reach("AhAs", "KdQc7h", &reach).is_ok());
     }
 }

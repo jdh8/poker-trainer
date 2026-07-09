@@ -1,8 +1,8 @@
 //! The training loops.
 //!
-//! - `run_pot_odds_drill`: deal a hand + flop and a hidden villain hand, villain
-//!   bets, you call or fold; scored against break-even pot odds using your true
-//!   (Monte-Carlo) equity.
+//! - `run_pot_odds_drill`: deal a hand + flop from a solved heads-up preflop
+//!   equilibrium, villain bets, you call or fold; scored against break-even pot
+//!   odds using your Monte-Carlo equity vs villain's *whole range* at the node.
 //! - `run_gto_drill`: act vs. a precomputed solution; scored on EV loss (Phase 1).
 
 use crate::eval::{self, Bucket};
@@ -33,11 +33,12 @@ fn spot_formation(spot: &SolvedSpot) -> String {
         .unwrap_or_else(|| "srp-btn-bb".into())
 }
 
-const POT: f64 = 10.0; // bb, fixed for now
 const BET_FRACTIONS: [f64; 5] = [0.33, 0.5, 0.75, 1.0, 1.5];
-const ITERS: u32 = 10_000;
 
-// Range-drill equity sub-bucketing knobs.
+/// The heads-up ruleset the pot-odds drill draws from when `--preflop` is omitted.
+const DEFAULT_POT_ODDS_RULESET: &str = "cash-hu89";
+
+// Villain-range equity knobs (pot-odds scoring and range-drill sub-bucketing).
 const EQ_ITERS: u32 = 40; // Monte-Carlo runouts per (hero, villain) pair
 const EQ_VILLAIN_CAP: usize = 120; // sample at most this many villain combos
 const SPLIT_MIN: usize = 6; // don't split a bucket smaller than this
@@ -77,13 +78,17 @@ fn hu_step(node_path: &str, pot_bb: f32, to_call_bb: f32, action: &str) -> Step 
 }
 
 /// A flop spot drawn from a solved heads-up preflop line: both hands, the flop,
-/// the pot the preflop betting closed into, and the terminal action path.
+/// the pot the preflop betting closed into, the terminal action path, and each
+/// seat's per-class reach along the line (the villain seat's is the range the
+/// drill scores hero's equity against).
 struct PreflopFlopSpot {
     sb: [Card; 2],
     bb: [Card; 2],
     flop: [Card; 3],
     pot: f64,
     path: String,
+    sb_reach: Vec<f32>,
+    bb_reach: Vec<f32>,
 }
 
 /// Forward-simulate one heads-up preflop hand from the chart root, sampling each
@@ -100,6 +105,12 @@ fn sample_preflop_flop_spot<R: RngExt>(
     let bb = [deck.deal(rng).unwrap(), deck.deal(rng).unwrap()];
     let sb_class = preflop::class_index(sb);
     let bb_class = preflop::class_index(bb);
+
+    // Each seat's per-class arrival probability: the product of its own action
+    // frequencies along the sampled line (mirrors `PreflopCharts::class_reach`,
+    // accumulated inline as we walk).
+    let mut sb_reach = vec![1.0f32; preflop::CLASSES];
+    let mut bb_reach = vec![1.0f32; preflop::CLASSES];
 
     let mut path = String::new();
     loop {
@@ -126,6 +137,16 @@ fn sample_preflop_flop_spot<R: RngExt>(
         let action = &node.actions[ai];
         let tok = preflop::label_token(action);
 
+        // Fold this action into the acting seat's reach over all 169 classes.
+        let seat_reach = if node.seat == "SB" {
+            &mut sb_reach
+        } else {
+            &mut bb_reach
+        };
+        for (r, f) in seat_reach.iter_mut().zip(&node.freqs[ai]) {
+            *r *= f;
+        }
+
         match hu_step(&path, node.pot_bb, node.to_call_bb, action) {
             Step::Dead => return None,
             Step::Flop(pot) => {
@@ -151,6 +172,8 @@ fn sample_preflop_flop_spot<R: RngExt>(
                     flop,
                     pot,
                     path: terminal,
+                    sb_reach,
+                    bb_reach,
                 });
             }
             Step::Continue => {
@@ -176,76 +199,61 @@ fn load_hu_charts(ruleset: &str) -> Result<PreflopCharts, String> {
     }
 }
 
-/// Entry point for `poker-trainer drill pot-odds`. With `preflop = Some(ruleset)`,
-/// each flop spot — pot size and both hands — is drawn from a solved heads-up
-/// preflop equilibrium instead of a fixed pot and random cards.
+/// Entry point for `poker-trainer drill pot-odds`. Each flop spot — pot size,
+/// hero's hand, and villain's range — is drawn from a solved heads-up preflop
+/// equilibrium (`--preflop <ruleset>`, defaulting to `cash-hu89`); the call/fold
+/// is scored against hero's equity vs villain's *whole range* at the node.
 pub fn run_pot_odds_drill(preflop: Option<&str>) {
     let mut rng = rand::rng();
     let mut spots = 0u32;
     let mut correct = 0u32;
 
-    let charts = match preflop {
-        Some(ruleset) => match load_hu_charts(ruleset) {
-            Ok(c) => Some(c),
-            Err(e) => {
-                eprintln!("{e}");
-                return;
-            }
-        },
-        None => None,
+    let ruleset = preflop.unwrap_or(DEFAULT_POT_ODDS_RULESET);
+    let charts = match load_hu_charts(ruleset) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("{e}");
+            return;
+        }
     };
     let stack_bb = charts
-        .as_ref()
-        .and_then(|c| c.header.config.get("stack_bb").and_then(|v| v.as_f64()));
+        .header
+        .config
+        .get("stack_bb")
+        .and_then(|v| v.as_f64());
 
     println!("poker-trainer — pot-odds drill (flop only).");
-    if let Some(c) = &charts {
-        println!("Spots drawn from {} preflop equilibrium.", c.header.label);
-    }
+    println!(
+        "Spots drawn from {} preflop equilibrium.",
+        charts.header.label
+    );
     println!("Should you call? Type c)all or f)old. Empty line or q quits.\n");
 
     loop {
-        // Build a spot: hero/villain hands, flop, pot, and an optional preflop
-        // action line to display.
-        let (hero, villain, flop, pot, line);
-        match &charts {
-            Some(c) => {
-                let Some(spot) =
-                    (0..200).find_map(|_| sample_preflop_flop_spot(c, stack_bb, &mut rng))
-                else {
-                    eprintln!(
-                        "  (this ruleset rarely reaches a non-all-in flop — \
-                         try a deeper HU set like cash-hu89)"
-                    );
-                    break;
-                };
-                // Hero is a random seat; villain is the other.
-                (hero, villain) = if rng.random_range(0..2) == 0 {
-                    (spot.sb, spot.bb)
-                } else {
-                    (spot.bb, spot.sb)
-                };
-                flop = spot.flop;
-                pot = spot.pot;
-                line = Some(preflop_line(c, &spot.path));
-            }
-            None => {
-                // Deal everything from one fresh deck so nothing collides.
-                let mut deck = Deck::default();
-                let mut draw = || deck.deal(&mut rng).unwrap();
-                hero = [draw(), draw()];
-                villain = [draw(), draw()];
-                flop = [draw(), draw(), draw()];
-                pot = POT;
-                line = None;
-            }
-        }
+        let Some(spot) =
+            (0..200).find_map(|_| sample_preflop_flop_spot(&charts, stack_bb, &mut rng))
+        else {
+            eprintln!(
+                "  (this ruleset rarely reaches a non-all-in flop — \
+                 try a deeper HU set like cash-hu89)"
+            );
+            break;
+        };
+        // Hero is a random seat; villain's range is the other seat's reach.
+        let (hero, villain_reach) = if rng.random_range(0..2) == 0 {
+            (spot.sb, spot.bb_reach)
+        } else {
+            (spot.bb, spot.sb_reach)
+        };
+        let flop = spot.flop;
+        let pot = spot.pot;
+        let line = preflop_line(&charts, &spot.path);
 
         let bet = pot * *BET_FRACTIONS.choose(&mut rng).unwrap();
         let req = required_equity(pot, bet);
 
         println!("Spot #{}", spots + 1);
-        if let Some(line) = line.as_ref().filter(|l| !l.is_empty()) {
+        if !line.is_empty() {
             println!("  Preflop:   {}.", line.join(", "));
         }
         println!("  Your hand: {} {}", fmt(hero[0]), fmt(hero[1]));
@@ -279,7 +287,14 @@ pub fn run_pot_odds_drill(preflop: Option<&str>) {
             }
         };
 
-        let eq = eval::equity(hero, villain, flop, ITERS);
+        let eq = preflop::equity_vs_reach(
+            hero,
+            flop,
+            &villain_reach,
+            &mut rng,
+            EQ_ITERS,
+            EQ_VILLAIN_CAP,
+        );
         let should_call = eq >= req;
         let right = called == should_call;
         spots += 1;
@@ -288,11 +303,10 @@ pub fn run_pot_odds_drill(preflop: Option<&str>) {
         }
 
         println!(
-            "  True equity: {:.1}%  (needed {:.1}%)",
+            "  Equity vs villain's range: {:.1}%  (needed {:.1}%)",
             eq * 100.0,
             req * 100.0
         );
-        println!("  Villain had: {} {}", fmt(villain[0]), fmt(villain[1]));
         println!(
             "  Best play: {} (call EV {:+.2}bb).  You said {} -> {}\n",
             if should_call { "CALL" } else { "FOLD" },
