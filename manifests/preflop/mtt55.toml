@@ -18,7 +18,7 @@ jam_from_level = 2              # jam offered from vs-3-bet on (open-jams this d
 limp_scope = "sb"               # only the small blind completes (design 07)
 
 [solver]
-traversals = 100_000_000
+traversals = 500_000_000
 seed = 1
 export_reach = 0.0002
 starter_reach = 0.0002
