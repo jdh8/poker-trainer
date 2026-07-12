@@ -627,9 +627,16 @@ fn write_all(spots: &[Spot], out_dir: &Path) {
         println!("Solving: {}", spot.label);
         // One solved game yields the IP c-bet node plus one OOP defend node per
         // c-bet size; solve_spot hands back each with its own file stem.
-        for (file_stem, solved) in solve_spot(spot, &stem) {
+        // tmp + rename (atomic within out_dir), with `-ip` — yielded first by
+        // solve_spot — renamed LAST: the resume gate above checks `-ip`, so
+        // its existence must imply every -oop sibling is fully in place.
+        // A kill leaves at worst a `.tmp` (overwritten next run) or orphan
+        // -oop files (re-solved and clobbered by the rename).
+        for (file_stem, solved) in solve_spot(spot, &stem).into_iter().rev() {
             let file = out_dir.join(format!("{file_stem}.json"));
-            fs::write(&file, serde_json::to_string_pretty(&solved).unwrap()).unwrap();
+            let tmp = out_dir.join(format!("{file_stem}.json.tmp"));
+            fs::write(&tmp, serde_json::to_string_pretty(&solved).unwrap()).unwrap();
+            fs::rename(&tmp, &file).unwrap();
             println!(
                 "  -> {} ({} hero hands)",
                 file.display(),
