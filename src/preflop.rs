@@ -471,12 +471,17 @@ impl PreflopCharts {
     /// Pot (bb) when `line` closes to a flop: the last decision's `pot_bb` for a
     /// check-through, `pot_bb + to_call_bb` for a called raise. `None` if the
     /// line doesn't close to a flop — a decision still follows (incl. the root
-    /// SB limp), or it's a fold/all-in terminal.
+    /// SB limp), or it's a fold/all-in terminal. Trailing folds are stripped
+    /// first: a cold-caller can leave the blinds to fold behind them, and those
+    /// blinds only forfeit chips already posted into the closing pot, so the
+    /// last call/check still sets it (e.g. `r2-f-f-c-f-f` = open, BTN cold-call,
+    /// blinds fold — the pot is fixed by BTN's call).
     pub fn flop_pot_bb(&self, line: &str) -> Option<f32> {
         if self.node(line).is_some() {
             return None; // a decision follows — not a flop yet
         }
-        let (parent, last) = line.rsplit_once('-').unwrap_or(("", line));
+        let closed = line.trim_end_matches("-f");
+        let (parent, last) = closed.rsplit_once('-').unwrap_or(("", closed));
         let node = self.node(parent)?;
         match last {
             "x" => Some(node.pot_bb),
@@ -503,13 +508,15 @@ impl PreflopCharts {
         max_to + ante
     }
 
-    /// Every action line that closes to a flop, as `(line, pot_bb)`, sorted.
-    /// Fold/all-in branches drop out.
+    /// Every two-player action line that closes to a flop, as `(line, pot_bb)`,
+    /// sorted — i.e. exactly the lines `--line`/`export-range` can solve (the
+    /// solver is heads-up). Multiway closes, folds, and all-ins drop out.
     // ponytail: a pruned continuation can masquerade as a flop close; fine for
     // the committed starter tier — regenerate charts.jsonl for rarer/deeper lines.
     pub fn flop_lines(&self) -> Vec<(String, f32)> {
         let mut out = Vec::new();
         self.collect_flop_lines("", &mut out);
+        out.retain(|(line, _)| self.flop_seats(line).is_some());
         out.sort_by(|a, b| a.0.cmp(&b.0));
         out
     }
@@ -518,7 +525,9 @@ impl PreflopCharts {
         let Some(node) = self.node(path) else { return };
         for label in &node.actions {
             let tok = label_token(label);
-            if tok == "f" || tok == "ai" {
+            // Fold branches are walked (a cold-caller's blinds fold behind them,
+            // still reaching a flop — see `flop_pot_bb`); all-in ends the hand.
+            if tok == "ai" {
                 continue;
             }
             let child = if path.is_empty() {
@@ -850,6 +859,57 @@ mod tests {
         assert_eq!(charts.flop_lines(), vec![("r2.5-c".to_string(), 5.0)]);
         assert!(charts.flop_pot_bb("r2.5").is_none()); // a decision still follows
         assert!(charts.flop_seats("r2.5-f").is_none()); // BB folds — one live seat
+
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn cold_caller_leaves_a_two_player_flop_when_blinds_fold_behind() {
+        // BTN opens 2bb, SB cold-calls, BB folds behind: a heads-up BTN-vs-SB
+        // flop whose closing action is BB's fold, not a call/check.
+        let dir = std::env::temp_dir().join(format!("pt-preflop-coldcall-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let mut header = sample_header();
+        header.config = serde_json::json!({"seats": ["BTN", "SB", "BB"], "stack_bb": 100.0});
+        fs::write(
+            dir.join("header.json"),
+            serde_json::to_string(&header).unwrap(),
+        )
+        .unwrap();
+        let mk = |path: &str, seat: &str, pot: f32, to_call: f32, actions: Vec<&str>| PreflopNode {
+            path: path.into(),
+            seat: seat.into(),
+            pot_bb: pot,
+            to_call_bb: to_call,
+            reach: 1.0,
+            actions: actions.iter().map(|s| s.to_string()).collect(),
+            freqs: vec![vec![0.5; CLASSES]; actions.len()],
+            evs: None,
+        };
+        let nodes = [
+            mk("", "BTN", 1.5, 0.0, vec!["Fold", "Raise to 2bb"]),
+            mk("r2", "SB", 3.5, 1.5, vec!["Fold", "Call"]),
+            mk("r2-c", "BB", 5.0, 1.0, vec!["Fold", "Call"]),
+        ];
+        let lines: Vec<String> = nodes
+            .iter()
+            .map(|n| serde_json::to_string(n).unwrap())
+            .collect();
+        fs::write(dir.join("starter.jsonl"), lines.join("\n")).unwrap();
+
+        let charts = PreflopCharts::load(&dir).unwrap();
+        // Trailing folds are stripped: the pot is the one after SB's call
+        // (BTN 2 + SB 2 + BB's dead 1), and the button acts last postflop.
+        assert_eq!(charts.flop_pot_bb("r2-c-f"), Some(5.0));
+        assert_eq!(
+            charts.flop_seats("r2-c-f"),
+            Some(("SB".into(), "BTN".into()))
+        );
+        // Only the heads-up close is offered; `r2-c` (BB still to act) and the
+        // 3-way `r2-c-c` are not.
+        assert_eq!(charts.flop_lines(), vec![("r2-c-f".to_string(), 5.0)]);
+        assert!(charts.flop_pot_bb("r2-c").is_none());
 
         fs::remove_dir_all(&dir).unwrap();
     }
