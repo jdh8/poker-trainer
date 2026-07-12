@@ -1,7 +1,7 @@
 # The first breadth drop (design doc 02, milestone 4): 25 texture-spread flops
-# for the two most common formations. ~25×2 solves ≈ hours of CPU — run it
-# with scripts/idle-run.sh on a shared box. Outputs are NOT committed (git
-# policy: only starter-8 stays in the repo).
+# across all five v2 formations. ~25×5 solves ≈ hours of CPU — run it
+# with scripts/idle-run.sh on a shared box.
+# Outputs are NOT committed (git policy: only starter-8 stays in the repo).
 #
 #   scripts/idle-run.sh cargo run -p solve-gen --release -- gen --manifest manifests/texture-25.toml
 
@@ -26,4 +26,16 @@ flops = "texture-25"
 
 [[runs]]
 formation = "3bp-bb-btn"
+flops = "texture-25"
+
+[[runs]]
+formation = "srp-co-bb"
+flops = "texture-25"
+
+[[runs]]
+formation = "srp-sb-bb"
+flops = "texture-25"
+
+[[runs]]
+formation = "3bp-btn-co"
 flops = "texture-25"
