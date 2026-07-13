@@ -6,6 +6,7 @@
 //! - `run_gto_drill`: act vs. a precomputed solution; scored on EV loss (Phase 1).
 
 use crate::eval::{self, Bucket};
+use crate::postflop_table::PostflopTable;
 use crate::preflop::{self, PreflopCharts, PreflopNode};
 use crate::solution::{
     FileSolutionProvider, LiveSolutionProvider, NodeStrategy, SolutionProvider, SolveRequest,
@@ -13,7 +14,7 @@ use crate::solution::{
 };
 use crate::stats;
 use crate::texture;
-use crate::tree::{TreeNode, TreeSession};
+use crate::tree::{TableWalk, TreeNode, TreeSession, TreeWalk};
 use rand::seq::IndexedRandom;
 use rand::RngExt;
 use rs_poker::core::{Card, Deck, Suit};
@@ -600,6 +601,32 @@ fn resolve_provider(req: Option<SolveRequest>) -> Option<Box<dyn SolutionProvide
     }
 }
 
+/// A generated reach-pruned table for this spot, if one exists under
+/// `data/tables/<formation>/`. `None` (missing / too-new / malformed) means
+/// live-solve instead.
+fn load_table(req: &SolveRequest) -> Option<PostflopTable> {
+    let dir = std::path::Path::new("data/tables").join(&req.config.formation);
+    PostflopTable::load(dir, &req.flop, &req.config.hash8()).ok()
+}
+
+/// Open a tree source for `req`: a disk-backed [`TableWalk`] when a reach-pruned
+/// table is generated (off-path lines live-solve transparently), else a live
+/// [`TreeSession`]. Both are `dyn TreeWalk`, so callers don't care which.
+fn open_walk(req: &SolveRequest) -> io::Result<(Box<dyn TreeWalk>, TreeNode)> {
+    if let Some(table) = load_table(req) {
+        eprintln!(
+            "Using reach-pruned table for {} ({} nodes) — off-path lines live-solve.",
+            req.flop,
+            table.len()
+        );
+        let (walk, root) = TableWalk::new(table, req.clone())?;
+        Ok((Box::new(walk), root))
+    } else {
+        let (session, root) = TreeSession::start(req)?;
+        Ok((Box::new(session), root))
+    }
+}
+
 /// Load the precomputed solution library, or print a hint and return `None`.
 fn load_provider() -> Option<FileSolutionProvider> {
     match FileSolutionProvider::load("data/solutions") {
@@ -666,15 +693,15 @@ pub fn run_table(req: Option<SolveRequest>, line: Option<String>, locks: Option<
                     );
                 }
             }
-            match crate::tree::TreeSession::start(&req) {
-                Ok((mut session, mut root)) => {
+            match open_walk(&req) {
+                Ok((mut walk, mut root)) => {
                     let spec = loaded
                         .as_ref()
                         .map(|f| f.line.join(","))
                         .filter(|s| !s.is_empty())
                         .or(line);
                     if let Some(spec) = spec {
-                        match descend(&mut session, root, &spec) {
+                        match descend(walk.as_mut(), root, &spec) {
                             Ok(node) => root = node,
                             // Browse from wherever the line stopped matching —
                             // the solve is too expensive to throw away. Locks
@@ -682,7 +709,7 @@ pub fn run_table(req: Option<SolveRequest>, line: Option<String>, locks: Option<
                             Err(e) => {
                                 eprintln!("line stopped early: {e}");
                                 loaded = None;
-                                match session.node() {
+                                match walk.node() {
                                     Ok(node) => root = node,
                                     Err(e) => {
                                         eprintln!("Tree session failed: {e}");
@@ -693,7 +720,7 @@ pub fn run_table(req: Option<SolveRequest>, line: Option<String>, locks: Option<
                         }
                     }
                     crate::table::run_tree(
-                        session,
+                        walk.as_mut(),
                         root,
                         crate::table::LockArgs {
                             path: locks,
@@ -724,7 +751,7 @@ pub fn run_table(req: Option<SolveRequest>, line: Option<String>, locks: Option<
 
 /// Descend a comma-separated label line, e.g. `"Check,Bet 2.0bb,deal 2c"` —
 /// action labels as the tree prints them, `deal <card>` at chance nodes.
-fn descend(session: &mut TreeSession, mut node: TreeNode, spec: &str) -> io::Result<TreeNode> {
+fn descend(session: &mut dyn TreeWalk, mut node: TreeNode, spec: &str) -> io::Result<TreeNode> {
     for step in spec.split(',').map(str::trim).filter(|s| !s.is_empty()) {
         node = if let Some(card) = step.strip_prefix("deal ") {
             session.deal(card.trim())?
@@ -937,18 +964,18 @@ fn hand_drill_loop(req: &SolveRequest) -> io::Result<()> {
     let (oop_seat, ip_seat) = crate::solution::formation(&req.config.formation)
         .map(|f| (f.oop_seat, f.ip_seat))
         .unwrap_or(("OOP", "IP"));
-    let (mut session, root) = TreeSession::start(req)?;
+    let (mut walk, root) = open_walk(req)?;
     let oop_hands = root.hands.clone();
     // The node payload only carries the *acting* player's hands, and OOP acts
     // at the root — one step down any action is an IP node with IP's range.
-    let ip_hands = session.play(0)?.hands;
+    let ip_hands = walk.play(0)?.hands;
 
     let mut rng = rand::rng();
     let mut hands = 0u32;
     let mut decisions: Vec<HandDecision> = Vec::new(); // whole session
 
     loop {
-        let root = session.root()?;
+        let root = walk.root()?;
         let hero_oop = rng.random_bool(0.5);
         let (hero_seat, hero_range, villain_range) = if hero_oop {
             ("oop", &oop_hands, &ip_hands)
@@ -984,7 +1011,7 @@ fn hand_drill_loop(req: &SolveRequest) -> io::Result<()> {
             fmt_hand_str(&root.board.join(""))
         );
         let outcome = play_hand(
-            &mut session,
+            walk.as_mut(),
             root,
             hero_seat,
             &hero,
@@ -1044,7 +1071,7 @@ struct HandOutcome {
 /// samples the equilibrium mix for its dealt hand, chance deals uniformly from
 /// the cards neither player holds.
 fn play_hand(
-    session: &mut TreeSession,
+    session: &mut dyn TreeWalk,
     mut node: TreeNode,
     hero_seat: &str,
     hero: &str,

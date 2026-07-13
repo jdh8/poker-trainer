@@ -8,6 +8,7 @@
 //! never links this crate.
 
 use clap::{Args, Parser, Subcommand};
+use poker_trainer::postflop_table::{TableHeader, TableNode};
 use poker_trainer::solution::{
     formation, GenInfo, HandStrategy, NodeStrategy, SolveRequest, SolvedSpot, SpotConfig,
 };
@@ -17,7 +18,7 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use std::fs;
-use std::io::{BufRead, Write};
+use std::io::{BufRead, BufWriter, Write};
 use std::path::{Path, PathBuf};
 
 const CHIPS_PER_BB: f32 = 100.0;
@@ -47,9 +48,61 @@ enum Command {
     },
     /// Solve one custom spot and write its JSON into the solution dir.
     Solve(SolveArgs),
+    /// Walk solved games and emit reach-pruned tables (design memo:
+    /// postflop-table-direction) into data/tables/<formation>/. Batch over a
+    /// manifest, or a single `--flop` spot (with `solve`'s override flags).
+    Tables(TablesArgs),
     /// Tree-session server: solve a spot, keep it resident, and answer
     /// line-delimited JSON node queries on stdio (protocol v2, design doc 01).
     Serve,
+}
+
+#[derive(Args)]
+struct TablesArgs {
+    /// Manifest of (formation × flop set) runs (default: starter-8). Ignored
+    /// when `--flop` is given.
+    #[arg(long)]
+    manifest: Option<PathBuf>,
+    /// Table a single flop instead of a manifest, e.g. `Td9d6h`.
+    #[arg(long)]
+    flop: Option<String>,
+    /// Formation for the single-flop path.
+    #[arg(long, default_value = "srp-btn-bb")]
+    formation: String,
+    /// OOP range override (single-flop path).
+    #[arg(long)]
+    oop: Option<String>,
+    /// IP range override (single-flop path).
+    #[arg(long)]
+    ip: Option<String>,
+    /// Flop bet sizes (single-flop path).
+    #[arg(long)]
+    sizes: Option<String>,
+    /// Turn bet sizes (single-flop path).
+    #[arg(long)]
+    turn_sizes: Option<String>,
+    /// River bet sizes (single-flop path).
+    #[arg(long)]
+    river_sizes: Option<String>,
+    /// Effective stack in bb (single-flop path).
+    #[arg(long)]
+    stack: Option<f32>,
+    /// Starting pot in bb (single-flop path).
+    #[arg(long)]
+    pot: Option<f32>,
+    /// Rake rate (single-flop path).
+    #[arg(long)]
+    rake_rate: Option<f32>,
+    /// Rake cap in bb (single-flop path).
+    #[arg(long)]
+    rake_cap: Option<f32>,
+    /// Reach threshold: prune (don't store) subtrees whose arrival probability
+    /// along the betting path falls below this. Chance deals don't penalize it.
+    #[arg(long, default_value_t = 0.002)]
+    reach: f32,
+    /// Output root (defaults to the repo's data/tables).
+    #[arg(long)]
+    out: Option<PathBuf>,
 }
 
 #[derive(Args)]
@@ -119,6 +172,11 @@ fn main() {
             let spot = spot_from_args(&a).unwrap_or_else(|e| die(e));
             write_all(std::slice::from_ref(&spot), &out);
         }
+        Command::Tables(a) => {
+            let out = a.out.clone().unwrap_or_else(|| repo_path("data/tables"));
+            let spots = tables_spots(&a).unwrap_or_else(|e| die(e));
+            write_tables(&spots, &out, a.reach);
+        }
         Command::Serve => serve(),
     }
 }
@@ -167,6 +225,34 @@ fn spot_from_args(a: &SolveArgs) -> Result<Spot, String> {
         flop: a.flop.clone(),
         config: c,
     })
+}
+
+/// Spots to table: a single `--flop` (with `solve`'s override flags) when given,
+/// else the `--manifest` (default starter-8). Reuses [`spot_from_args`] and
+/// [`load_manifest`] verbatim.
+fn tables_spots(a: &TablesArgs) -> Result<Vec<Spot>, String> {
+    if let Some(flop) = &a.flop {
+        let sa = SolveArgs {
+            flop: flop.clone(),
+            formation: a.formation.clone(),
+            oop: a.oop.clone(),
+            ip: a.ip.clone(),
+            sizes: a.sizes.clone(),
+            turn_sizes: a.turn_sizes.clone(),
+            river_sizes: a.river_sizes.clone(),
+            stack: a.stack,
+            pot: a.pot,
+            rake_rate: a.rake_rate,
+            rake_cap: a.rake_cap,
+            out: None,
+        };
+        return Ok(vec![spot_from_args(&sa)?]);
+    }
+    let path = a
+        .manifest
+        .clone()
+        .unwrap_or_else(|| repo_path("manifests/starter-8.toml"));
+    load_manifest(&path)
 }
 
 /// A manifest: named flop sets plus runs of (formation × flop set ×
@@ -514,15 +600,22 @@ fn node_payload(s: &mut ServeSession) -> Value {
 
 /// The current node as the protocol's [`TreeNode`] payload.
 fn node_payload_parts(s: &mut ServeSession) -> TreeNode {
-    let game = &mut s.game;
+    read_node(&mut s.game, s.starting_pot, &s.labels)
+}
+
+/// Read the game's current node into a [`TreeNode`], given the starting pot and
+/// the display labels of the line walked so far. The single node reader shared
+/// by `serve` (via [`node_payload_parts`]) and the table generator
+/// ([`walk_table`]).
+fn read_node(game: &mut PostFlopGame, starting_pot: i32, labels: &[String]) -> TreeNode {
     let board = game
         .current_board()
         .iter()
         .map(|&c| card_to_string(c).unwrap())
         .collect();
     let bets = game.total_bet_amount();
-    let pot_bb = (s.starting_pot + bets[0] + bets[1]) as f32 / CHIPS_PER_BB;
-    let line = s.labels.clone();
+    let pot_bb = (starting_pot + bets[0] + bets[1]) as f32 / CHIPS_PER_BB;
+    let line = labels.to_vec();
     let base = TreeNode {
         board,
         pot_bb,
@@ -650,6 +743,156 @@ fn gen_info(exploitability_chips: f32) -> GenInfo {
     GenInfo {
         version: env!("CARGO_PKG_VERSION").into(),
         exploitability_bb: exploitability_chips / CHIPS_PER_BB,
+    }
+}
+
+/// Solve each spot and emit its reach-pruned table:
+/// `<out>/<formation>/<flop>-<hash8>.jsonl` (one [`TableNode`] per line) plus a
+/// per-config `header-<hash8>.json`. Resumable and atomic, exactly like
+/// [`write_all`]: the final `.jsonl` is the resume gate, written via tmp+rename.
+fn write_tables(spots: &[Spot], out_root: &Path, threshold: f32) {
+    for spot in spots {
+        let dir = out_root.join(&spot.config.formation);
+        fs::create_dir_all(&dir).unwrap();
+        let hash = spot.config.hash8();
+        let stem = format!("{}-{hash}", spot.flop.to_lowercase());
+        let file = dir.join(format!("{stem}.jsonl"));
+        if file.exists() {
+            println!("Cached, skipping: {} ({stem})", spot.label);
+            continue;
+        }
+        println!("Tabling: {} (reach ≥ {threshold})", spot.label);
+        let (mut game, exploitability, _) = load_or_solve(spot).expect("spot must solve");
+        game.back_to_root();
+        let starting_pot = (spot.config.pot_bb * CHIPS_PER_BB) as i32;
+
+        // Header per config-hash (overwrite is idempotent) — provenance + the
+        // version gate the trainer's loader checks.
+        let header = TableHeader {
+            version: 1,
+            formation: spot.config.formation.clone(),
+            config: spot.config.clone(),
+            config_hash: hash.clone(),
+            generator: gen_info(exploitability),
+            reach: threshold,
+        };
+        fs::write(
+            dir.join(format!("header-{hash}.json")),
+            serde_json::to_string_pretty(&header).unwrap(),
+        )
+        .unwrap();
+
+        // Nodes: tmp + rename so a mid-flop kill leaves at most a `.tmp`.
+        let tmp = dir.join(format!("{stem}.jsonl.tmp"));
+        let count = {
+            let mut w = BufWriter::new(fs::File::create(&tmp).unwrap());
+            let mut labels = Vec::new();
+            let n = walk_table(&mut game, starting_pot, threshold, &mut labels, 1.0, &mut w);
+            w.flush().unwrap();
+            n
+        };
+        fs::rename(&tmp, &file).unwrap();
+        println!("  -> {} ({count} nodes)", file.display());
+    }
+}
+
+/// Depth-first walk of the solved game, writing one JSONL [`TableNode`] per
+/// reached node. Returns the node count. Descent rules (design decision):
+/// - **Betting reach is conditional.** At a player node the aggregate frequency
+///   of action `i` is `Σ_h weights[h]·strat[i][h] / Σ_h weights[h]` — the
+///   reach-weighted mix (the [`runouts_payload`] idiom). Recurse into `i` only
+///   if `reach · freq_i ≥ threshold`. Reach is monotone non-increasing, so
+///   pruning a subtree is sound.
+/// - **Chance deals don't penalize reach.** Recurse over every dealable card
+///   with `reach` unchanged.
+/// - **Cap at the turn.** The turn→river chance node (a 4-card board) is the
+///   live-fallback frontier: not emitted, not descended. River decisions never
+///   store; the trainer live-solves off the pruned path.
+fn walk_table(
+    game: &mut PostFlopGame,
+    starting_pot: i32,
+    threshold: f32,
+    labels: &mut Vec<String>,
+    reach: f32,
+    w: &mut dyn Write,
+) -> usize {
+    let node = read_node(game, starting_pot, labels);
+
+    // River boundary: the turn→river chance node (turn dealt → 4-card board) and
+    // everything past it is the live-fallback frontier — store nothing.
+    if node.player == "chance" && node.board.len() >= 4 {
+        return 0;
+    }
+
+    // Emit this node (floats rounded to 3 dp to keep files small); terminals are
+    // bare markers the drill/browser stop on.
+    let row = TableNode {
+        reach,
+        node: round_node(&node),
+    };
+    writeln!(w, "{}", serde_json::to_string(&row).unwrap()).unwrap();
+    let mut count = 1;
+    if node.player == "terminal" {
+        return count;
+    }
+
+    let here = game.history().to_vec(); // restore point for each child
+    if node.player == "chance" {
+        let mask = game.possible_cards();
+        for card in (0u8..52).filter(|&c| mask & (1u64 << c) != 0) {
+            let card_str = card_to_string(card).unwrap();
+            game.play(card as usize);
+            labels.push(format!("deal {card_str}"));
+            count += walk_table(game, starting_pot, threshold, labels, reach, w);
+            labels.pop();
+            game.apply_history(&here);
+        }
+        return count;
+    }
+
+    // Player node. weights = normalized_weights (combo mass here), freqs =
+    // strategy; both already read by `read_node`.
+    let wsum: f32 = node.weights.iter().sum();
+    if wsum < 1e-9 {
+        return count; // zero-reach node — nothing to descend into
+    }
+    let nh = node.weights.len();
+    for i in 0..node.actions.len() {
+        let agg: f32 = (0..nh)
+            .map(|j| node.weights[j] * node.freqs[i][j])
+            .sum::<f32>()
+            / wsum;
+        let child_reach = reach * agg;
+        if child_reach < threshold {
+            continue;
+        }
+        game.play(i);
+        labels.push(node.actions[i].clone());
+        count += walk_table(game, starting_pot, threshold, labels, child_reach, w);
+        labels.pop();
+        game.apply_history(&here);
+    }
+    count
+}
+
+/// A copy of `node` with every strategy float rounded to 3 dp — halves file
+/// size versus full f32 precision, like the preflop export does.
+fn round_node(node: &TreeNode) -> TreeNode {
+    let r3 = |x: f32| (x * 1000.0).round() / 1000.0;
+    let rv = |v: &[f32]| v.iter().map(|&x| r3(x)).collect::<Vec<_>>();
+    let rvv = |m: &[Vec<f32>]| m.iter().map(|r| rv(r)).collect::<Vec<_>>();
+    TreeNode {
+        player: node.player.clone(),
+        board: node.board.clone(),
+        pot_bb: node.pot_bb,
+        line: node.line.clone(),
+        actions: node.actions.clone(),
+        dealable: node.dealable.clone(),
+        hands: node.hands.clone(),
+        freqs: rvv(&node.freqs),
+        evs: rvv(&node.evs),
+        weights: rv(&node.weights),
+        equity: rv(&node.equity),
     }
 }
 

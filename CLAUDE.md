@@ -19,12 +19,13 @@ Three-crate workspace: root `poker-trainer` (MIT OR Apache-2.0, lib + bin),
   one-shot solves) and `tree::TreeSession` driving `solve-gen serve` over
   line-delimited JSON stdio, protocol v2
   ([design 01](docs/design/01-tree-protocol.md)).
-- **NEVER** commit new files under `data/solutions/` (gitignored by design —
-  only the starter-8 tier is tracked) and **never** `git add -f` there.
-- **NEVER** hand-edit `data/solutions/*.json` or `data/preflop/**`: generated
-  output. Regenerate instead (solution-library skill). Unlike solutions, the
-  preflop starter tiers ARE committed — commit a regen only when the manifest
-  or preflop-gen deliberately changed.
+- **NEVER** commit new files under `data/solutions/` or `data/tables/`
+  (gitignored by design — only the starter-8 solution tier is tracked; tables
+  are never committed) and **never** `git add -f` there.
+- **NEVER** hand-edit `data/solutions/*.json`, `data/tables/**`, or
+  `data/preflop/**`: generated output. Regenerate instead (solution-library
+  skill). Unlike solutions, the preflop starter tiers ARE committed — commit a
+  regen only when the manifest or preflop-gen deliberately changed.
 - **NEVER** run solver generation bare on this shared machine — wrap it in
   `scripts/idle-run.sh` (solution-library skill).
 - **NEVER** run `table` or a bare `drill` in a headless session — they block
@@ -70,7 +71,8 @@ minutes cold): run `cargo test -- --ignored` only when touching `tree.rs`,
 | `src/texture.rs` | objective flop-texture classification |
 | `src/board.rs`, `src/range.rs` | **intentional stubs — do not flesh out** |
 | `src/preflop.rs` | preflop chart format + loader (the seam `preflop-gen` writes to) |
-| `crates/solve-gen/src/main.rs` | single-file AGPL generator: `gen \| solve \| serve` |
+| `src/postflop_table.rs` | reach-pruned postflop table format + loader (the seam `solve-gen tables` writes to); `TreeWalk`/`TableWalk` live in `src/tree.rs` |
+| `crates/solve-gen/src/main.rs` | single-file AGPL generator: `gen \| solve \| tables \| serve` |
 | `crates/preflop-gen/` | permissive preflop MCCFR generator (design 07) |
 | `web/` | wasm catalog of the pure examples — **own workspace**, not a member; `cargo test` there runs natively; deployed by `pages.yml` |
 | `tests/` | fixtures only; all unit tests are colocated in `src/` |
@@ -93,6 +95,13 @@ minutes cold): run `cargo test -- --ignored` only when touching `tree.rs`,
   preflop charts (path-addressed nodes); `charts.jsonl` (full export) is
   gitignored and regenerates via `preflop-gen gen` (~15 min per ruleset,
   idle-run it).
+- `data/tables/<formation>/{header-<hash8>.json,<flop>-<hash8>.jsonl}` —
+  reach-pruned postflop tables (never committed, gitignored): flop+turn
+  decision nodes stored line-addressed, river/off-path live-solves. `drill
+  hand` / `table --board` prefer a table when present, else the live tree.
+  Generation solves one game per flop (~9 GB RSS each) — **never run bare**,
+  wrap in `scripts/idle-run.sh`: `scripts/idle-run.sh cargo run -p solve-gen
+  --release -- tables --manifest manifests/texture-25.toml`.
 
 ## Conventions
 

@@ -12,7 +12,7 @@ use crate::eval::{classify_hand, Bucket};
 use crate::report::is_aggressive;
 use crate::solution::SolvedSpot;
 use crate::trainer::{fmt_hand_str, parse_hole};
-use crate::tree::{RunoutSummary, TreeNode, TreeSession};
+use crate::tree::{RunoutSummary, TreeNode, TreeWalk};
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use ratatui::layout::{Constraint, Layout};
 use ratatui::style::{Color, Modifier, Style};
@@ -1108,7 +1108,7 @@ impl Blockers {
 // ponytail: "continue" is defined vs. the biggest bet only; a per-action
 // blocker readout would fetch one villain node per size.
 fn villain_continues(
-    session: &mut TreeSession,
+    session: &mut dyn TreeWalk,
     node: &TreeNode,
 ) -> std::io::Result<Option<Blockers>> {
     if node.player != "oop" && node.player != "ip" {
@@ -1271,10 +1271,22 @@ fn draw_tree(f: &mut Frame, node: &TreeNode, view: &TreeView) {
     );
 }
 
-/// Walk a solved game tree live: numbered actions descend, `u`/`r` go up, and
-/// chance nodes offer a card picker. The session (and its ~1 GB solver child)
-/// lives for the whole browse; a dead child ends the TUI with its error.
-pub fn run_tree(mut session: TreeSession, mut node: TreeNode, mut lock_args: LockArgs) {
+/// Lock the current node's `strategy` and re-solve, forcing a live session
+/// (a disk-backed table can't re-solve, and is stale afterward anyway).
+fn lock_and_resolve(
+    session: &mut dyn TreeWalk,
+    strategy: &[Vec<f32>],
+) -> std::io::Result<TreeNode> {
+    let live = session.live()?;
+    live.lock(strategy)?;
+    live.resolve()
+}
+
+/// Walk a solved game tree: numbered actions descend, `u`/`r` go up, and chance
+/// nodes offer a card picker. `session` is a [`TreeWalk`] — a live tree session
+/// or a reach-pruned table that live-solves off its stored path — held by the
+/// caller for the whole browse; a dead child ends the TUI with its error.
+pub fn run_tree(session: &mut dyn TreeWalk, mut node: TreeNode, mut lock_args: LockArgs) {
     if !std::io::stdout().is_terminal() {
         eprintln!("`table` draws an interactive color grid — run it in a terminal, not piped.");
         return;
@@ -1298,7 +1310,7 @@ pub fn run_tree(mut session: TreeSession, mut node: TreeNode, mut lock_args: Loc
             eprintln!("Applying {} saved cell locks and re-solving…", cells.len());
             let grid = build_grid_node(&node);
             let strategy = expand_lock(&node, &cells);
-            match session.lock(&strategy).and_then(|_| session.resolve()) {
+            match lock_and_resolve(session, &strategy) {
                 Ok(next) => {
                     init_baseline = Some(baseline_map(&grid));
                     init_locks = cells;
@@ -1324,7 +1336,7 @@ pub fn run_tree(mut session: TreeSession, mut node: TreeNode, mut lock_args: Loc
         lock_mode: false,
         locks: init_locks,
         baseline_ev: init_baseline,
-        blockers: villain_continues(&mut session, &node).unwrap_or(None),
+        blockers: villain_continues(session, &node).unwrap_or(None),
         notice: None,
     };
     let mut died: Option<std::io::Error> = None;
@@ -1453,7 +1465,7 @@ pub fn run_tree(mut session: TreeSession, mut node: TreeNode, mut lock_args: Loc
                 // vs. the strategy we're leaving (captured now, pre-rebuild).
                 let base = baseline_map(&view.grid);
                 let strategy = expand_lock(&node, &view.locks);
-                match session.lock(&strategy).and_then(|_| session.resolve()) {
+                match lock_and_resolve(session, &strategy) {
                     Ok(next) => {
                         node = next;
                         view.grid = build_grid_node(&node);
@@ -1461,7 +1473,7 @@ pub fn run_tree(mut session: TreeSession, mut node: TreeNode, mut lock_args: Loc
                         view.lens = Lens::Delta;
                         view.lock_mode = false;
                         view.runouts = None;
-                        match villain_continues(&mut session, &node) {
+                        match villain_continues(session, &node) {
                             Ok(b) => view.blockers = b,
                             Err(e) => {
                                 died = Some(e);
@@ -1526,7 +1538,7 @@ pub fn run_tree(mut session: TreeSession, mut node: TreeNode, mut lock_args: Loc
                 if view.lens == Lens::Delta {
                     view.lens = Lens::Strategy;
                 }
-                match villain_continues(&mut session, &node) {
+                match villain_continues(session, &node) {
                     Ok(b) => view.blockers = b,
                     Err(e) => {
                         died = Some(e);

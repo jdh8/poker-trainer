@@ -17,6 +17,11 @@
 # Never commit a custom (non-manifest) ruleset directory.
 /data/preflop/*/charts.jsonl
 
+# Reach-pruned postflop tables (solve-gen tables): an offline optimization for
+# `drill hand` / `table` — the live-solve fallback covers a fresh clone, so
+# nothing here is committed (same stance as data/solutions). Regenerate locally.
+/data/tables/
+
 # web/ is its own workspace; pkg/ is wasm-pack output, solutions/ and
 # preflop/ are local stages.
 /web/target

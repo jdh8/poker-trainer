@@ -41,6 +41,7 @@ design doc (`01`–`07`).
 | Single-node drills, EV-loss scoring | ✅ `drill gto` | — |
 | Range-builder drills + leak buckets | ✅ `drill range` | — |
 | **Full-hand practice** (flop→river vs. equilibrium villain) | ✅ `drill hand` (`--board` spots; curated-library sampling not yet built) | — |
+| **Reach-pruned postflop tables** (offline flop+turn strategy, live-solve off the frontier) | ✅ `solve-gen tables` → `drill hand` / `table --board` read a table when generated | — |
 | Persistent session stats, leak trends | ✅ `stats` over `history.jsonl` | — |
 | Preflop charts + preflop drills | ✅ solved 6-max charts (`crates/preflop-gen` MCCFR: cash depth ladder 5–150bb, limps + BB option), EV-loss `drill preflop`, web tree browser | [07](07-preflop-solver.md) |
 | Formation breadth (positions, 3-bet pots, stack depths, rake) | ✅ config-side (5 formations, rake, manifests); breadth tiers solve locally | data-gen → [02](02-solution-library.md) |
@@ -64,6 +65,14 @@ stdio JSON. The license seam is untouched (process boundary), no new tree
 format exists, and node queries are instant once the ~30 s–4 min solve (or a
 cache hit) completes. `SolvedSpot` snapshots remain the instant, offline path
 for curated drills.
+
+For multi-street **table play** across many flops, `solve-gen tables` adds a
+third, offline path: a reach-pruned walk of the solved tree stores strategy at
+frequently-reached flop+turn decision nodes only (line-addressed JSONL,
+`src/postflop_table.rs`), ~MB/flop instead of the ~10 GB full game. `drill
+hand` and `table --board` read a table when one is generated and live-solve
+transparently off the pruned frontier (river, rare lines) — the same
+process-boundary seam, no solver linked into the trainer.
 
 ## Phases
 
