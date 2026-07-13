@@ -3,8 +3,9 @@
 A static, framework-free catalog of the trainer's human-facing examples:
 equity calculator and pot-odds drill (the Rust crate compiled to wasm), a
 preflop chart tree browser (fetches the committed `data/preflop/` starter
-tiers — design 07), and a GTO strategy grid that fetches the committed
-starter-8 solution snapshots. Deployed to GitHub Pages by
+tiers — design 07), a GTO strategy grid that fetches the committed starter-8
+solution snapshots, and a Postflop tables browser (the reach-pruned tables'
+flop nodes, committed at `data/tables-web/`). Deployed to GitHub Pages by
 `.github/workflows/pages.yml`; there is no server.
 
 ## Build & run locally
@@ -16,6 +17,7 @@ mkdir -p solutions
 cp ../data/solutions/*.json solutions/
 (cd ../data/solutions && ls *.json | jq -R . | jq -s -c .) > solutions/index.json
 ln -s ../data/preflop preflop            # preflop chart browser data (symlink — never goes stale)
+ln -s ../data/tables-web tables          # postflop tables browser data (symlink)
 python3 -m http.server 8000              # http://localhost:8000
 ```
 

@@ -1,10 +1,14 @@
 use clap::{Args, Parser, Subcommand, ValueEnum};
+use poker_trainer::postflop_table::{PostflopTable, TableNode};
 use poker_trainer::preflop::{
     class_index, class_name, parse_cards, weighted_range_string, PreflopCharts,
 };
-use poker_trainer::solution::{SolveRequest, SpotConfig};
+use poker_trainer::solution::{formation, SolveRequest, SpotConfig};
 use poker_trainer::{analyze, report, stats, trainer};
-use std::path::PathBuf;
+use serde::Serialize;
+use std::collections::BTreeMap;
+use std::fs;
+use std::path::{Path, PathBuf};
 
 #[derive(Parser)]
 #[command(name = "poker-trainer", about = "Post-flop-focused GTO poker trainer")]
@@ -130,6 +134,20 @@ enum Command {
         /// hero's whole range.
         #[arg(long)]
         hand: Option<String>,
+    },
+    /// Export the reach-pruned tables' flop decision nodes as browser-ready
+    /// JSONL for the web grid (data/tables-web/). Pure post-processing of local
+    /// data/tables/ — links no solver, runs no solve.
+    ExportTablesWeb {
+        /// Source tables root (formation dirs of `solve-gen tables` output).
+        #[arg(long, default_value = "data/tables")]
+        tables: PathBuf,
+        /// Output root — committed and staged into the site by pages.yml.
+        #[arg(long, default_value = "data/tables-web")]
+        out: PathBuf,
+        /// Only this formation (default: every formation dir present).
+        #[arg(long)]
+        formation: Option<String>,
     },
 }
 
@@ -285,6 +303,11 @@ fn main() {
             hero.as_deref(),
             hand.as_deref(),
         ),
+        Command::ExportTablesWeb {
+            tables,
+            out,
+            formation,
+        } => run_export_tables_web(&tables, &out, formation.as_deref()),
     }
 }
 
@@ -506,5 +529,258 @@ fn report_hand(hand: &str, flop: Option<&str>, line: &str, reach: &[f32]) {
             "# note: {} ~never continues this line under the equilibrium",
             class_name(class)
         );
+    }
+}
+
+/// One flop decision node, reshaped for the web grid. `actions` is hoisted to
+/// the node (it's the same for every combo — repeating it per combo doubled the
+/// file), and each combo carries only its per-action `freqs`/`evs`; the browser
+/// adapter re-nests these into the `data/solutions` shape `renderGrid()` reads.
+/// `line`/`hero_oop` drive the node picker.
+#[derive(Serialize)]
+struct WebNode {
+    /// Action line from the flop root, e.g. `["Check","Bet 2.0bb"]` (`[]` = root).
+    line: Vec<String>,
+    /// True if the acting seat is out of position.
+    hero_oop: bool,
+    label: String,
+    villain_action: String,
+    pot_bb: f32,
+    board: Vec<String>,
+    /// The acting player's action labels (shared by every combo below).
+    actions: Vec<String>,
+    strategies: Vec<WebCombo>,
+}
+
+/// One hero combo's strategy at a node: `freqs`/`evs` parallel to the node's
+/// `actions` (same names as [`poker_trainer::tree::TreeNode`]).
+#[derive(Serialize)]
+struct WebCombo {
+    hand: String,
+    freqs: Vec<f32>,
+    evs: Vec<f32>,
+}
+
+/// A flop entry in the web index: the filename `stem` plus a display flop.
+#[derive(Serialize)]
+struct WebFlop {
+    stem: String,
+    display: String,
+}
+
+/// One formation's web tables: its config hash (in every filename) + its flops.
+#[derive(Serialize)]
+struct WebFormation {
+    hash: String,
+    flops: Vec<WebFlop>,
+}
+
+/// `export-tables-web`: reshape the flop decision nodes of every reach-pruned
+/// table under `tables` into browser-ready JSONL under `out`, plus an
+/// `index.json` catalog. Pure file post-processing — no solver, no solve.
+fn run_export_tables_web(tables: &Path, out: &Path, only: Option<&str>) {
+    let mut dirs: Vec<PathBuf> = fs::read_dir(tables)
+        .unwrap_or_else(|e| die(format!("{}: {e}", tables.display())))
+        .filter_map(|e| e.ok().map(|e| e.path()))
+        .filter(|p| p.is_dir())
+        .collect();
+    dirs.sort();
+
+    let mut index: BTreeMap<String, WebFormation> = BTreeMap::new();
+    for dir in dirs {
+        let formation = dir.file_name().unwrap().to_string_lossy().into_owned();
+        if only.is_some_and(|o| o != formation) {
+            continue;
+        }
+        let Some(hash) = header_hash(&dir) else {
+            eprintln!("skip {formation}: no header-<hash>.json");
+            continue;
+        };
+        let out_dir = out.join(&formation);
+        fs::create_dir_all(&out_dir).unwrap_or_else(|e| die(format!("{}: {e}", out_dir.display())));
+
+        let mut flops = Vec::new();
+        let mut nodes_written = 0usize;
+        for stem in flop_stems(&dir, &hash) {
+            let table = match PostflopTable::load(&dir, &stem, &hash) {
+                Ok(t) => t,
+                Err(e) => {
+                    eprintln!("skip {formation}/{stem}: {e}");
+                    continue;
+                }
+            };
+            // Flop decision nodes only: 3-card board, a player (not chance/terminal).
+            let mut rows: Vec<WebNode> = table
+                .nodes()
+                .filter(|tn| {
+                    tn.node.board.len() == 3 && matches!(tn.node.player.as_str(), "oop" | "ip")
+                })
+                .map(|tn| web_node(&formation, &stem, tn))
+                .collect();
+            // Stable, logical order: root first, then by depth then label.
+            rows.sort_by(|a, b| (a.line.len(), &a.line).cmp(&(b.line.len(), &b.line)));
+            nodes_written += rows.len();
+            let body = rows
+                .iter()
+                .map(|r| serde_json::to_string(r).unwrap())
+                .collect::<Vec<_>>()
+                .join("\n");
+            let file = out_dir.join(format!("{stem}-{hash}.jsonl"));
+            fs::write(&file, body).unwrap_or_else(|e| die(format!("{}: {e}", file.display())));
+            flops.push(WebFlop {
+                display: titlecase_flop(&stem),
+                stem,
+            });
+        }
+        flops.sort_by(|a, b| a.stem.cmp(&b.stem));
+        eprintln!(
+            "{formation}: {} flops, {nodes_written} flop nodes",
+            flops.len()
+        );
+        index.insert(formation, WebFormation { hash, flops });
+    }
+
+    if index.is_empty() {
+        die(format!("no tables found under {}", tables.display()));
+    }
+    fs::create_dir_all(out).unwrap_or_else(|e| die(format!("{}: {e}", out.display())));
+    let index_path = out.join("index.json");
+    fs::write(&index_path, serde_json::to_string_pretty(&index).unwrap())
+        .unwrap_or_else(|e| die(format!("{}: {e}", index_path.display())));
+    eprintln!("wrote {} formations to {}", index.len(), out.display());
+}
+
+/// The `<hash>` of `<dir>/header-<hash>.json` (first one, if several).
+fn header_hash(dir: &Path) -> Option<String> {
+    let mut hashes: Vec<String> = fs::read_dir(dir)
+        .ok()?
+        .filter_map(|e| e.ok())
+        .filter_map(|e| {
+            let name = e.file_name().into_string().ok()?;
+            name.strip_prefix("header-")?
+                .strip_suffix(".json")
+                .map(str::to_string)
+        })
+        .collect();
+    hashes.sort();
+    hashes.into_iter().next()
+}
+
+/// Flop filename stems in `dir` for config `hash`: `<stem>-<hash>.jsonl` → `<stem>`.
+fn flop_stems(dir: &Path, hash: &str) -> Vec<String> {
+    let suffix = format!("-{hash}.jsonl");
+    let mut stems: Vec<String> = fs::read_dir(dir)
+        .into_iter()
+        .flatten()
+        .filter_map(|e| e.ok())
+        .filter_map(|e| {
+            e.file_name()
+                .into_string()
+                .ok()?
+                .strip_suffix(&suffix)
+                .map(str::to_string)
+        })
+        .collect();
+    stems.sort();
+    stems
+}
+
+/// Reshape one stored table node into a [`WebNode`] — the load-bearing bit is
+/// transposing `freqs`/`evs` from `[action][hand]` to per-hand strategies.
+fn web_node(formation_id: &str, stem: &str, tn: &TableNode) -> WebNode {
+    let n = &tn.node;
+    let hero_oop = n.player == "oop";
+    let f = formation(formation_id);
+    let label_prefix = f.map_or(formation_id, |f| f.label);
+    let seat = match f {
+        Some(f) if hero_oop => f.oop_seat,
+        Some(f) => f.ip_seat,
+        None if hero_oop => "OOP",
+        None => "IP",
+    };
+    let villain_action = if n.line.is_empty() {
+        format!("{seat} to act (first decision)")
+    } else {
+        format!("after {} — {seat} to act", n.line.join(", "))
+    };
+    let strategies = n
+        .hands
+        .iter()
+        .enumerate()
+        .map(|(j, hand)| WebCombo {
+            hand: hand.clone(),
+            freqs: n.freqs.iter().map(|per_action| per_action[j]).collect(),
+            evs: n.evs.iter().map(|per_action| per_action[j]).collect(),
+        })
+        .collect();
+    WebNode {
+        line: n.line.clone(),
+        hero_oop,
+        label: format!("{label_prefix}, {}", titlecase_flop(stem)),
+        villain_action,
+        pot_bb: n.pot_bb,
+        board: n.board.clone(),
+        actions: n.actions.clone(),
+        strategies,
+    }
+}
+
+/// A lowercase flop filename stem → display flop: `"td9d6h"` → `"Td9d6h"`.
+/// Only rank letters (t,j,q,k,a) uppercase; suit letters (c,d,h,s) stay lower.
+fn titlecase_flop(stem: &str) -> String {
+    stem.chars()
+        .map(|c| {
+            if "tjqka".contains(c) {
+                c.to_ascii_uppercase()
+            } else {
+                c
+            }
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use poker_trainer::tree::TreeNode;
+
+    #[test]
+    fn web_node_transposes_and_labels() {
+        let tn = TableNode {
+            reach: 1.0,
+            node: TreeNode {
+                player: "oop".into(),
+                board: vec!["6h".into(), "9d".into(), "Td".into()],
+                pot_bb: 6.0,
+                line: vec![],
+                actions: vec!["Check".into(), "Bet 2.0bb".into()],
+                dealable: vec![],
+                hands: vec!["AsKs".into(), "QdQc".into()],
+                // [action][hand]: Check freqs per hand, then Bet freqs per hand.
+                freqs: vec![vec![0.6, 0.3], vec![0.4, 0.7]],
+                evs: vec![vec![1.0, 2.0], vec![1.5, 2.4]],
+                weights: vec![1.0, 1.0],
+                equity: vec![0.55, 0.6],
+            },
+        };
+        let w = web_node("srp-btn-bb", "td9d6h", &tn);
+
+        // Per-hand transpose: hand j gets column j from each action row.
+        assert_eq!(w.actions, vec!["Check", "Bet 2.0bb"]);
+        assert_eq!(w.strategies[0].freqs, vec![0.6, 0.4]);
+        assert_eq!(w.strategies[0].evs, vec![1.0, 1.5]);
+        assert_eq!(w.strategies[1].freqs, vec![0.3, 0.7]);
+        assert_eq!(w.strategies[1].evs, vec![2.0, 2.4]);
+
+        assert!(w.hero_oop);
+        assert_eq!(w.label, "SRP BTN vs BB, Td9d6h");
+        assert_eq!(w.villain_action, "BB to act (first decision)");
+    }
+
+    #[test]
+    fn titlecase_flop_uppercases_ranks_not_suits() {
+        assert_eq!(titlecase_flop("td9d6h"), "Td9d6h");
+        assert_eq!(titlecase_flop("ahad8c"), "AhAd8c");
+        assert_eq!(titlecase_flop("4s3s2d"), "4s3s2d");
     }
 }

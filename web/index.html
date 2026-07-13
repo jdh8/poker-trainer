@@ -18,6 +18,7 @@
     <a href="#pot-odds">Pot-odds drill</a>
     <a href="#flop-equity">Flop equity</a>
     <a href="#grid">GTO strategy grid</a>
+    <a href="#tables">Postflop tables</a>
   </nav>
 </header>
 <main>
@@ -103,6 +104,24 @@
   <div id="gr-legend"></div>
   <div id="gr-grid"></div>
   <div id="gr-detail"></div>
+</section>
+
+<section id="tables">
+  <h2>Postflop tables</h2>
+  <p>Browse the reach-pruned postflop tables (<code>solve-gen tables</code>,
+     exported by <code>poker-trainer export-tables-web</code>) as 13×13 grids —
+     all five formations, 25 flops each. Pick a formation, a flop, then a
+     decision node along the flop betting line. Cell colors are action
+     frequencies averaged over the class's combos; click a cell for the
+     per-combo breakdown. Turn/river lines live-solve in the trainer, so only
+     flop decisions are shown here.</p>
+  <label class="inline">Formation <select id="tb-formation"></select></label>
+  <label class="inline">Flop <select id="tb-flop"></select></label>
+  <label class="inline">Node <select id="tb-node"></select></label>
+  <div id="tb-head"></div>
+  <div id="tb-legend"></div>
+  <div id="tb-grid"></div>
+  <div id="tb-detail"></div>
 </section>
 
 </main>

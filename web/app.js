@@ -490,8 +490,6 @@ const NODE_LABELS = {
   'oop-75': 'OOP: facing 75% c-bet',
 };
 let grFiles = {};   // flop -> node -> filename
-let grSpot = null;  // fetched solution
-let grClasses = {}; // class name -> [strategy entries]
 
 function actionColor(label, i, actions) {
   if (/^fold/i.test(label)) return 'var(--act-fold)';
@@ -510,22 +508,24 @@ function comboClass(hand) {
   return hi + lo + (s1 === s2 ? 's' : 'o');
 }
 
-function renderGrid() {
-  const actions = grSpot.strategies[0].strategy.actions;
-  $('gr-head').innerHTML =
-    `<b>${grSpot.label}</b><div class="sub">${grSpot.villain_action} · pot ${grSpot.pot_bb}bb · ` +
-    `exploitability ${grSpot.generator.exploitability_bb.toFixed(3)}bb</div>`;
-  $('gr-legend').innerHTML = actions.map(a =>
+// Render a SolvedSpot-shaped `spot` into the `prefix`-{head,legend,grid,detail}
+// elements. Shared by the GTO grid (prefix 'gr') and the tables viewer ('tb').
+function renderGrid(spot, prefix) {
+  const actions = spot.strategies[0].strategy.actions;
+  $(prefix + '-head').innerHTML =
+    `<b>${spot.label}</b><div class="sub">${spot.villain_action} · pot ${spot.pot_bb}bb` +
+    (spot.generator ? ` · exploitability ${spot.generator.exploitability_bb.toFixed(3)}bb` : '') + `</div>`;
+  $(prefix + '-legend').innerHTML = actions.map(a =>
     `<span><span class="chip" style="background:${actionColor(a, 0, actions)}"></span>${a}</span>`).join('');
 
-  grClasses = {};
-  for (const s of grSpot.strategies) (grClasses[comboClass(s.hand)] ??= []).push(s);
+  const classes = {};   // class name -> [strategy entries]
+  for (const s of spot.strategies) (classes[comboClass(s.hand)] ??= []).push(s);
 
   const cells = [];
   for (let i = 0; i < 13; i++) for (let j = 0; j < 13; j++) {
     const name = i === j ? RANKS[i] + RANKS[j]
       : i < j ? RANKS[i] + RANKS[j] + 's' : RANKS[j] + RANKS[i] + 'o';
-    const combos = grClasses[name];
+    const combos = classes[name];
     if (!combos) { cells.push(`<div class="cell dead">${name}</div>`); continue; }
     // mean frequency per action over the class's combos → gradient segments
     const means = actions.map((_, k) =>
@@ -538,16 +538,17 @@ function renderGrid() {
     }).join(', ');
     cells.push(`<div class="cell" data-class="${name}" style="background:linear-gradient(to left, ${stops})">${name}</div>`);
   }
-  $('gr-grid').innerHTML = cells.join('');
-  $('gr-detail').innerHTML = '<p class="sub" style="color:var(--muted)">Click a cell for the per-combo breakdown.</p>';
-  document.querySelectorAll('#gr-grid .cell[data-class]').forEach(c => c.onclick = () => renderDetail(c));
+  $(prefix + '-grid').innerHTML = cells.join('');
+  $(prefix + '-detail').innerHTML = '<p class="sub" style="color:var(--muted)">Click a cell for the per-combo breakdown.</p>';
+  document.querySelectorAll(`#${prefix}-grid .cell[data-class]`).forEach(c =>
+    c.onclick = () => renderDetail(spot, classes, prefix, c));
 }
 
-function renderDetail(cell) {
-  document.querySelectorAll('#gr-grid .cell.sel').forEach(c => c.classList.remove('sel'));
+function renderDetail(spot, classes, prefix, cell) {
+  document.querySelectorAll(`#${prefix}-grid .cell.sel`).forEach(c => c.classList.remove('sel'));
   cell.classList.add('sel');
-  const combos = grClasses[cell.dataset.class];
-  const actions = grSpot.strategies[0].strategy.actions;
+  const combos = classes[cell.dataset.class];
+  const actions = spot.strategies[0].strategy.actions;
   const head = '<tr><th>combo</th>' + actions.map(a => `<th>${a}</th>`).join('') + '</tr>';
   const rows = combos.map(c => {
     const best = c.strategy.action_ev.indexOf(Math.max(...c.strategy.action_ev));
@@ -556,7 +557,7 @@ function renderDetail(cell) {
       `<small>(${c.strategy.action_ev[k].toFixed(2)})</small></td>`).join('');
     return `<tr><td>${cardsHTML(c.hand.match(/.{2}/g))}</td>${tds}</tr>`;
   }).join('');
-  $('gr-detail').innerHTML =
+  $(prefix + '-detail').innerHTML =
     `<table>${head}${rows}</table>` +
     `<p class="sub" style="color:var(--muted)">Cells: frequency <small>(EV in bb)</small>; green = highest-EV action.</p>`;
 }
@@ -566,8 +567,7 @@ async function grLoad() {
   const node = $('gr-node').value;
   const file = grFiles[flop]?.[node];
   if (!file) return;
-  grSpot = await (await fetch('solutions/' + file)).json();
-  renderGrid();
+  renderGrid(await (await fetch('solutions/' + file)).json(), 'gr');
 }
 
 function grFillNodes() {
@@ -597,6 +597,58 @@ async function grInit() {
   grLoad();
 }
 
+// ---- Reach-pruned tables (flop grids across all formations) -----------------
+// Same 13×13 grid as above, fed by the committed `data/tables-web/` export
+// (`poker-trainer export-tables-web`): every formation, 25 flops, each flop's
+// flop-decision nodes. The lean export hoists `actions` to the node and stores
+// per-combo `freqs`/`evs`; tbReshape re-nests them into renderGrid's shape.
+
+const TB_FORMATION_LABELS = {
+  'srp-btn-bb': 'SRP BTN vs BB', 'srp-co-bb': 'SRP CO vs BB', 'srp-sb-bb': 'SRP SB vs BB',
+  '3bp-bb-btn': '3-bet pot BB vs BTN', '3bp-btn-co': '3-bet pot BTN vs CO',
+};
+let tbIndex = null;   // formation -> {hash, flops:[{stem,display}]}
+let tbNodes = [];     // current flop's reshaped node-spots
+
+function tbReshape(n) {
+  n.strategies = n.strategies.map(s =>
+    ({ hand: s.hand, strategy: { actions: n.actions, frequencies: s.freqs, action_ev: s.evs } }));
+  return n;
+}
+
+function tbNodeLabel(n) {
+  return `${n.hero_oop ? 'OOP' : 'IP'}: ${n.line.length ? n.line.join(' · ') : 'first decision'}`;
+}
+
+async function tbLoad() {
+  const f = $('tb-formation').value, stem = $('tb-flop').value, hash = tbIndex[f].hash;
+  const text = await (await fetch(`tables/${f}/${stem}-${hash}.jsonl`)).text();
+  tbNodes = text.split('\n').filter(l => l.trim()).map(l => tbReshape(JSON.parse(l)));
+  $('tb-node').innerHTML = tbNodes.map((n, i) => `<option value="${i}">${tbNodeLabel(n)}</option>`).join('');
+  tbShow();
+}
+
+function tbShow() {
+  renderGrid(tbNodes[+$('tb-node').value], 'tb');
+}
+
+function tbFillFlops() {
+  $('tb-flop').innerHTML = tbIndex[$('tb-formation').value].flops.map(fl =>
+    `<option value="${fl.stem}">${fl.display}</option>`).join('');
+  tbLoad();
+}
+
+async function tbInit() {
+  try { tbIndex = await (await fetch('tables/index.json')).json(); }
+  catch { $('tb-head').textContent = 'Table exports not staged — run `poker-trainer export-tables-web` (see web/README).'; return; }
+  $('tb-formation').innerHTML = Object.keys(tbIndex).sort().map(f =>
+    `<option value="${f}">${TB_FORMATION_LABELS[f] || f}</option>`).join('');
+  $('tb-formation').onchange = tbFillFlops;
+  $('tb-flop').onchange = tbLoad;
+  $('tb-node').onchange = tbShow;
+  tbFillFlops();
+}
+
 // ---- boot -------------------------------------------------------------------
 
 await init();
@@ -604,3 +656,4 @@ poInit();
 feInit();
 pfInit();
 grInit();
+tbInit();

@@ -1,0 +1,527 @@
+{
+  "3bp-bb-btn": {
+    "hash": "289b7689",
+    "flops": [
+      {
+        "stem": "4s3s2d",
+        "display": "4s3s2d"
+      },
+      {
+        "stem": "5c5d9h",
+        "display": "5c5d9h"
+      },
+      {
+        "stem": "5h4h2s",
+        "display": "5h4h2s"
+      },
+      {
+        "stem": "6h5d4c",
+        "display": "6h5d4c"
+      },
+      {
+        "stem": "7c5s3d",
+        "display": "7c5s3d"
+      },
+      {
+        "stem": "8d7d3c",
+        "display": "8d7d3c"
+      },
+      {
+        "stem": "8h8c3d",
+        "display": "8h8c3d"
+      },
+      {
+        "stem": "9s8s4d",
+        "display": "9s8s4d"
+      },
+      {
+        "stem": "acjc9s",
+        "display": "AcJc9s"
+      },
+      {
+        "stem": "ah8h3h",
+        "display": "Ah8h3h"
+      },
+      {
+        "stem": "ahad8c",
+        "display": "AhAd8c"
+      },
+      {
+        "stem": "ahqh7c",
+        "display": "AhQh7c"
+      },
+      {
+        "stem": "as7d2c",
+        "display": "As7d2c"
+      },
+      {
+        "stem": "askd5h",
+        "display": "AsKd5h"
+      },
+      {
+        "stem": "jdtd4s",
+        "display": "JdTd4s"
+      },
+      {
+        "stem": "jh9h5c",
+        "display": "Jh9h5c"
+      },
+      {
+        "stem": "kdkh6s",
+        "display": "KdKh6s"
+      },
+      {
+        "stem": "kh7c2d",
+        "display": "Kh7c2d"
+      },
+      {
+        "stem": "khqs4d",
+        "display": "KhQs4d"
+      },
+      {
+        "stem": "ksts6c",
+        "display": "KsTs6c"
+      },
+      {
+        "stem": "qc8s3h",
+        "display": "Qc8s3h"
+      },
+      {
+        "stem": "qhjd9c",
+        "display": "QhJd9c"
+      },
+      {
+        "stem": "td9d6h",
+        "display": "Td9d6h"
+      },
+      {
+        "stem": "th8c6s",
+        "display": "Th8c6s"
+      },
+      {
+        "stem": "tstc7d",
+        "display": "TsTc7d"
+      }
+    ]
+  },
+  "3bp-btn-co": {
+    "hash": "921a7bc2",
+    "flops": [
+      {
+        "stem": "4s3s2d",
+        "display": "4s3s2d"
+      },
+      {
+        "stem": "5c5d9h",
+        "display": "5c5d9h"
+      },
+      {
+        "stem": "5h4h2s",
+        "display": "5h4h2s"
+      },
+      {
+        "stem": "6h5d4c",
+        "display": "6h5d4c"
+      },
+      {
+        "stem": "7c5s3d",
+        "display": "7c5s3d"
+      },
+      {
+        "stem": "8d7d3c",
+        "display": "8d7d3c"
+      },
+      {
+        "stem": "8h8c3d",
+        "display": "8h8c3d"
+      },
+      {
+        "stem": "9s8s4d",
+        "display": "9s8s4d"
+      },
+      {
+        "stem": "acjc9s",
+        "display": "AcJc9s"
+      },
+      {
+        "stem": "ah8h3h",
+        "display": "Ah8h3h"
+      },
+      {
+        "stem": "ahad8c",
+        "display": "AhAd8c"
+      },
+      {
+        "stem": "ahqh7c",
+        "display": "AhQh7c"
+      },
+      {
+        "stem": "as7d2c",
+        "display": "As7d2c"
+      },
+      {
+        "stem": "askd5h",
+        "display": "AsKd5h"
+      },
+      {
+        "stem": "jdtd4s",
+        "display": "JdTd4s"
+      },
+      {
+        "stem": "jh9h5c",
+        "display": "Jh9h5c"
+      },
+      {
+        "stem": "kdkh6s",
+        "display": "KdKh6s"
+      },
+      {
+        "stem": "kh7c2d",
+        "display": "Kh7c2d"
+      },
+      {
+        "stem": "khqs4d",
+        "display": "KhQs4d"
+      },
+      {
+        "stem": "ksts6c",
+        "display": "KsTs6c"
+      },
+      {
+        "stem": "qc8s3h",
+        "display": "Qc8s3h"
+      },
+      {
+        "stem": "qhjd9c",
+        "display": "QhJd9c"
+      },
+      {
+        "stem": "td9d6h",
+        "display": "Td9d6h"
+      },
+      {
+        "stem": "th8c6s",
+        "display": "Th8c6s"
+      },
+      {
+        "stem": "tstc7d",
+        "display": "TsTc7d"
+      }
+    ]
+  },
+  "srp-btn-bb": {
+    "hash": "d728de43",
+    "flops": [
+      {
+        "stem": "4s3s2d",
+        "display": "4s3s2d"
+      },
+      {
+        "stem": "5c5d9h",
+        "display": "5c5d9h"
+      },
+      {
+        "stem": "5h4h2s",
+        "display": "5h4h2s"
+      },
+      {
+        "stem": "6h5d4c",
+        "display": "6h5d4c"
+      },
+      {
+        "stem": "7c5s3d",
+        "display": "7c5s3d"
+      },
+      {
+        "stem": "8d7d3c",
+        "display": "8d7d3c"
+      },
+      {
+        "stem": "8h8c3d",
+        "display": "8h8c3d"
+      },
+      {
+        "stem": "9s8s4d",
+        "display": "9s8s4d"
+      },
+      {
+        "stem": "acjc9s",
+        "display": "AcJc9s"
+      },
+      {
+        "stem": "ah8h3h",
+        "display": "Ah8h3h"
+      },
+      {
+        "stem": "ahad8c",
+        "display": "AhAd8c"
+      },
+      {
+        "stem": "ahqh7c",
+        "display": "AhQh7c"
+      },
+      {
+        "stem": "as7d2c",
+        "display": "As7d2c"
+      },
+      {
+        "stem": "askd5h",
+        "display": "AsKd5h"
+      },
+      {
+        "stem": "jdtd4s",
+        "display": "JdTd4s"
+      },
+      {
+        "stem": "jh9h5c",
+        "display": "Jh9h5c"
+      },
+      {
+        "stem": "kdkh6s",
+        "display": "KdKh6s"
+      },
+      {
+        "stem": "kh7c2d",
+        "display": "Kh7c2d"
+      },
+      {
+        "stem": "khqs4d",
+        "display": "KhQs4d"
+      },
+      {
+        "stem": "ksts6c",
+        "display": "KsTs6c"
+      },
+      {
+        "stem": "qc8s3h",
+        "display": "Qc8s3h"
+      },
+      {
+        "stem": "qhjd9c",
+        "display": "QhJd9c"
+      },
+      {
+        "stem": "td9d6h",
+        "display": "Td9d6h"
+      },
+      {
+        "stem": "th8c6s",
+        "display": "Th8c6s"
+      },
+      {
+        "stem": "tstc7d",
+        "display": "TsTc7d"
+      }
+    ]
+  },
+  "srp-co-bb": {
+    "hash": "2592ed4a",
+    "flops": [
+      {
+        "stem": "4s3s2d",
+        "display": "4s3s2d"
+      },
+      {
+        "stem": "5c5d9h",
+        "display": "5c5d9h"
+      },
+      {
+        "stem": "5h4h2s",
+        "display": "5h4h2s"
+      },
+      {
+        "stem": "6h5d4c",
+        "display": "6h5d4c"
+      },
+      {
+        "stem": "7c5s3d",
+        "display": "7c5s3d"
+      },
+      {
+        "stem": "8d7d3c",
+        "display": "8d7d3c"
+      },
+      {
+        "stem": "8h8c3d",
+        "display": "8h8c3d"
+      },
+      {
+        "stem": "9s8s4d",
+        "display": "9s8s4d"
+      },
+      {
+        "stem": "acjc9s",
+        "display": "AcJc9s"
+      },
+      {
+        "stem": "ah8h3h",
+        "display": "Ah8h3h"
+      },
+      {
+        "stem": "ahad8c",
+        "display": "AhAd8c"
+      },
+      {
+        "stem": "ahqh7c",
+        "display": "AhQh7c"
+      },
+      {
+        "stem": "as7d2c",
+        "display": "As7d2c"
+      },
+      {
+        "stem": "askd5h",
+        "display": "AsKd5h"
+      },
+      {
+        "stem": "jdtd4s",
+        "display": "JdTd4s"
+      },
+      {
+        "stem": "jh9h5c",
+        "display": "Jh9h5c"
+      },
+      {
+        "stem": "kdkh6s",
+        "display": "KdKh6s"
+      },
+      {
+        "stem": "kh7c2d",
+        "display": "Kh7c2d"
+      },
+      {
+        "stem": "khqs4d",
+        "display": "KhQs4d"
+      },
+      {
+        "stem": "ksts6c",
+        "display": "KsTs6c"
+      },
+      {
+        "stem": "qc8s3h",
+        "display": "Qc8s3h"
+      },
+      {
+        "stem": "qhjd9c",
+        "display": "QhJd9c"
+      },
+      {
+        "stem": "td9d6h",
+        "display": "Td9d6h"
+      },
+      {
+        "stem": "th8c6s",
+        "display": "Th8c6s"
+      },
+      {
+        "stem": "tstc7d",
+        "display": "TsTc7d"
+      }
+    ]
+  },
+  "srp-sb-bb": {
+    "hash": "ac3d0368",
+    "flops": [
+      {
+        "stem": "4s3s2d",
+        "display": "4s3s2d"
+      },
+      {
+        "stem": "5c5d9h",
+        "display": "5c5d9h"
+      },
+      {
+        "stem": "5h4h2s",
+        "display": "5h4h2s"
+      },
+      {
+        "stem": "6h5d4c",
+        "display": "6h5d4c"
+      },
+      {
+        "stem": "7c5s3d",
+        "display": "7c5s3d"
+      },
+      {
+        "stem": "8d7d3c",
+        "display": "8d7d3c"
+      },
+      {
+        "stem": "8h8c3d",
+        "display": "8h8c3d"
+      },
+      {
+        "stem": "9s8s4d",
+        "display": "9s8s4d"
+      },
+      {
+        "stem": "acjc9s",
+        "display": "AcJc9s"
+      },
+      {
+        "stem": "ah8h3h",
+        "display": "Ah8h3h"
+      },
+      {
+        "stem": "ahad8c",
+        "display": "AhAd8c"
+      },
+      {
+        "stem": "ahqh7c",
+        "display": "AhQh7c"
+      },
+      {
+        "stem": "as7d2c",
+        "display": "As7d2c"
+      },
+      {
+        "stem": "askd5h",
+        "display": "AsKd5h"
+      },
+      {
+        "stem": "jdtd4s",
+        "display": "JdTd4s"
+      },
+      {
+        "stem": "jh9h5c",
+        "display": "Jh9h5c"
+      },
+      {
+        "stem": "kdkh6s",
+        "display": "KdKh6s"
+      },
+      {
+        "stem": "kh7c2d",
+        "display": "Kh7c2d"
+      },
+      {
+        "stem": "khqs4d",
+        "display": "KhQs4d"
+      },
+      {
+        "stem": "ksts6c",
+        "display": "KsTs6c"
+      },
+      {
+        "stem": "qc8s3h",
+        "display": "Qc8s3h"
+      },
+      {
+        "stem": "qhjd9c",
+        "display": "QhJd9c"
+      },
+      {
+        "stem": "td9d6h",
+        "display": "Td9d6h"
+      },
+      {
+        "stem": "th8c6s",
+        "display": "Th8c6s"
+      },
+      {
+        "stem": "tstc7d",
+        "display": "TsTc7d"
+      }
+    ]
+  }
+}
