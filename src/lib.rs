@@ -4,6 +4,7 @@
 pub mod analyze;
 pub mod board;
 pub mod eval;
+pub mod iso;
 pub mod postflop_table;
 pub mod preflop;
 pub mod range;

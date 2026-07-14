@@ -1101,10 +1101,11 @@ impl Blockers {
     }
 }
 
-/// Fetch the villain response to hero's biggest bet/raise via two protocol
-/// calls (design doc 03): `play` the action, read the villain node, `back`.
-/// `None` when the node has no aggressive action or no villain decision
-/// follows it; errors mean the session itself died.
+/// Fetch the villain response to hero's biggest bet/raise via a passive
+/// [`TreeWalk::peek`] (design doc 03). `None` when the node has no aggressive
+/// action, no villain decision follows it, or — on a table-backed walk — the
+/// child is off the stored frontier (the lens quietly disappears rather than
+/// paying a live solve on every navigation); errors mean the session died.
 // ponytail: "continue" is defined vs. the biggest bet only; a per-action
 // blocker readout would fetch one villain node per size.
 fn villain_continues(
@@ -1117,28 +1118,27 @@ fn villain_continues(
     let Some(i) = node.actions.iter().rposition(|a| is_aggressive(a)) else {
         return Ok(None);
     };
-    let vnode = session.play(i)?;
-    let result = if vnode.player == "oop" || vnode.player == "ip" {
-        let fold = vnode.actions.iter().position(|a| a == "Fold");
-        let mass = vnode
-            .hands
-            .iter()
-            .enumerate()
-            .filter_map(|(j, hand)| {
-                let reach = vnode.weights.get(j).copied().unwrap_or(1.0);
-                let cont = fold.map_or(1.0, |f| 1.0 - vnode.freqs[f][j]);
-                parse_hole(hand).map(|h| (h, reach * cont))
-            })
-            .collect();
-        Some(Blockers {
-            action: node.actions[i].clone(),
-            mass,
-        })
-    } else {
-        None
+    let Some(vnode) = session.peek(i)? else {
+        return Ok(None);
     };
-    session.back()?;
-    Ok(result)
+    if vnode.player != "oop" && vnode.player != "ip" {
+        return Ok(None);
+    }
+    let fold = vnode.actions.iter().position(|a| a == "Fold");
+    let mass = vnode
+        .hands
+        .iter()
+        .enumerate()
+        .filter_map(|(j, hand)| {
+            let reach = vnode.weights.get(j).copied().unwrap_or(1.0);
+            let cont = fold.map_or(1.0, |f| 1.0 - vnode.freqs[f][j]);
+            parse_hole(hand).map(|h| (h, reach * cont))
+        })
+        .collect();
+    Ok(Some(Blockers {
+        action: node.actions[i].clone(),
+        mass,
+    }))
 }
 
 /// The numbered action bar for a player node: `1 Check   2 Bet 3.3bb   …`.

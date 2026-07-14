@@ -6,6 +6,7 @@
 //! format — is the wire format (protocol v2, see [`PROTOCOL_V`]), which keeps
 //! the AGPL solver behind a process boundary exactly like the snapshot path.
 
+use crate::iso::{translate_node, SuitPerm};
 use crate::postflop_table::PostflopTable;
 use crate::solution::{solve_gen_command, SolveRequest};
 use serde::{Deserialize, Serialize};
@@ -182,6 +183,15 @@ pub trait TreeWalk {
     fn deal(&mut self, card: &str) -> io::Result<TreeNode>;
     fn back(&mut self) -> io::Result<TreeNode>;
     fn runouts(&mut self) -> io::Result<Vec<RunoutSummary>>;
+    /// The child under action `action` without moving the walker, or `None`
+    /// when answering would cost a solve: a live session plays and backs out
+    /// (two cheap protocol calls); a table-backed walk answers from the table
+    /// only, so passive lenses never trigger the go-live fallback.
+    fn peek(&mut self, action: usize) -> io::Result<Option<TreeNode>> {
+        let node = self.play(action)?;
+        self.back()?;
+        Ok(Some(node))
+    }
     /// A live, re-solvable session positioned at the current node — spawning
     /// and replaying the line if this walker was disk-backed. lock/resolve and
     /// (from a table) runouts go through here.
@@ -222,7 +232,11 @@ impl TreeWalk for TreeSession {
 pub struct TableWalk {
     table: PostflopTable,
     req: SolveRequest,
-    /// The action line to the current node (kept only while on the table path).
+    /// User→stored suit map when the table was stored under a suit-isomorphic
+    /// flop (design doc 08). `None` = exact hit, serve nodes untranslated.
+    perm: Option<SuitPerm>,
+    /// The action line to the current node, in the table's stored suit space
+    /// (kept only while on the table path).
     line: Vec<String>,
     /// Spawned on the first miss; once live, every op delegates to it (the
     /// table is stale after a re-solve, so there's no going back).
@@ -230,21 +244,45 @@ pub struct TableWalk {
 }
 
 impl TableWalk {
-    /// Build a walker positioned at the table's root node.
-    pub fn new(table: PostflopTable, req: SolveRequest) -> io::Result<(Self, TreeNode)> {
-        let root = table
+    /// Build a walker positioned at the table's root node. `perm` is the
+    /// user→stored suit map for a table found via suit isomorphism (`None`
+    /// for an exact hit).
+    pub fn new(
+        table: PostflopTable,
+        req: SolveRequest,
+        perm: Option<SuitPerm>,
+    ) -> io::Result<(Self, TreeNode)> {
+        let walk = Self {
+            table,
+            req,
+            perm,
+            line: Vec::new(),
+            live: None,
+        };
+        let root = walk
+            .table
             .node(&[])
-            .map(|t| t.node.clone())
+            .map(|t| walk.translate(t.node.clone()))
             .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "table has no root node"))?;
-        Ok((
-            Self {
-                table,
-                req,
-                line: Vec::new(),
-                live: None,
-            },
-            root,
-        ))
+        Ok((walk, root))
+    }
+
+    /// A stored node, mapped into the user's suit space when serving via an
+    /// isomorph. Action labels are card-free, so line keys need no mapping.
+    fn translate(&self, node: TreeNode) -> TreeNode {
+        match &self.perm {
+            Some(p) => translate_node(node, p),
+            None => node,
+        }
+    }
+
+    /// A user-entered card in the table's stored suit space (the direction of
+    /// `deal` keys). Unparseable input passes through to fail like any miss.
+    fn to_stored(&self, card: &str) -> String {
+        self.perm
+            .as_ref()
+            .and_then(|p| p.card(card))
+            .unwrap_or_else(|| card.to_string())
     }
 
     /// The current node from the table (only reached while `live` is `None`, so
@@ -252,7 +290,7 @@ impl TableWalk {
     fn lookup(&self) -> io::Result<TreeNode> {
         self.table
             .node(&self.line)
-            .map(|t| t.node.clone())
+            .map(|t| self.translate(t.node.clone()))
             .ok_or_else(|| {
                 io::Error::new(
                     io::ErrorKind::NotFound,
@@ -263,16 +301,23 @@ impl TableWalk {
 
     /// Ensure a live session exists at `self.line`, spawning and replaying the
     /// line from the root exactly once. Prints the solve on stderr like any
-    /// other live solve.
+    /// other live solve. The live solve is of the user's raw flop, so stored
+    /// deal labels map back through the perm during replay; action labels are
+    /// identical in both suit spaces.
     fn go_live(&mut self) -> io::Result<&mut TreeSession> {
         if self.live.is_none() {
             let (session, root) = TreeSession::start(&self.req)?;
             self.live = Some(session);
             let s = self.live.as_mut().unwrap();
+            let back = self.perm.as_ref().map(SuitPerm::inverse);
             let mut node = root;
             for label in self.line.clone() {
                 node = if let Some(card) = label.strip_prefix("deal ") {
-                    s.deal(card)?
+                    let card = back
+                        .as_ref()
+                        .and_then(|p| p.card(card))
+                        .unwrap_or_else(|| card.to_string());
+                    s.deal(&card)?
                 } else {
                     let i = node
                         .actions
@@ -313,7 +358,8 @@ impl TreeWalk for TableWalk {
             return s.play(action);
         }
         // The child's label is the current (stored) node's action label — the
-        // exact string the generator keyed the child on.
+        // exact string the generator keyed the child on (card-free, so it is
+        // the same in both suit spaces).
         let cur = self.lookup()?;
         let label = cur.actions.get(action).cloned().ok_or_else(|| {
             io::Error::new(
@@ -323,7 +369,7 @@ impl TreeWalk for TableWalk {
         })?;
         self.line.push(label);
         match self.table.node(&self.line) {
-            Some(t) => Ok(t.node.clone()),
+            Some(t) => Ok(self.translate(t.node.clone())),
             None => self.go_live().and_then(TreeSession::node),
         }
     }
@@ -332,9 +378,10 @@ impl TreeWalk for TableWalk {
         if let Some(s) = &mut self.live {
             return s.deal(card);
         }
-        self.line.push(format!("deal {card}"));
+        let stored = self.to_stored(card);
+        self.line.push(format!("deal {stored}"));
         match self.table.node(&self.line) {
-            Some(t) => Ok(t.node.clone()),
+            Some(t) => Ok(self.translate(t.node.clone())),
             None => self.go_live().and_then(TreeSession::node),
         }
     }
@@ -351,6 +398,24 @@ impl TreeWalk for TableWalk {
         // ponytail: runouts always live-solve from a table (browser-only op);
         // synthesize from the stored turn children if this spawn ever bites.
         self.go_live()?.runouts()
+    }
+
+    fn peek(&mut self, action: usize) -> io::Result<Option<TreeNode>> {
+        if let Some(s) = &mut self.live {
+            let node = s.play(action)?;
+            s.back()?;
+            return Ok(Some(node));
+        }
+        let cur = self.lookup()?;
+        let Some(label) = cur.actions.get(action) else {
+            return Ok(None);
+        };
+        let mut child = self.line.clone();
+        child.push(label.clone());
+        Ok(self
+            .table
+            .node(&child)
+            .map(|t| self.translate(t.node.clone())))
     }
 
     fn live(&mut self) -> io::Result<&mut TreeSession> {
@@ -581,7 +646,7 @@ mod tests {
                 })
         };
 
-        let (mut walk, root) = TableWalk::new(table, req.clone()).unwrap();
+        let (mut walk, root) = TableWalk::new(table, req.clone(), None).unwrap();
         let (mut live, live_root) = TreeSession::start(&req).unwrap();
         assert_eq!(root.player, "oop");
         assert_eq!(root.hands, live_root.hands);
@@ -622,6 +687,272 @@ mod tests {
         }
         assert_eq!(node.player, "chance");
         assert_eq!(node.board.len(), 4, "fell back onto the river chance node");
+
+        let _ = std::fs::remove_dir_all(&out);
+    }
+
+    use crate::postflop_table::{TableHeader, TableNode, FORMAT_VERSION};
+    use crate::solution::{GenInfo, SpotConfig};
+
+    fn tiny_config() -> SpotConfig {
+        SpotConfig {
+            formation: "srp-btn-bb".into(),
+            oop_range: "22".into(),
+            ip_range: "33".into(),
+            flop_sizes: "50%".into(),
+            turn_sizes: "33%".into(),
+            river_sizes: "33%".into(),
+            stack_bb: 97.0,
+            pot_bb: 6.0,
+            rake_rate: 0.0,
+            rake_cap_bb: 0.0,
+        }
+    }
+
+    /// On-disk fixture mirroring `postflop_table`'s test helper.
+    fn write_fixture(dir: &std::path::Path, flop: &str, config: &SpotConfig, nodes: &[TableNode]) {
+        std::fs::create_dir_all(dir).unwrap();
+        let header = TableHeader {
+            version: FORMAT_VERSION,
+            formation: config.formation.clone(),
+            config: config.clone(),
+            config_hash: config.hash8(),
+            generator: GenInfo {
+                version: "0.1.0".into(),
+                exploitability_bb: 0.02,
+            },
+            reach: 0.002,
+        };
+        std::fs::write(
+            dir.join(format!("header-{}.json", header.config_hash)),
+            serde_json::to_string_pretty(&header).unwrap(),
+        )
+        .unwrap();
+        let lines: Vec<String> = nodes
+            .iter()
+            .map(|n| serde_json::to_string(n).unwrap())
+            .collect();
+        std::fs::write(
+            dir.join(format!(
+                "{}-{}.jsonl",
+                flop.to_lowercase(),
+                header.config_hash
+            )),
+            lines.join("\n"),
+        )
+        .unwrap();
+    }
+
+    fn table_node(reach: f32, node: TreeNode) -> TableNode {
+        TableNode { reach, node }
+    }
+
+    /// Stored space Td9d6h served to a user who typed Ts9s6h: every boundary
+    /// of the walk translates (outbound payloads, inbound deals, peeks), the
+    /// parallel per-hand arrays re-sort in lockstep, and a passive peek at an
+    /// unstored child answers `None` instead of going live.
+    #[test]
+    fn iso_table_walk_translates_between_suit_spaces() {
+        let config = tiny_config();
+        let dir = std::env::temp_dir().join(format!("pt-iso-walk-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+
+        let root = table_node(
+            1.0,
+            TreeNode {
+                player: "oop".into(),
+                board: vec!["6h".into(), "9d".into(), "Td".into()],
+                pot_bb: 6.0,
+                line: vec![],
+                actions: vec!["Check".into(), "Bet 2.0bb".into()],
+                hands: vec!["2d2c".into(), "2s2c".into()],
+                freqs: vec![vec![0.6, 0.4], vec![0.4, 0.6]],
+                evs: vec![vec![1.0, 2.0], vec![3.0, 4.0]],
+                weights: vec![0.1, 0.2],
+                equity: vec![0.5, 0.7],
+                ..Default::default()
+            },
+        );
+        let chance = table_node(
+            0.6,
+            TreeNode {
+                player: "chance".into(),
+                board: vec!["6h".into(), "9d".into(), "Td".into()],
+                pot_bb: 6.0,
+                line: vec!["Check".into()],
+                dealable: vec!["2c".into(), "2d".into()],
+                ..Default::default()
+            },
+        );
+        let turn = table_node(
+            0.6,
+            TreeNode {
+                player: "oop".into(),
+                board: vec!["6h".into(), "9d".into(), "Td".into(), "2d".into()],
+                pot_bb: 6.0,
+                line: vec!["Check".into(), "deal 2d".into()],
+                actions: vec!["Check".into()],
+                hands: vec!["2s2c".into()],
+                freqs: vec![vec![1.0]],
+                evs: vec![vec![1.5]],
+                weights: vec![1.0],
+                equity: vec![0.5],
+                ..Default::default()
+            },
+        );
+        write_fixture(&dir, "Td9d6h", &config, &[root, chance, turn]);
+        let table = PostflopTable::load(&dir, "Td9d6h", &config.hash8()).unwrap();
+
+        // The composed user→stored map, exactly as the lookup derives it.
+        let (canon_user, to_canon_user) = crate::iso::canonical_flop("Ts9s6h").unwrap();
+        let (canon_file, to_canon_file) = crate::iso::canonical_flop("Td9d6h").unwrap();
+        assert_eq!(canon_user, canon_file, "same isomorphism class");
+        let q = to_canon_file.inverse().compose(&to_canon_user);
+
+        let req = SolveRequest {
+            flop: "Ts9s6h".into(),
+            config,
+        };
+        let (mut walk, root) = TableWalk::new(table, req, Some(q)).unwrap();
+
+        // Outbound: user-space board, hands re-sorted with arrays in lockstep
+        // (stored "2d2c"→user 2s2c has the bigger key, so the order flips).
+        assert_eq!(root.board, vec!["6h", "9s", "Ts"]);
+        assert_eq!(root.hands, vec!["2d2c", "2s2c"]);
+        assert_eq!(root.weights, vec![0.2, 0.1]);
+        assert_eq!(root.freqs, vec![vec![0.4, 0.6], vec![0.6, 0.4]]);
+
+        // Passive peek: stored child answers translated, unstored answers
+        // None — and never spawns a live session.
+        let peeked = walk.peek(0).unwrap().unwrap();
+        assert_eq!(peeked.dealable, vec!["2c", "2s"]);
+        assert!(walk.peek(1).unwrap().is_none(), "pruned child peeks None");
+        assert_eq!(walk.node().unwrap().line, Vec::<String>::new());
+
+        // Inbound: a user-space deal reaches the stored child through the perm,
+        // and the served line reads back in user space.
+        let chance = walk.play(0).unwrap();
+        assert_eq!(chance.player, "chance");
+        assert_eq!(chance.dealable, vec!["2c", "2s"]);
+        let turn = walk.deal("2s").unwrap();
+        assert_eq!(turn.board, vec!["6h", "9s", "Ts", "2s"]);
+        assert_eq!(turn.line, vec!["Check", "deal 2s"]);
+        // Stored 2s2c maps to user 2d2c — consistently unblocked by the
+        // user-space turn card 2s, as the stored hand was by the stored 2d.
+        assert_eq!(turn.hands, vec!["2d2c"]);
+
+        let back = walk.back().unwrap();
+        assert_eq!(back.player, "chance");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// End-to-end iso equivalence: generate a table for Td9d6h, open it via
+    /// the suit-isomorphic Ts9s6h, and compare against a fresh live solve of
+    /// Ts9s6h itself — the exactness claim of design doc 08, plus the go-live
+    /// replay translation. Spawns solve-gen twice: `cargo test -- --ignored`.
+    #[test]
+    #[ignore]
+    fn iso_table_walk_matches_live_solve_of_raw_flop() {
+        let range = "99+,AJs+,KQs,AQo+";
+        let config = SpotConfig {
+            formation: "srp-btn-bb".into(),
+            oop_range: range.into(),
+            ip_range: range.into(),
+            flop_sizes: "50%".into(),
+            turn_sizes: "33%".into(),
+            river_sizes: "33%".into(),
+            stack_bb: 97.0,
+            pot_bb: 6.0,
+            rake_rate: 0.0,
+            rake_cap_bb: 0.0,
+        };
+        let out = std::env::temp_dir().join(format!("pt-iso-gen-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&out);
+        let args: Vec<String> = [
+            "tables",
+            "--flop",
+            "Td9d6h",
+            "--formation",
+            "srp-btn-bb",
+            "--oop",
+            range,
+            "--ip",
+            range,
+            "--sizes",
+            "50%",
+            "--turn-sizes",
+            "33%",
+            "--river-sizes",
+            "33%",
+            "--reach",
+            "0.0001",
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .chain([String::from("--out"), out.to_string_lossy().into_owned()])
+        .collect();
+        let status = crate::solution::solve_gen_command(&args).status().unwrap();
+        assert!(status.success(), "solve-gen tables failed");
+
+        let table = PostflopTable::load(out.join("srp-btn-bb"), "Td9d6h", &config.hash8()).unwrap();
+        let (_, to_canon_user) = crate::iso::canonical_flop("Ts9s6h").unwrap();
+        let (_, to_canon_file) = crate::iso::canonical_flop("Td9d6h").unwrap();
+        let q = to_canon_file.inverse().compose(&to_canon_user);
+        let req = SolveRequest {
+            flop: "Ts9s6h".into(),
+            config,
+        };
+
+        let (mut walk, root) = TableWalk::new(table, req.clone(), Some(q)).unwrap();
+        let (mut live, live_root) = TreeSession::start(&req).unwrap();
+
+        let close = |a: &[Vec<f32>], b: &[Vec<f32>]| {
+            a.len() == b.len()
+                && a.iter().zip(b).all(|(x, y)| {
+                    x.len() == y.len() && x.iter().zip(y).all(|(p, q)| (p - q).abs() <= 0.02)
+                })
+        };
+
+        // The translated table must be element-for-element parallel to the
+        // live solve of the raw flop: same board, same hands in the same
+        // order, matching strategy.
+        assert_eq!(root.board, live_root.board);
+        assert_eq!(root.hands, live_root.hands, "hand order re-sorts exactly");
+        assert!(close(&root.freqs, &live_root.freqs), "root strategy");
+
+        let ci = root.actions.iter().position(|a| a == "Check").unwrap();
+        let ip = walk.play(ci).unwrap();
+        let ip_live = live.play(ci).unwrap();
+        assert_eq!(ip.hands, ip_live.hands);
+        assert!(close(&ip.freqs, &ip_live.freqs), "flop line");
+
+        let ci2 = ip.actions.iter().position(|a| a == "Check").unwrap();
+        let chance = walk.play(ci2).unwrap();
+        let chance_live = live.play(ci2).unwrap();
+        assert_eq!(chance.player, "chance");
+        assert_eq!(chance.dealable, chance_live.dealable, "user-space runouts");
+
+        let card = chance.dealable[0].clone();
+        let turn = walk.deal(&card).unwrap();
+        let turn_live = live.deal(&card).unwrap();
+        assert_eq!(turn.board, turn_live.board);
+        assert_eq!(turn.hands, turn_live.hands);
+        assert!(close(&turn.freqs, &turn_live.freqs), "turn line");
+
+        // Off the stored frontier: the walk go-lives on the raw flop,
+        // replaying the stored line back through the perm.
+        let mut node = turn;
+        for _ in 0..3 {
+            if node.player == "chance" && node.board.len() == 4 {
+                break;
+            }
+            let c = node.actions.iter().position(|a| a == "Check").unwrap();
+            node = walk.play(c).unwrap();
+        }
+        assert_eq!(node.player, "chance");
+        assert_eq!(node.board.len(), 4, "replayed onto the river chance node");
+        assert_eq!(&node.board[..3], &["6h", "9s", "Ts"], "raw-flop live board");
 
         let _ = std::fs::remove_dir_all(&out);
     }

@@ -322,7 +322,7 @@ impl SolutionProvider for LiveSolutionProvider {
 /// Split a flop string like `"Td9d6h"` (or a joined board) into sorted
 /// lowercase cards — an order-independent identity, since the file stem keeps
 /// the user's card order but the board field is solver-sorted.
-fn flop_key(flop: &str) -> Vec<String> {
+pub(crate) fn flop_key(flop: &str) -> Vec<String> {
     let mut cards: Vec<String> = flop
         .as_bytes()
         .chunks(2)

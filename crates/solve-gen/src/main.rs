@@ -1201,6 +1201,44 @@ mod tests {
         assert_eq!(set.len(), 1755);
     }
 
+    /// The trainer's lookup-side canonicalization (design doc 08) must agree
+    /// with this enumeration byte-for-byte: every enumerated flop is its own
+    /// canonical form under the identity relabeling, and raw variants map
+    /// onto an enumerated flop. This is the cross-crate pin that keeps
+    /// `all-iso-flops` generation and iso lookup in the same suit space.
+    #[test]
+    fn trainer_iso_agrees_with_iso_flops() {
+        let flops = iso_flops();
+        for f in &flops {
+            let (canon, perm) = poker_trainer::iso::canonical_flop(f).unwrap();
+            assert_eq!(&canon, f, "canonical flops are fixed points");
+            assert!(perm.is_identity(), "{f}");
+        }
+        let set: std::collections::BTreeSet<&String> = flops.iter().collect();
+        for raw in ["Ts9s6h", "AhKh2d", "8h8c3d", "QdJs7c", "2s3s4s"] {
+            let (canon, perm) = poker_trainer::iso::canonical_flop(raw).unwrap();
+            assert!(set.contains(&canon), "{raw} → {canon} not enumerated");
+            // The returned relabeling really carries the raw flop onto it.
+            let mut mapped: Vec<String> = raw
+                .as_bytes()
+                .chunks(2)
+                .map(|c| {
+                    perm.card(std::str::from_utf8(c).unwrap())
+                        .unwrap()
+                        .to_lowercase()
+                })
+                .collect();
+            mapped.sort();
+            let mut canon_cards: Vec<String> = canon
+                .as_bytes()
+                .chunks(2)
+                .map(|c| std::str::from_utf8(c).unwrap().to_lowercase())
+                .collect();
+            canon_cards.sort();
+            assert_eq!(mapped, canon_cards, "{raw}");
+        }
+    }
+
     /// Protocol dispatch without a solve: errors are responses, never panics,
     /// and `id` echoes back.
     #[test]

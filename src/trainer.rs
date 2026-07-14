@@ -604,22 +604,68 @@ fn resolve_provider(req: Option<SolveRequest>) -> Option<Box<dyn SolutionProvide
 /// A generated reach-pruned table for this spot, if one exists under
 /// `data/tables/<formation>/`. `None` (missing / too-new / malformed) means
 /// live-solve instead.
-fn load_table(req: &SolveRequest) -> Option<PostflopTable> {
+fn load_table(req: &SolveRequest) -> Option<(PostflopTable, Option<crate::iso::SuitPerm>)> {
     let dir = std::path::Path::new("data/tables").join(&req.config.formation);
-    PostflopTable::load(dir, &req.flop, &req.config.hash8()).ok()
+    find_table(&dir, &req.flop, &req.config.hash8())
+}
+
+/// The table serving `flop` in `dir`, plus the user→stored suit map when it
+/// was stored under an isomorphic flop (design doc 08). Exact filename first
+/// (today's behavior), then the canonical filename (the `all-iso-flops`
+/// naming), then a directory scan — legacy tiers keep the manifest's card
+/// order and suits in their stems, so any stem in the same isomorphism class
+/// serves through the composed relabeling.
+fn find_table(
+    dir: &std::path::Path,
+    flop: &str,
+    hash: &str,
+) -> Option<(PostflopTable, Option<crate::iso::SuitPerm>)> {
+    if let Ok(t) = PostflopTable::load(dir, flop, hash) {
+        return Some((t, None));
+    }
+    let (canon, to_canon) = crate::iso::canonical_flop(flop)?;
+    if let Ok(t) = PostflopTable::load(dir, &canon, hash) {
+        return Some((t, Some(to_canon).filter(|p| !p.is_identity())));
+    }
+    let suffix = format!("-{hash}.jsonl");
+    for entry in std::fs::read_dir(dir).ok()? {
+        let Ok(name) = entry.map(|e| e.file_name()) else {
+            continue;
+        };
+        let Some(stem) = name.to_str().and_then(|n| n.strip_suffix(&suffix)) else {
+            continue;
+        };
+        let Some((c, to_canon_file)) = crate::iso::canonical_flop(stem) else {
+            continue;
+        };
+        if c != canon {
+            continue;
+        }
+        let Ok(t) = PostflopTable::load(dir, stem, hash) else {
+            continue;
+        };
+        // user→stored = (file→canonical)⁻¹ ∘ (user→canonical).
+        let q = to_canon_file.inverse().compose(&to_canon);
+        return Some((t, Some(q).filter(|p| !p.is_identity())));
+    }
+    None
 }
 
 /// Open a tree source for `req`: a disk-backed [`TableWalk`] when a reach-pruned
 /// table is generated (off-path lines live-solve transparently), else a live
 /// [`TreeSession`]. Both are `dyn TreeWalk`, so callers don't care which.
 fn open_walk(req: &SolveRequest) -> io::Result<(Box<dyn TreeWalk>, TreeNode)> {
-    if let Some(table) = load_table(req) {
+    if let Some((table, perm)) = load_table(req) {
+        let via = match &perm {
+            Some(_) => " via a suit-isomorphic stored flop",
+            None => "",
+        };
         eprintln!(
-            "Using reach-pruned table for {} ({} nodes) — off-path lines live-solve.",
+            "Using reach-pruned table for {}{via} ({} nodes) — off-path lines live-solve.",
             req.flop,
             table.len()
         );
-        let (walk, root) = TableWalk::new(table, req.clone())?;
+        let (walk, root) = TableWalk::new(table, req.clone(), perm)?;
         Ok((Box::new(walk), root))
     } else {
         let (session, root) = TreeSession::start(req)?;
@@ -677,7 +723,7 @@ pub fn run_table(req: Option<SolveRequest>, line: Option<String>, locks: Option<
                     return;
                 }
                 let flop: String = f.board.iter().take(3).map(String::as_str).collect();
-                if !flop.eq_ignore_ascii_case(&req.flop) {
+                if crate::solution::flop_key(&flop) != crate::solution::flop_key(&req.flop) {
                     eprintln!(
                         "--locks was saved on flop {flop}, not {} — refusing to apply it.",
                         req.flop
@@ -1514,6 +1560,69 @@ fn fmt(c: Card) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Table lookup coverage (design doc 08): an exact stem hits untranslated;
+    /// a reordered or isomorphic flop hits through the scan with the composed
+    /// perm; different classes and hashes stay misses.
+    #[test]
+    fn find_table_serves_isomorphs_and_legacy_stems() {
+        let config = crate::solution::SpotConfig {
+            formation: "srp-btn-bb".into(),
+            oop_range: "22".into(),
+            ip_range: "33".into(),
+            flop_sizes: "50%".into(),
+            turn_sizes: "33%".into(),
+            river_sizes: "33%".into(),
+            stack_bb: 97.0,
+            pot_bb: 6.0,
+            rake_rate: 0.0,
+            rake_cap_bb: 0.0,
+        };
+        let hash = config.hash8();
+        let dir = std::env::temp_dir().join(format!("pt-find-table-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        // Legacy-style stem: the manifest's card order, not the canonical form.
+        std::fs::write(
+            dir.join(format!("header-{hash}.json")),
+            serde_json::json!({
+                "version": 1, "formation": "srp-btn-bb", "config": config,
+                "config_hash": hash,
+                "generator": {"version": "0", "exploitability_bb": 0.02},
+                "reach": 0.002,
+            })
+            .to_string(),
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join(format!("td9d6h-{hash}.jsonl")),
+            serde_json::json!({
+                "reach": 1.0, "player": "oop",
+                "board": ["6h", "9d", "Td"], "pot_bb": 6.0,
+                "line": [], "actions": ["Check"],
+                "hands": ["3d3c"], "freqs": [[1.0]], "evs": [[0.0]],
+                "weights": [1.0], "equity": [0.5],
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        // Exact stem: no translation.
+        let (_, perm) = find_table(&dir, "Td9d6h", &hash).unwrap();
+        assert!(perm.is_none());
+        // Same cards reordered: found by scan, identity perm dropped.
+        let (_, perm) = find_table(&dir, "9dTd6h", &hash).unwrap();
+        assert!(perm.is_none());
+        // Suit-isomorphic flop: found with the composed user→stored map.
+        let (_, perm) = find_table(&dir, "Ts9s6h", &hash).unwrap();
+        let q = perm.expect("isomorph needs a translation");
+        assert_eq!(q.card("2s").as_deref(), Some("2d"), "user s → stored d");
+        // A different isomorphism class and a different config both miss.
+        assert!(find_table(&dir, "Th9d6c", &hash).is_none());
+        assert!(find_table(&dir, "Td9d6h", "deadbeef").is_none());
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn dealt_class_combos_map_back_to_their_class() {
