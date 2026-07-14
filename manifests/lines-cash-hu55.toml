@@ -1,0 +1,43 @@
+# Grounded-line tier (design doc 08): every cash-hu55 flop-closing line with
+# ≥ 0.1% arrival mass, each solved across all 1,755 canonical flops. Ordered
+# by mass (`export-range --ruleset cash-hu55` reprints the ranking) — trim or
+# reorder freely; each run is ~1,755 solves ≈ 3-4 idle days and ~20-70 GB.
+# Queue AFTER manifests/all-1755.toml:
+#
+#   scripts/idle-run.sh cargo run -p solve-gen --release -- tables \
+#     --manifest manifests/lines-cash-hu55.toml --no-save-bins
+#
+# Tables land in data/tables/cash-hu55_<line>/ and serve
+# `table --from cash-hu55:<line> --board <any flop>` instantly.
+
+[[runs]]
+from = "cash-hu55:r2.5-c"     # SB opens 2.5x, BB calls (mass 16.3%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "cash-hu55:r3-c"       # SB opens 3x, BB calls (9.3%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "cash-hu55:c-x"        # limped, checked through preflop (8.7%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "cash-hu55:c-r3-c"     # SB limps, BB raises, SB calls (5.5%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "cash-hu55:r2.5-r7.5-c" # 3-bet pot, opener calls (1.2%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "cash-hu55:r3-r9-c"    # 3-bet pot vs the 3x open (0.6%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "cash-hu55:r2-c"       # min-open called (0.2%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "cash-hu55:r2.5-r10-c" # big 3-bet vs 2.5x open (0.1%)
+flops = "all-iso-flops"

@@ -1,8 +1,7 @@
 use clap::{Args, Parser, Subcommand, ValueEnum};
+use poker_trainer::ground::{self, derive_line_spot, LineSpot};
 use poker_trainer::postflop_table::{PostflopTable, TableNode};
-use poker_trainer::preflop::{
-    class_index, class_name, parse_cards, weighted_range_string, PreflopCharts,
-};
+use poker_trainer::preflop::{class_index, class_name, parse_cards, PreflopCharts};
 use poker_trainer::solution::{formation, SolveRequest, SpotConfig};
 use poker_trainer::{analyze, report, stats, trainer};
 use serde::Serialize;
@@ -311,72 +310,6 @@ fn main() {
     }
 }
 
-/// Position-derived solve inputs for a flop-closing preflop `line`: both live
-/// seats (OOP, IP), their per-class arrival reaches + weighted range strings,
-/// the pot, effective stack, and rake — everything `solve-gen solve` needs,
-/// plus the reaches for hero/hand provenance.
-struct LineSpot {
-    oop_seat: String,
-    ip_seat: String,
-    oop_reach: Vec<f32>,
-    ip_reach: Vec<f32>,
-    oop_range: String,
-    ip_range: String,
-    pot: f32,
-    stack: f32,
-    rake_rate: f32,
-    rake_cap: f32,
-}
-
-/// Condense a solved preflop `line` into its two-player flop [`LineSpot`].
-/// `Err` (user-facing) if the line isn't a clean two-player flop close or an
-/// ancestor node was pruned — everything the caller should report and bail on.
-fn derive_line_spot(charts: &PreflopCharts, line: &str) -> Result<LineSpot, String> {
-    let (oop_seat, ip_seat) = charts.flop_seats(line).ok_or_else(|| {
-        format!(
-            "{line:?} isn't a two-player flop line (list lines with: export-range --ruleset <id>)"
-        )
-    })?;
-    let pot = charts.flop_pot_bb(line).ok_or_else(|| {
-        format!("{line:?} doesn't close to a flop (more action follows, or it's a fold/all-in)")
-    })?;
-    let reach = |seat: &str| {
-        charts
-            .seat_reach(line, seat)
-            .ok_or_else(|| format!("{line:?} has a pruned/missing ancestor node"))
-    };
-    let oop_reach = reach(&oop_seat)?;
-    let ip_reach = reach(&ip_seat)?;
-    let oop_range = weighted_range_string(&oop_reach);
-    let ip_range = weighted_range_string(&ip_reach);
-    if oop_range.is_empty() || ip_range.is_empty() {
-        return Err(format!(
-            "{line:?} is unreachable for a live seat under the equilibrium"
-        ));
-    }
-    let stack = charts
-        .stack_bb()
-        .ok_or_else(|| "ruleset config lacks stack_bb".to_string())?
-        - charts.line_commitment_bb(line);
-    let (rake_rate, rake_cap) = charts.rake();
-    Ok(LineSpot {
-        oop_seat,
-        ip_seat,
-        oop_reach,
-        ip_reach,
-        oop_range,
-        ip_range,
-        pot,
-        stack,
-        rake_rate,
-        rake_cap,
-    })
-}
-
-/// Base [`SpotConfig`] for a `<ruleset>:<line>` spec (the `--from` flag): the
-/// `srp-btn-bb` shell — solver-default sizes and a formation solve-gen's
-/// `for_formation` accepts, so the cache key matches the `export-range`-emitted
-/// command — with ranges/pot/stack/rake replaced by the preflop equilibrium.
 /// Print `msg` to stderr and exit with status 2 — the shared "bad input, can't
 /// proceed" bailout for the `export-range`/`--from` paths.
 fn die(msg: impl std::fmt::Display) -> ! {
@@ -384,29 +317,25 @@ fn die(msg: impl std::fmt::Display) -> ! {
     std::process::exit(2);
 }
 
-/// Prints and exits on a bad spec (there's nothing to solve without it).
+/// [`SpotConfig`] for a `<ruleset>:<line>` spec (the `--from` flag), built by
+/// the shared [`ground::ground`] constructor — the same one solve-gen's
+/// `--from` and manifest `from =` runs call, so the cache key aligns across
+/// all of them by construction. Prints and exits on a bad spec (there's
+/// nothing to solve without it).
 fn grounded_config(spec: &str) -> SpotConfig {
-    let (ruleset, line) = spec.split_once(':').unwrap_or_else(|| {
-        die(format!(
-            "--from expects <ruleset>:<line>, e.g. cash-hu55:r2.5-c (got {spec:?})"
-        ))
-    });
-    let charts = PreflopCharts::load(format!("data/preflop/{ruleset}"))
-        .unwrap_or_else(|e| die(e.to_string()));
-    let s = derive_line_spot(&charts, line).unwrap_or_else(|e| die(e));
+    let g = ground::ground(spec, "data/preflop").unwrap_or_else(|e| die(e));
+    let line = spec.split_once(':').map_or(spec, |(_, l)| l);
     eprintln!(
         "# grounded in {} line {line} — OOP={} IP={} pot={:.2}bb eff_stack={:.2}bb rake={}/{}bb",
-        charts.header.label, s.oop_seat, s.ip_seat, s.pot, s.stack, s.rake_rate, s.rake_cap
+        g.label,
+        g.spot.oop_seat,
+        g.spot.ip_seat,
+        g.spot.pot,
+        g.spot.stack,
+        g.spot.rake_rate,
+        g.spot.rake_cap
     );
-    let mut config = SpotConfig::for_formation("srp-btn-bb", "data/ranges")
-        .unwrap_or_else(|e| die(e.to_string()));
-    config.oop_range = s.oop_range;
-    config.ip_range = s.ip_range;
-    config.pot_bb = s.pot;
-    config.stack_bb = s.stack;
-    config.rake_rate = s.rake_rate;
-    config.rake_cap_bb = s.rake_cap;
-    config
+    g.config
 }
 
 /// `export-range`: bridge a solved preflop line into `solve-gen solve` inputs.
@@ -424,19 +353,23 @@ fn run_export_range(
     let charts = PreflopCharts::load(format!("data/preflop/{ruleset}")).unwrap_or_else(|e| die(e));
 
     let Some(line) = line else {
-        let lines = charts.flop_lines();
+        let mut lines = charts.flop_lines();
         if lines.is_empty() {
             die(format!(
                 "no flop-closing lines in {ruleset}'s committed charts \
                  (regenerate charts.jsonl for rarer/deeper lines)"
             ));
         }
+        // Most-travelled first: arrival mass is what decides which lines are
+        // worth a precomputed table tier (design doc 08).
+        let mass = |l: &str| charts.line_mass(l).unwrap_or(0.0);
+        lines.sort_by(|a, b| mass(&b.0).total_cmp(&mass(&a.0)).then(a.0.cmp(&b.0)));
         println!(
-            "Flop-closing lines for {} — pass one to --line:",
+            "Flop-closing lines for {} — pass one to --line (sorted by arrival mass):",
             charts.header.label
         );
         for (l, pot) in lines {
-            println!("  {l}\t(pot {pot:.1}bb)");
+            println!("  {l}\t(pot {pot:.1}bb, mass {:.2}%)", mass(&l) * 100.0);
         }
         return;
     };
@@ -489,14 +422,23 @@ fn run_export_range(
             );
         }
     }
-    let args = format!(
+    // The --from form is the canonical, hash-aligned command: solve-gen
+    // grounds it through the same shared constructor, so its cache key equals
+    // the trainer's `--from <spec>`. The raw args stay printed for manual
+    // tinkering, but f32 formatting rounds pot/stack — a raw invocation can
+    // land on a different config hash.
+    let spec = format!("{ruleset}:{line}");
+    let raw = format!(
         "--oop \"{oop}\" --ip \"{ip}\" --pot {pot:.2} --stack {stack:.2} \
          --rake-rate {rake_rate} --rake-cap {rake_cap}"
     );
     match flop {
-        Some(flop) => println!("cargo run -p solve-gen --release -- solve --flop {flop} {args}"),
-        None => println!("{args}"),
+        Some(flop) => {
+            println!("cargo run -p solve-gen --release -- solve --flop {flop} --from {spec}")
+        }
+        None => println!("--from {spec}"),
     }
+    println!("# raw equivalent (not hash-aligned; f32 formatting rounds): {raw}");
 }
 
 /// Report (to stderr) how often hero reaches the line holding `hand`, using

@@ -24,6 +24,16 @@ use std::path::Path;
 /// The newest table format this reader understands.
 pub const FORMAT_VERSION: u32 = 1;
 
+/// The on-disk directory name for a formation id. Grounded ids embed a `:`
+/// (`"cash-hu55:r2.5-c"`), which Windows filenames forbid — swap it for `_`,
+/// which appears in neither formation ids nor line tokens. A no-op for the
+/// curated formations, so existing table trees stay valid. Headers and
+/// configs keep the raw id; only the path is sanitized (generator write side
+/// and trainer read side both come through here).
+pub fn formation_dir(formation: &str) -> String {
+    formation.replace(':', "_")
+}
+
 /// Join key separator for an action line — a unit separator, never a label char.
 const SEP: &str = "\u{1f}";
 

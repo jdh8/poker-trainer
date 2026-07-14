@@ -1,0 +1,50 @@
+# Grounded-line tier (design doc 08): the ten most-travelled mtt89 flop
+# lines (1 BB ante), each solved across all 1,755 canonical flops. Ordered by
+# arrival mass (`export-range --ruleset mtt89` reprints the ranking) — trim
+# or extend freely; each run is ~1,755 solves ≈ 3-4 idle days and ~20-70 GB.
+# Queue AFTER manifests/all-1755.toml:
+#
+#   scripts/idle-run.sh cargo run -p solve-gen --release -- tables \
+#     --manifest manifests/lines-mtt89.toml --no-save-bins
+#
+# Seat order per line token: UTG-HJ-CO-BTN-SB-BB.
+
+[[runs]]
+from = "mtt89:f-f-f-f-c-x"    # SB limps, BB checks (mass 9.5%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt89:f-f-f-r3-f-c"   # BTN opens, BB defends (8.0%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt89:f-f-r3-f-f-c"   # CO opens, BB defends (6.9%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt89:f-r3-f-f-f-c"   # HJ opens, BB defends (6.3%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt89:r3-f-f-f-f-c"   # UTG opens, BB defends (5.9%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt89:f-f-f-f-c-r3-c" # SB limps, BB raises, SB calls (5.2%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt89:f-f-f-f-r3-c"   # SB opens, BB defends (3.0%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt89:f-f-f-r3-c-f"   # BTN opens, SB cold-calls (1.3%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt89:f-f-r3-f-c-f"   # CO opens, SB cold-calls (1.1%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt89:f-r3-f-f-c-f"   # HJ opens, SB cold-calls (1.0%)
+flops = "all-iso-flops"

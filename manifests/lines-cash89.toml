@@ -1,0 +1,50 @@
+# Grounded-line tier (design doc 08): the ten most-travelled cash89 flop
+# lines, each solved across all 1,755 canonical flops. Ordered by arrival
+# mass (`export-range --ruleset cash89` reprints the ranking) — trim or
+# extend freely; each run is ~1,755 solves ≈ 3-4 idle days and ~20-70 GB.
+# Queue AFTER manifests/all-1755.toml:
+#
+#   scripts/idle-run.sh cargo run -p solve-gen --release -- tables \
+#     --manifest manifests/lines-cash89.toml --no-save-bins
+#
+# Seat order per line token: UTG-HJ-CO-BTN-SB-BB.
+
+[[runs]]
+from = "cash89:f-f-f-f-r3-c"   # SB opens, BB defends (mass 6.4%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "cash89:f-f-f-r3-f-c"   # BTN opens, BB defends (5.0%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "cash89:f-f-r3-f-f-c"   # CO opens, BB defends (3.9%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "cash89:f-r3-f-f-f-c"   # HJ opens, BB defends (3.1%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "cash89:r3-f-f-f-f-c"   # UTG opens, BB defends (2.4%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "cash89:f-f-f-f-c-x"    # SB limps, BB checks (1.9%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "cash89:r2.5-f-f-f-f-c" # UTG opens 2.5x, BB defends (1.2%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "cash89:f-f-f-r3-c-f"   # BTN opens, SB cold-calls (1.0%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "cash89:f-f-r3-f-c-f"   # CO opens, SB cold-calls (0.8%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "cash89:f-f-f-f-c-r3-c" # SB limps, BB raises, SB calls (0.8%)
+flops = "all-iso-flops"

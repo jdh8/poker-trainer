@@ -397,6 +397,39 @@ impl PreflopCharts {
         self.seat_reach(path, &seat)
     }
 
+    /// How often a random deal travels `line` under the equilibrium: the
+    /// product, over every seat that acts along it, of that seat's
+    /// combo-weighted arrival marginal. Ranks lines for a precompute tier
+    /// (design doc 08). `None` if an ancestor node is pruned/missing.
+    // ponytail: product of marginals — class-level card removal and cross-seat
+    // hand correlation are ignored, like everything in these charts. Fine for
+    // ranking; not a simulator.
+    pub fn line_mass(&self, line: &str) -> Option<f32> {
+        let mut seats: Vec<String> = Vec::new();
+        let mut prefix = String::new();
+        for tok in line.split('-').filter(|t| !t.is_empty()) {
+            let node = self.node(&prefix)?;
+            if !seats.contains(&node.seat) {
+                seats.push(node.seat.clone());
+            }
+            if !prefix.is_empty() {
+                prefix.push('-');
+            }
+            prefix.push_str(tok);
+        }
+        let mut mass = 1.0f32;
+        for seat in &seats {
+            let reach = self.seat_reach(line, seat)?;
+            let combos: f32 = reach
+                .iter()
+                .enumerate()
+                .map(|(i, r)| class_combos(i) as f32 * r)
+                .sum();
+            mass *= combos / 1326.0;
+        }
+        Some(mass)
+    }
+
     /// A ruleset-config number, e.g. `stack_bb`, `bb`, `ante_bb`.
     fn cfg_f32(&self, key: &str) -> Option<f32> {
         self.header

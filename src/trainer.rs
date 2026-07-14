@@ -605,7 +605,8 @@ fn resolve_provider(req: Option<SolveRequest>) -> Option<Box<dyn SolutionProvide
 /// `data/tables/<formation>/`. `None` (missing / too-new / malformed) means
 /// live-solve instead.
 fn load_table(req: &SolveRequest) -> Option<(PostflopTable, Option<crate::iso::SuitPerm>)> {
-    let dir = std::path::Path::new("data/tables").join(&req.config.formation);
+    let dir = std::path::Path::new("data/tables")
+        .join(crate::postflop_table::formation_dir(&req.config.formation));
     find_table(&dir, &req.flop, &req.config.hash8())
 }
 

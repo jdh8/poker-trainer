@@ -494,6 +494,24 @@ mod tests {
     }
 
     #[test]
+    fn curated_formation_hashes_are_pinned() {
+        // Hundreds of GB of generated tables and solver caches are keyed by
+        // these literals. If this fails, you changed SpotConfig's shape or
+        // serialization, a default, or a committed range file — either revert,
+        // or accept that every generated artifact regenerates under new keys.
+        for (id, hash) in [
+            ("srp-btn-bb", "d728de43"),
+            ("srp-co-bb", "2592ed4a"),
+            ("srp-sb-bb", "ac3d0368"),
+            ("3bp-bb-btn", "289b7689"),
+            ("3bp-btn-co", "921a7bc2"),
+        ] {
+            let c = SpotConfig::for_formation(id, "data/ranges").unwrap();
+            assert_eq!(c.hash8(), hash, "{id} re-keyed");
+        }
+    }
+
+    #[test]
     fn for_formation_reads_ranges_and_rejects_unknown_ids() {
         let dir = std::env::temp_dir().join(format!("pt-ranges-test-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);

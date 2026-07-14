@@ -96,6 +96,10 @@ struct TablesArgs {
     /// Rake cap in bb (single-flop path).
     #[arg(long)]
     rake_cap: Option<f32>,
+    /// Ground the config in a solved preflop line, `<ruleset>:<line>` (see
+    /// `solve --from`). Single-flop path.
+    #[arg(long)]
+    from: Option<String>,
     /// Reach threshold: prune (don't store) subtrees whose arrival probability
     /// along the betting path falls below this. Chance deals don't penalize it.
     #[arg(long, default_value_t = 0.002)]
@@ -146,6 +150,13 @@ struct SolveArgs {
     /// Rake cap in bb.
     #[arg(long)]
     rake_cap: Option<f32>,
+    /// Ground the config in a solved preflop line: `<ruleset>:<line>`, e.g.
+    /// cash-hu55:r2.5-c. Ranges/pot/stack/rake come from that equilibrium via
+    /// the trainer's shared constructor, so the cache key matches the
+    /// trainer's own `--from <spec>`; the remaining overrides apply on top.
+    /// --formation is ignored when set.
+    #[arg(long)]
+    from: Option<String>,
     /// Output directory (defaults to the repo's data/solutions).
     #[arg(long)]
     out: Option<PathBuf>,
@@ -199,8 +210,13 @@ fn seats(formation_id: &str) -> (&'static str, &'static str) {
 }
 
 fn spot_from_args(a: &SolveArgs) -> Result<Spot, String> {
-    let mut c = SpotConfig::for_formation(&a.formation, repo_path("data/ranges"))
-        .map_err(|e| e.to_string())?;
+    // --from grounds through the trainer's shared constructor — the same code
+    // the trainer's own --from runs, so the config hash aligns by construction.
+    let mut c = match &a.from {
+        Some(spec) => poker_trainer::ground::ground(spec, repo_path("data/preflop"))?.config,
+        None => SpotConfig::for_formation(&a.formation, repo_path("data/ranges"))
+            .map_err(|e| e.to_string())?,
+    };
     let overrides = [
         (&mut c.oop_range, &a.oop),
         (&mut c.ip_range, &a.ip),
@@ -249,6 +265,7 @@ fn tables_spots(a: &TablesArgs) -> Result<Vec<Spot>, String> {
             pot: a.pot,
             rake_rate: a.rake_rate,
             rake_cap: a.rake_cap,
+            from: a.from.clone(),
             out: None,
         };
         return Ok(vec![spot_from_args(&sa)?]);
@@ -271,7 +288,11 @@ struct Manifest {
 
 #[derive(Deserialize)]
 struct Run {
-    formation: String,
+    /// A curated formation id. Exactly one of this or `from`.
+    formation: Option<String>,
+    /// A grounded `<ruleset>:<line>` spec (design doc 08). Exactly one of
+    /// this or `formation`.
+    from: Option<String>,
     /// A `[flopsets]` key, or the built-in `"all-iso-flops"`.
     flops: String,
     flop_sizes: Option<String>,
@@ -292,8 +313,15 @@ fn load_manifest(path: &Path) -> Result<Vec<Spot>, String> {
 fn manifest_spots(m: &Manifest) -> Result<Vec<Spot>, String> {
     let mut spots = Vec::new();
     for run in &m.runs {
-        let mut c = SpotConfig::for_formation(&run.formation, repo_path("data/ranges"))
-            .map_err(|e| e.to_string())?;
+        let mut c = match (&run.formation, &run.from) {
+            (Some(f), None) => {
+                SpotConfig::for_formation(f, repo_path("data/ranges")).map_err(|e| e.to_string())?
+            }
+            (None, Some(spec)) => {
+                poker_trainer::ground::ground(spec, repo_path("data/preflop"))?.config
+            }
+            _ => return Err("each [[runs]] needs exactly one of formation/from".into()),
+        };
         let overrides = [
             (&mut c.flop_sizes, &run.flop_sizes),
             (&mut c.turn_sizes, &run.turn_sizes),
@@ -758,7 +786,9 @@ fn gen_info(exploitability_chips: f32) -> GenInfo {
 fn write_tables(spots: &[Spot], out_root: &Path, threshold: f32, save_bins: bool) {
     let total = spots.len();
     for (i, spot) in spots.iter().enumerate() {
-        let dir = out_root.join(&spot.config.formation);
+        let dir = out_root.join(poker_trainer::postflop_table::formation_dir(
+            &spot.config.formation,
+        ));
         fs::create_dir_all(&dir).unwrap();
         let hash = spot.config.hash8();
         let stem = format!("{}-{hash}", spot.flop.to_lowercase());
@@ -1320,5 +1350,54 @@ mod tests {
         assert_eq!(spot.config.pot_bb, 6.0); // defaulted
         assert!(!spot.config.oop_range.is_empty()); // read from data/ranges
         assert!(spot.label.contains("Td9d6h"));
+    }
+
+    /// `--from` and manifest `from =` runs must land on the exact config the
+    /// trainer's own `--from` builds — the shared constructor is the whole
+    /// hash-alignment story (design doc 08), so pin it from this side too.
+    #[test]
+    fn grounded_from_aligns_with_the_shared_constructor() {
+        let cli = Cli::parse_from([
+            "solve-gen",
+            "solve",
+            "--flop",
+            "Td9d6h",
+            "--from",
+            "cash-hu55:r2.5-c",
+        ]);
+        let Some(Command::Solve(a)) = cli.command else {
+            panic!("expected solve subcommand")
+        };
+        let spot = spot_from_args(&a).unwrap();
+        let g =
+            poker_trainer::ground::ground("cash-hu55:r2.5-c", repo_path("data/preflop")).unwrap();
+        assert_eq!(spot.config, g.config);
+        assert_eq!(spot.config.hash8(), g.config.hash8());
+        assert_eq!(spot.config.formation, "cash-hu55:r2.5-c");
+        // The on-disk directory name is Windows-safe but reversible enough.
+        assert_eq!(
+            poker_trainer::postflop_table::formation_dir(&spot.config.formation),
+            "cash-hu55_r2.5-c"
+        );
+
+        let m: Manifest =
+            toml::from_str("[[runs]]\nfrom = \"cash-hu55:r2.5-c\"\nflops = \"all-iso-flops\"\n")
+                .unwrap();
+        let spots = manifest_spots(&m).unwrap();
+        assert_eq!(spots.len(), 1755);
+        assert_eq!(spots[0].config.hash8(), g.config.hash8());
+
+        // Exactly one of formation/from.
+        let both: Manifest = toml::from_str(
+            "[[runs]]\nformation = \"srp-btn-bb\"\nfrom = \"cash-hu55:r2.5-c\"\nflops = \"all-iso-flops\"\n",
+        )
+        .unwrap();
+        assert!(manifest_spots(&both)
+            .unwrap_err()
+            .contains("exactly one of formation/from"));
+        let neither: Manifest = toml::from_str("[[runs]]\nflops = \"all-iso-flops\"\n").unwrap();
+        assert!(manifest_spots(&neither)
+            .unwrap_err()
+            .contains("exactly one of formation/from"));
     }
 }
