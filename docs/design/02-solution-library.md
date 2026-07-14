@@ -92,9 +92,12 @@ exists** (resumable; pairs with `scripts/idle-run.sh`). The current hardcoded
 
 Flop sets are named lists in the manifest, plus one generated set:
 `all-iso-flops` = the 1,755 suit-isomorphic flops, enumerated in code (tiny
-function; the standard 22,100/isomorphism reduction). Suggested tiers:
-`starter-8` (in git) → `texture-25` → `broad-95` → `all-1755` (generated
-locally, never committed).
+function; the standard 22,100/isomorphism reduction). Tiers: `starter-8`
+(in git) → `texture-25` → `all-1755` (shipped as `manifests/all-1755.toml`
+for the reach-pruned *tables*, one run per formation — with the iso lookup
+of [design 08](08-instant-flops.md) that tier is complete instant coverage
+of all 22,100 flops; generated locally, never committed). The intermediate
+`broad-95` snapshot tier lost its reason to exist and was dropped.
 
 ## Scale math & storage
 

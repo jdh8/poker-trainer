@@ -93,9 +93,38 @@ flop     texture   node    combos   bet%  ev(bb)  mix
 
 Copy `manifests/texture-25.toml` as the template: `[flopsets]` are named
 card-string lists, plus the generated keyword `"all-iso-flops"` (the 1,755
-suit-isomorphic flops). `broad-95` is the next tier the docs name (~95 flops;
-no manifest exists yet). New tiers' outputs stay untracked — that is the git
+suit-isomorphic flops). New tiers' outputs stay untracked — that is the git
 policy, not an accident.
+
+## Reach-pruned tables at scale (design 08)
+
+The tables pipeline has its own tier system with different rules:
+
+- `manifests/all-1755.toml` — every canonical flop × the 5 formations. With
+  the trainer's iso lookup (`src/iso.rs`) that is complete instant coverage
+  of all 22,100 flops. ~200-300 s per flop under idle priority → **4-6 idle
+  days and ~20-80 GB per formation** (data/tables symlinks to
+  `/srv/var/poker/tables`; resume = the flop's `.jsonl` exists).
+- **Always pass `--no-save-bins` on manifest tables runs** — a solver save is
+  0.65-12 GB per flop, and the full tier would write 10+ TB of cache:
+
+  ```sh
+  scripts/idle-run.sh cargo run -p solve-gen --release -- tables \
+    --manifest manifests/all-1755.toml --no-save-bins
+  ```
+
+- Grounded preflop lines: `[[runs]] from = "<ruleset>:<line>"` instead of
+  `formation =` (exactly one of the two). Rank a ruleset's lines by arrival
+  mass with `cargo run -q -- export-range --ruleset <id>`; the shipped tiers
+  are `manifests/lines-{cash-hu55,cash89,mtt89}.toml`, queued behind the
+  formations. Tables land in `data/tables/<ruleset>_<line>/` and serve
+  `table --from <ruleset>:<line> --board <any flop>` instantly.
+- Hash discipline: `curated_formation_hashes_are_pinned` (src/solution.rs)
+  and `grounded_from_aligns_with_the_shared_constructor` (solve-gen) guard
+  the cache keys. If either fails, you re-keyed generated artifacts — revert
+  or regenerate deliberately.
+- After new flops/configs land, refresh the local web export:
+  `scripts/serve-web.sh --export`.
 
 ## The preflop chart library (design 07)
 

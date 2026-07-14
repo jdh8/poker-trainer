@@ -91,9 +91,19 @@ Range scored: 141 combos in 12 buckets.
 …
 ```
 
-`drill hand` — needs `--board` and starts a real tree-session solve
-(CPU-minutes on a cache miss). **Do not use it for casual verification** — the
-ignored tests below exercise the same path with a tiny solve.
+`drill hand` — needs `--board`. When a reach-pruned table covers the flop's
+isomorphism class (design 08 — check with `ls data/tables/<formation_dir>/`),
+it opens instantly and is safe to drive headlessly; guard against an
+accidental live solve with `POKER_TRAINER_SOLVE_GEN=/bin/false` (a table miss
+then errors instead of solving for minutes). On a genuine miss it starts a
+real tree-session solve (CPU-minutes) — **do not use that for casual
+verification**; the ignored tests below exercise the same path with a tiny
+solve. `--from <ruleset>:<line>` grounds the config in a preflop line.
+
+`scripts/serve-web.sh` — local web viewer against the full table store
+(`--export` refreshes `/srv/var/poker/tables-web` first). Serves on :8000 in
+the foreground; for a headless check, background it and curl
+`http://localhost:8000/tables/index.json`.
 
 `table` — a ratatui TUI, **requires a real TTY, never run it headless**.
 Verify `table.rs` changes with `cargo test table::`; when visual confirmation

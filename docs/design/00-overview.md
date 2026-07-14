@@ -42,6 +42,7 @@ design doc (`01`–`07`).
 | Range-builder drills + leak buckets | ✅ `drill range` | — |
 | **Full-hand practice** (flop→river vs. equilibrium villain) | ✅ `drill hand` (`--board` spots; curated-library sampling not yet built) | — |
 | **Reach-pruned postflop tables** (offline flop+turn strategy, live-solve off the frontier) | ✅ `solve-gen tables` → `drill hand` / `table --board` read a table when generated | — |
+| **Instant tables for any flop** (GTO-Wizard feel: canonical 1,755-flop store + suit relabeling at lookup, exact) | ✅ iso lookup + `all-1755` / grounded-line manifests + `--from` hash alignment + local web flop entry; the store itself fills over idle weeks | [08](08-instant-flops.md) |
 | Persistent session stats, leak trends | ✅ `stats` over `history.jsonl` | — |
 | Preflop charts + preflop drills | ✅ solved 6-max charts (`crates/preflop-gen` MCCFR: cash depth ladder 5–150bb, limps + BB option), EV-loss `drill preflop`, web tree browser | [07](07-preflop-solver.md) |
 | Formation breadth (positions, 3-bet pots, stack depths, rake) | ✅ config-side (5 formations, rake, manifests); breadth tiers solve locally | data-gen → [02](02-solution-library.md) |
@@ -93,8 +94,9 @@ P4–P10 are shipped**; the table is kept for the dependency map.
 
 P4 and P6 were independent and both unblocked most of the rest; P4 was the
 keystone. What remains open: spot filters + curated-library sampling for
-`drill hand` (04 M3), breadth tiers beyond `texture-25` (02), and the P10
-deferred trio (06).
+`drill hand` (04 M3), the P10 deferred trio (06), and letting the all-1755 /
+grounded-line generation queues finish (08 — machinery shipped, the store
+fills over idle weeks).
 
 ## Risks
 

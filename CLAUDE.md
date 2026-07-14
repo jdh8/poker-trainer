@@ -72,6 +72,8 @@ minutes cold): run `cargo test -- --ignored` only when touching `tree.rs`,
 | `src/board.rs`, `src/range.rs` | **intentional stubs — do not flesh out** |
 | `src/preflop.rs` | preflop chart format + loader (the seam `preflop-gen` writes to) |
 | `src/postflop_table.rs` | reach-pruned postflop table format + loader (the seam `solve-gen tables` writes to); `TreeWalk`/`TableWalk` live in `src/tree.rs` |
+| `src/iso.rs` | flop suit-isomorphism: canonical form + lookup-time relabeling ([design 08](docs/design/08-instant-flops.md)) — one stored table serves all 22,100 flops exactly |
+| `src/ground.rs` | `<ruleset>:<line>` → `SpotConfig` — the single constructor behind every `--from` (trainer, solve-gen, manifests); hash alignment lives here |
 | `crates/solve-gen/src/main.rs` | single-file AGPL generator: `gen \| solve \| tables \| serve` |
 | `crates/preflop-gen/` | permissive preflop MCCFR generator (design 07) |
 | `web/` | wasm catalog of the pure examples — **own workspace**, not a member; `cargo test` there runs natively; deployed by `pages.yml` |
@@ -95,13 +97,24 @@ minutes cold): run `cargo test -- --ignored` only when touching `tree.rs`,
   preflop charts (path-addressed nodes); `charts.jsonl` (full export) is
   gitignored and regenerates via `preflop-gen gen` (~15 min per ruleset,
   idle-run it).
-- `data/tables/<formation>/{header-<hash8>.json,<flop>-<hash8>.jsonl}` —
-  reach-pruned postflop tables (never committed, gitignored): flop+turn
-  decision nodes stored line-addressed, river/off-path live-solves. `drill
-  hand` / `table --board` prefer a table when present, else the live tree.
-  Generation solves one game per flop (~9 GB RSS each) — **never run bare**,
-  wrap in `scripts/idle-run.sh`: `scripts/idle-run.sh cargo run -p solve-gen
-  --release -- tables --manifest manifests/texture-25.toml`.
+- `data/tables/<formation_dir>/{header-<hash8>.json,<flop>-<hash8>.jsonl}` —
+  reach-pruned postflop tables (never committed; `data/tables` is a
+  **symlink to `/srv/var/poker/tables`** on the bulk HDD): flop+turn decision
+  nodes stored line-addressed, river/off-path live-solves. `drill hand` /
+  `table --board` prefer a table when present — any suit-isomorphic stored
+  flop serves exactly via `src/iso.rs` (design 08) — else the live tree.
+  Grounded `--from <ruleset>:<line>` configs get dirs like `cash-hu55_r2.5-c`
+  (`formation_dir` swaps `:` for `_`). Generation solves one game per flop
+  (~9 GB RSS, ~200-300 s each) — **never run bare**, wrap in
+  `scripts/idle-run.sh`, and **always `--no-save-bins` on manifest runs**
+  (a bin is 0.65-12 GB/flop): `scripts/idle-run.sh cargo run -p solve-gen
+  --release -- tables --manifest manifests/all-1755.toml --no-save-bins`.
+  Line tiers queue behind it: `manifests/lines-{cash-hu55,cash89,mtt89}.toml`.
+  The solver bin cache also lives on the HDD
+  (`~/.cache/poker-trainer/solves → /srv/var/poker/solves`).
+- `scripts/serve-web.sh` — local web viewer against the full table store
+  (`/srv/var/poker/tables-web`; `--export` refreshes it, `--build` rebuilds
+  wasm). GitHub Pages keeps only the committed `data/tables-web` tier.
 
 ## Conventions
 
