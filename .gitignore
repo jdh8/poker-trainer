@@ -20,9 +20,11 @@
 # Reach-pruned postflop tables (solve-gen tables): an offline optimization for
 # `drill hand` / `table` — the live-solve fallback covers a fresh clone, so
 # nothing here is committed (same stance as data/solutions). Regenerate locally.
+# No trailing slash: data/tables may be a symlink onto the bulk-storage HDD
+# (design doc 08), and dir-only patterns don't match symlinks.
 # NOTE: data/tables-web/ (the thin flop-only web export, `poker-trainer
 # export-tables-web`) IS committed and deployed — deliberately not ignored.
-/data/tables/
+/data/tables
 
 # web/ is its own workspace; pkg/ is wasm-pack output, solutions/, preflop/
 # and tables/ are local stages (symlinks into data/).

@@ -100,6 +100,11 @@ struct TablesArgs {
     /// along the betting path falls below this. Chance deals don't penalize it.
     #[arg(long, default_value_t = 0.002)]
     reach: f32,
+    /// Don't save solver .bin caches (still loads existing ones). Bulk runs
+    /// must set this: a full-precision save is 0.65–12 GB per flop, so an
+    /// all-iso-flops manifest would write 10+ TB of cache.
+    #[arg(long)]
+    no_save_bins: bool,
     /// Output root (defaults to the repo's data/tables).
     #[arg(long)]
     out: Option<PathBuf>,
@@ -175,7 +180,7 @@ fn main() {
         Command::Tables(a) => {
             let out = a.out.clone().unwrap_or_else(|| repo_path("data/tables"));
             let spots = tables_spots(&a).unwrap_or_else(|e| die(e));
-            write_tables(&spots, &out, a.reach);
+            write_tables(&spots, &out, a.reach, !a.no_save_bins);
         }
         Command::Serve => serve(),
     }
@@ -439,7 +444,7 @@ fn handle_op(sess: &mut Option<ServeSession>, req: &Value) -> Result<Value, Stri
                 flop: r.flop,
                 config: r.config,
             };
-            let (game, exploitability, cached) = load_or_solve(&spot)?;
+            let (game, exploitability, cached) = load_or_solve(&spot, true)?;
             let s = sess.insert(ServeSession {
                 game,
                 starting_pot: (spot.config.pot_bb * CHIPS_PER_BB) as i32,
@@ -750,8 +755,9 @@ fn gen_info(exploitability_chips: f32) -> GenInfo {
 /// `<out>/<formation>/<flop>-<hash8>.jsonl` (one [`TableNode`] per line) plus a
 /// per-config `header-<hash8>.json`. Resumable and atomic, exactly like
 /// [`write_all`]: the final `.jsonl` is the resume gate, written via tmp+rename.
-fn write_tables(spots: &[Spot], out_root: &Path, threshold: f32) {
-    for spot in spots {
+fn write_tables(spots: &[Spot], out_root: &Path, threshold: f32, save_bins: bool) {
+    let total = spots.len();
+    for (i, spot) in spots.iter().enumerate() {
         let dir = out_root.join(&spot.config.formation);
         fs::create_dir_all(&dir).unwrap();
         let hash = spot.config.hash8();
@@ -762,7 +768,9 @@ fn write_tables(spots: &[Spot], out_root: &Path, threshold: f32) {
             continue;
         }
         println!("Tabling: {} (reach ≥ {threshold})", spot.label);
-        let (mut game, exploitability, _) = load_or_solve(spot).expect("spot must solve");
+        let started = std::time::Instant::now();
+        let (mut game, exploitability, _) =
+            load_or_solve(spot, save_bins).expect("spot must solve");
         game.back_to_root();
         let starting_pot = (spot.config.pot_bb * CHIPS_PER_BB) as i32;
 
@@ -792,7 +800,12 @@ fn write_tables(spots: &[Spot], out_root: &Path, threshold: f32) {
             n
         };
         fs::rename(&tmp, &file).unwrap();
-        println!("  -> {} ({count} nodes)", file.display());
+        println!(
+            "  -> {} ({count} nodes, {:.0}s) [{}/{total}]",
+            file.display(),
+            started.elapsed().as_secs_f32(),
+            i + 1
+        );
     }
 }
 
@@ -916,10 +929,12 @@ fn solve_cache_path(spot: &Spot) -> Option<PathBuf> {
     )))
 }
 
-/// Load a cached solve if present, else solve and cache. The bool is
-/// `cached` for the serve ack. A corrupt/unreadable cache file just re-solves
-/// and overwrites; a failed save only warns — the cache is an optimization.
-fn load_or_solve(spot: &Spot) -> Result<(PostFlopGame, f32, bool), String> {
+/// Load a cached solve if present, else solve and (when `save_bin`) cache.
+/// The bool is `cached` for the serve ack. A corrupt/unreadable cache file
+/// just re-solves and overwrites; a failed save only warns — the cache is an
+/// optimization. Bulk table runs pass `save_bin = false`: their resume gate
+/// is the .jsonl, and a full-precision save is 0.65–12 GB per flop.
+fn load_or_solve(spot: &Spot, save_bin: bool) -> Result<(PostFlopGame, f32, bool), String> {
     let path = solve_cache_path(spot);
     if let Some(p) = &path {
         if let Ok((mut game, memo)) = load_data_from_file::<PostFlopGame, _>(p, None) {
@@ -929,9 +944,11 @@ fn load_or_solve(spot: &Spot) -> Result<(PostFlopGame, f32, bool), String> {
         }
     }
     let (game, exploitability) = build_and_solve(spot)?;
-    if let Some(p) = &path {
-        if let Err(e) = save_data_to_file(&game, &exploitability.to_string(), p, None) {
-            eprintln!("  warning: failed to cache solve: {e}");
+    if save_bin {
+        if let Some(p) = &path {
+            if let Err(e) = save_data_to_file(&game, &exploitability.to_string(), p, None) {
+                eprintln!("  warning: failed to cache solve: {e}");
+            }
         }
     }
     Ok((game, exploitability, false))
@@ -979,7 +996,7 @@ fn build_and_solve(spot: &Spot) -> Result<(PostFlopGame, f32), String> {
 }
 
 fn solve_spot(spot: &Spot, stem: &str) -> Vec<(String, SolvedSpot)> {
-    let (game, exploitability, _) = load_or_solve(spot).expect("spot must solve");
+    let (game, exploitability, _) = load_or_solve(spot, true).expect("spot must solve");
     let mut game = game;
     let generator = gen_info(exploitability);
     let starting_pot = (spot.config.pot_bb * CHIPS_PER_BB) as i32;

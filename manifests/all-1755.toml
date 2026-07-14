@@ -1,0 +1,36 @@
+# The full canonical tier (design docs 02 + 08): every one of the 1,755
+# suit-isomorphic flops, per formation. With the trainer's iso lookup this is
+# complete coverage — all 22,100 real flops serve instantly from these tables.
+#
+# Scale per formation: ~1,755 solves ≈ 3-4 days of idle CPU, ~20-80 GB of
+# JSONL (keep data/tables symlinked to the /srv HDD). Resumable per flop:
+# kill/restart freely, done flops are skipped. Runs are ordered by drill
+# priority — reorder or comment out to reprioritize.
+#
+# ALWAYS idle-wrap, and NEVER let this tier write solver .bin caches
+# (0.65-12 GB per flop — 10+ TB for the full set):
+#
+#   scripts/idle-run.sh cargo run -p solve-gen --release -- tables \
+#     --manifest manifests/all-1755.toml --no-save-bins
+#
+# Outputs are NOT committed (git policy: only starter-8 stays in the repo).
+
+[[runs]]
+formation = "srp-btn-bb"
+flops = "all-iso-flops"
+
+[[runs]]
+formation = "srp-co-bb"
+flops = "all-iso-flops"
+
+[[runs]]
+formation = "srp-sb-bb"
+flops = "all-iso-flops"
+
+[[runs]]
+formation = "3bp-bb-btn"
+flops = "all-iso-flops"
+
+[[runs]]
+formation = "3bp-btn-co"
+flops = "all-iso-flops"
