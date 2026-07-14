@@ -1,7 +1,7 @@
 // Framework-free glue: wasm exports return JSON strings, we parse and render.
 // The GTO grid and preflop chart sections never touch wasm — they fetch the
 // committed JSON directly.
-import init, { equity_report, equity_vs_reach, made_hand } from './pkg/poker_trainer_web.js';
+import init, { equity_report, equity_vs_reach, made_hand, canonical_flop } from './pkg/poker_trainer_web.js';
 
 const $ = id => document.getElementById(id);
 const SUITS = { s: ['♠', 'spade'], h: ['♥', 'heart'], d: ['♦', 'diamond'], c: ['♣', 'club'] };
@@ -609,11 +609,57 @@ const TB_FORMATION_LABELS = {
 };
 let tbIndex = null;   // formation -> {hash, flops:[{stem,display}]}
 let tbNodes = [];     // current flop's reshaped node-spots
+let tbXlat = null;    // stored→user suit-char map when serving an isomorph
+
+// Suit-isomorphism glue (design doc 08): a typed flop maps onto its class
+// representative via wasm `canonical_flop`; any stored stem in the same class
+// serves it, with cards relabeled stored→user before rendering.
+const tbCanon = f => JSON.parse(canonical_flop(f)); // {canonical, map:{c:..,d:..}}
+
+// stored→user suit map from the two flops' own user→canonical maps.
+function tbFromStored(userMap, storedMap) {
+  const inv = {};
+  for (const [s, c] of Object.entries(storedMap)) inv[c] = s;
+  const map = {};
+  for (const [u, c] of Object.entries(userMap)) map[inv[c]] = u;
+  return map;
+}
+
+const tbIdentity = m => Object.entries(m).every(([k, v]) => k === v);
+const tbXlatCards = s => s.replace(/([2-9TJQKAtjqka])([cdhs])/g, (_, r, x) => r + (tbXlat[x] || x));
 
 function tbReshape(n) {
+  if (tbXlat) {
+    n.board = n.board.map(tbXlatCards);
+    n.strategies.forEach(s => { s.hand = tbXlatCards(s.hand); });
+  }
   n.strategies = n.strategies.map(s =>
     ({ hand: s.hand, strategy: { actions: n.actions, frequencies: s.freqs, action_ev: s.evs } }));
   return n;
+}
+
+// Type any flop: find a stored stem in its isomorphism class and serve it
+// through the suit relabeling. The dropdown snaps to the serving stem.
+function tbBoardEntered() {
+  const raw = $('tb-board').value.trim();
+  const hint = $('tb-hint');
+  if (!raw) { tbXlat = null; hint.textContent = ''; return; }
+  let user;
+  try { user = tbCanon(raw); }
+  catch (e) { hint.textContent = String(e.message || e); return; }
+  const f = $('tb-formation').value;
+  for (const fl of tbIndex[f].flops) {
+    const stored = tbCanon(fl.stem);
+    if (stored.canonical !== user.canonical) continue;
+    const map = tbFromStored(user.map, stored.map);
+    tbXlat = tbIdentity(map) ? null : map;
+    hint.textContent = tbXlat ? `serving ${fl.display} relabeled onto your suits (exact — suit-isomorphic)` : '';
+    $('tb-flop').value = fl.stem;
+    tbLoad();
+    return;
+  }
+  tbXlat = null;
+  hint.textContent = `no table in this flop's class for ${f} yet — generate the all-1755 tier`;
 }
 
 function tbNodeLabel(n) {
@@ -643,9 +689,11 @@ async function tbInit() {
   catch { $('tb-head').textContent = 'Table exports not staged — run `poker-trainer export-tables-web` (see web/README).'; return; }
   $('tb-formation').innerHTML = Object.keys(tbIndex).sort().map(f =>
     `<option value="${f}">${TB_FORMATION_LABELS[f] || f}</option>`).join('');
-  $('tb-formation').onchange = tbFillFlops;
-  $('tb-flop').onchange = tbLoad;
+  $('tb-formation').onchange = () => { tbXlat = null; $('tb-hint').textContent = ''; tbFillFlops(); };
+  $('tb-flop').onchange = () => { tbXlat = null; $('tb-hint').textContent = ''; $('tb-board').value = ''; tbLoad(); };
   $('tb-node').onchange = tbShow;
+  $('tb-board').onchange = tbBoardEntered;
+  $('tb-board').onkeydown = e => { if (e.key === 'Enter') tbBoardEntered(); };
   tbFillFlops();
 }
 

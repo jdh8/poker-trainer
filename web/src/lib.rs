@@ -8,10 +8,45 @@
 //! The internal `*_impl` functions return plain Rust types so the
 //! `#[cfg(test)]` module runs natively (rlib), no browser needed.
 
-use poker_trainer::{eval, preflop, report};
+use poker_trainer::{eval, iso, preflop, report};
 use rs_poker::core::Card;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
+
+// ---- flop canonicalization (instant tables lookup, design doc 08) -----------
+
+#[derive(Serialize)]
+struct CanonicalFlop {
+    /// The flop's representative among the 1,755 suit-isomorphism classes.
+    canonical: String,
+    /// This flop's suit → canonical suit, as chars (`{"c":"c","d":"d",…}`).
+    /// JS composes two of these to translate a stored table's cards into the
+    /// typed flop's suit space.
+    map: std::collections::BTreeMap<char, char>,
+}
+
+fn canonical_flop_impl(flop: &str) -> Result<CanonicalFlop, String> {
+    let (canonical, perm) = iso::canonical_flop(flop)
+        .ok_or("a flop is exactly 3 distinct cards, e.g. Ts9s6h".to_string())?;
+    let map = ['c', 'd', 'h', 's']
+        .into_iter()
+        .map(|s| {
+            // Read the suit image off a mapped card — keeps iso's API minimal.
+            let image = perm.card(&format!("2{s}")).unwrap();
+            (s, image.chars().nth(1).unwrap())
+        })
+        .collect();
+    Ok(CanonicalFlop { canonical, map })
+}
+
+/// Canonicalize a typed flop for the tables browser: its class representative
+/// (which names the stored file) plus the suit relabeling onto it.
+#[wasm_bindgen]
+pub fn canonical_flop(flop: &str) -> Result<String, JsError> {
+    canonical_flop_impl(flop)
+        .map(|r| serde_json::to_string(&r).unwrap())
+        .map_err(|e| JsError::new(&e))
+}
 
 // ---- equity calculator ------------------------------------------------------
 
@@ -187,5 +222,20 @@ mod tests {
         assert_eq!(made_hand_impl("KsKh", "Kd9c4s").unwrap(), "Value");
         assert_eq!(made_hand_impl("AsAh", "Kd9c4s").unwrap(), "Overpair");
         assert!(made_hand_impl("AsAh", "Kd9c").is_err()); // not a flop
+    }
+
+    #[test]
+    fn canonical_flop_maps_and_serializes() {
+        let r = canonical_flop_impl("Ts9s6h").unwrap();
+        assert_eq!(r.canonical, "6c9dTd");
+        // s carries the T9 pair onto d; h carries the 6 onto c.
+        assert_eq!(r.map[&'s'], 'd');
+        assert_eq!(r.map[&'h'], 'c');
+        // A canonical flop maps identically.
+        let id = canonical_flop_impl("6c9dTd").unwrap();
+        assert_eq!(id.canonical, "6c9dTd");
+        assert!(id.map.iter().all(|(k, v)| k == v));
+        assert!(canonical_flop_impl("nope").is_err());
+        assert!(canonical_flop("Ts9s6h").is_ok());
     }
 }
