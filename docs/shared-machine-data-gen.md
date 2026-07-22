@@ -27,7 +27,11 @@ This is the *scavenger* pattern:
   yours the moment it wakes there.
 
 `solve-gen` already uses every core itself (one rayon worker per hardware
-thread), so it owns the box on its own — don't launch several at once.
+thread), so it owns the box on its own — don't launch several at once. This
+is measured, not just etiquette (2026-07, Ryzen 8700F, dual-channel DDR5):
+two concurrent 8-thread solves ran no faster than one 16-thread stream — a
+single solve already saturates memory bandwidth, so extra jobs only split
+it. `RAYON_NUM_THREADS` caps a job's workers if you ever need cores freed.
 
 ### Why SCHED_IDLE rather than `nice -19`
 

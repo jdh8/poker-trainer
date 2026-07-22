@@ -91,6 +91,7 @@ P4–P10 are shipped**; the table is kept for the dependency map.
 | **P10** | Nodelocking end-to-end (lock, re-solve, compare) + presets + saved-lock files — done | M | P4, P7 | [06](06-solver-capabilities.md) |
 | **P11** | Preflop MCCFR solver + solved chart library (6-max, size menus, antes, ICM) — done | L | — | [07](07-preflop-solver.md) |
 | — | ICM postflop (solver fork), bunching, multiway postflop | research | — | [06](06-solver-capabilities.md) |
+| — | Turn/river value net → depth-limited flop solves (GPU R&D; would cut bulk-gen cost ~10×) | research | 08 store as corpus | [09](09-value-net.md) |
 
 P4 and P6 were independent and both unblocked most of the rest; P4 was the
 keystone. What remains open: spot filters + curated-library sampling for
@@ -120,5 +121,7 @@ fills over idle weeks).
   equilibria lack Nash guarantees anyway; even commercial multiway is
   approximate. Revisit only if a credible engine appears (06).
 - **Solve-speed parity with GTO Wizard AI** — theirs is a datacenter + NN
-  approximator. Local caching is our answer, not model inference.
+  approximator. Local caching is our answer, not model inference. (Narrow
+  exception under study: an offline value net to cheapen *our own* bulk
+  generation and off-tree lookups — [09](09-value-net.md), research.)
 - **Real-time play assistance (HUD)** — out; ethically and ToS-fraught.

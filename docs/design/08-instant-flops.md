@@ -65,12 +65,24 @@ element-for-element.
 ## Generation at scale
 
 - `manifests/all-1755.toml`: `flops = "all-iso-flops"` per formation.
-  Measured ≈ 200–300 s per flop under SCHED_IDLE → **4–6 idle days and
+  Measured ≈ 1–5 min per flop under SCHED_IDLE → **4–6 idle days and
   ~20–80 GB of JSONL per config**. Resumable per flop (the `.jsonl` is the
   gate); kill/reorder freely.
 - `tables --no-save-bins` is **mandatory for bulk runs**: a full-precision
   solver save is 0.65–12 GB per flop — the full tier would write 10+ TB of
   cache. Existing bins still load (warm hits for the old texture-25 spots).
+- `--compress` (the solver's 16-bit storage) is measured **strictly better
+  for bulk runs** (2026-07, Ryzen 8700F): ~12% faster and half the RSS
+  (7–12 GB vs 14–24 GB f32) at identical achieved exploitability — the
+  0.5%-pot target gates quality either way. Pass it on every manifest run.
+- Flop-level concurrency does **not** pay on this box: two 8-thread solves
+  measured a wash against one 16-thread stream (364 s vs ~333 s for the same
+  two flops) — a single solve already saturates dual-channel DDR5 bandwidth,
+  so a second job just splits it. `tables --stride N --offset K` still
+  splits a manifest safely (the `.jsonl` gate dedups overlap); it exists for
+  *multi-box* splits or wider-memory hardware, not for stacking jobs here.
+  GPU offload was reviewed and rejected for the same bandwidth/VRAM reasons
+  ([09](09-value-net.md)).
 - Storage lives on the bulk HDD: `data/tables → /srv/var/poker/tables` and
   `~/.cache/poker-trainer/solves → /srv/var/poker/solves` (symlinks; the
   btrfs `zstd:1` mount compresses the JSONL further). `.gitignore` uses
@@ -80,7 +92,7 @@ element-for-element.
 
   ```sh
   scripts/idle-run.sh cargo run -p solve-gen --release -- tables \
-    --manifest manifests/all-1755.toml --no-save-bins
+    --manifest manifests/all-1755.toml --no-save-bins --compress
   ```
 
 ## Grounded preflop lines (`src/ground.rs`)
