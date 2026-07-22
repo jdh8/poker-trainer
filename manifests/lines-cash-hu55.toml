@@ -7,6 +7,10 @@
 #   scripts/idle-run.sh cargo run -p solve-gen --release -- tables \
 #     --manifest manifests/lines-cash-hu55.toml --no-save-bins
 #
+# Fannable across the box fleet (--stride/--offset, --compress mandatory,
+# local --out, then collect-shards + mop-up): see the fleet section of
+# docs/shared-machine-data-gen.md.
+#
 # Tables land in data/tables/cash-hu55_<line>/ and serve
 # `table --from cash-hu55:<line> --board <any flop>` instantly.
 

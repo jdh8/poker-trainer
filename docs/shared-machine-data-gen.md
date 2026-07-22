@@ -91,6 +91,67 @@ systemd-run --user --scope -p CPUQuota=600% -p CPUWeight=10 -p MemoryMax=12G \
 - `MemoryMax` — the useful guard here: `postflop-solver` allocates a sizeable
   game tree per spot, so this stops a wide tree from OOM-ing colleagues.
 
+## Fanning a bulk tier across the fleet
+
+A `tables` tier (`manifests/all-1755.toml`, `manifests/lines-*.toml`) is one
+sequential solve per flop — embarrassingly parallel across *boxes*, not
+threads (a second solve on one box is a wash: memory-bandwidth-bound, see
+caveat 2). `solve-gen tables` splits a manifest across processes with
+`--stride N --offset K`: box K solves only the flops where `i % N == K`, so
+the boxes produce **disjoint** sets and the per-formation `header-<hash>.json`
+is a byte-identical idempotent write everywhere — merging is a plain `rsync`.
+
+The blocker used to be RAM: an f32 solve is 14–24 GB RSS, so a 16 GB worker
+OOM'd. `--compress` (16-bit solver storage, ~7–12 GB RSS, measured faster and
+same exploitability) fits a 16 GB box, so the fleet is viable again. It is
+**mandatory** here, alongside the usual `--no-save-bins`.
+
+The fleet is N boxes → `--stride N`, one distinct offset each (example: 3):
+
+| offset | host | notes |
+| --- | --- | --- |
+| 0 | main box (has `/srv`) | writes straight to `/srv`, no `MemoryMax` |
+| 1 | worker A | local/shared `--out`, `MemoryMax=13G` if 16 GB |
+| 2 | worker B | local/shared `--out`, `MemoryMax=13G` if 16 GB |
+
+Each remote already has a checkout at `~/src/poker-trainer` (ranges and
+manifests are committed) — `git pull`, then run. It must pass `--out <dir>`
+(a local disk, or a big shared volume if the worker has one): the default
+`data/tables` symlink to `/srv` only exists on the main box.
+
+```sh
+# On each worker (offset 1..N-1), in ~/src/poker-trainer: git pull, then —
+# MemoryMax = box RAM minus OS headroom: 16 GB box -> 13G, 32 GB -> drop -p.
+# This is the OOM fix: a worst-case wide flop kills THIS PROCESS
+# (resumable — the .jsonl is skipped on restart), not the box.
+systemd-run --user --scope -p MemoryMax=13G \
+  scripts/idle-run.sh cargo run -p solve-gen --release -- tables \
+    --manifest manifests/all-1755.toml --no-save-bins --compress \
+    --stride 3 --offset 1 --out ~/poker-tables
+
+# On the main box (offset 0), same manifest, no cap, --out to /srv:
+scripts/idle-run.sh cargo run -p solve-gen --release -- tables \
+  --manifest manifests/all-1755.toml --no-save-bins --compress \
+  --stride 3 --offset 0
+```
+
+Then collect the remotes into `/srv` and run the mop-up pass on the main box:
+
+```sh
+scripts/collect-shards.sh worker-a:poker-tables worker-b:poker-tables
+
+# Mop-up = run the FULL manifest (no --stride) once on the main box. The
+# per-flop .jsonl gate skips everything the fleet produced and solves only
+# leftovers — this doubles as the completeness check.
+scripts/idle-run.sh cargo run -p solve-gen --release -- tables \
+  --manifest manifests/all-1755.toml --no-save-bins --compress
+```
+
+Compressed RSS tops out around 12 GB, so a 13G cap should never actually fire
+on a 16 GB box — but if a flop ever exceeds it, that one flop is left unsolved
+and the mop-up pass picks it up. Don't build a restart-supervisor unless a
+wedge actually recurs.
+
 ## Surviving disconnect
 
 - Run inside `tmux`/`screen`, or detach with

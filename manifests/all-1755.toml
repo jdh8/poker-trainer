@@ -13,6 +13,11 @@
 #   scripts/idle-run.sh cargo run -p solve-gen --release -- tables \
 #     --manifest manifests/all-1755.toml --no-save-bins
 #
+# Fan out across the box fleet with --stride N --offset K (each box a disjoint
+# offset, local --out, --compress mandatory to fit 16 GB workers); then
+# scripts/collect-shards.sh into /srv and a full-manifest mop-up pass. See the
+# "Fanning a bulk tier across the fleet" section of docs/shared-machine-data-gen.md.
+#
 # Outputs are NOT committed (git policy: only starter-8 stays in the repo).
 
 [[runs]]
