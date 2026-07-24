@@ -33,3 +33,9 @@
 /web/solutions
 /web/preflop
 /web/tables
+
+# Value-net training harness (design doc 09): the corpus lives on /srv, the
+# venv and checkpoints are local artifacts.
+/train/.venv
+/train/*.pt
+/train/__pycache__

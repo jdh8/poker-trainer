@@ -1,10 +1,14 @@
 # 09 — Value net for depth-limited solving (GPU R&D)
 
-Status: **follow-up, not scheduled.** Written 2026-07 after a GPU-feasibility
-review of bulk generation. Records why GPU-porting the CFR engine is the wrong
-move, and the one route where the local GPU (RTX 4070 SUPER, 12 GB) genuinely
-pays. Trigger to pick this up: the line-tier queues' multi-month cost becomes
-unacceptable, or we want instant solves for off-tree/off-store spots.
+Status: **phases (a)+(b) in progress** (2026-07-24) — corpus extractor
+(`src/bin/export-value-corpus.rs`, one fixed-width record per stored turn
+root, both invariants checked against every file) and the `train/` harness
+(uv + torch MLP, equity-baseline eval) are shipped; phase (c) not started.
+Written 2026-07 after a GPU-feasibility review of bulk generation. Records
+why GPU-porting the CFR engine is the wrong move, and the one route where
+the local GPU (RTX 4070 SUPER, 12 GB) genuinely pays. The trigger fired:
+the line-tier queues' multi-month cost (49,140 solves, ~1% done at pickup)
+is exactly the "unacceptable" case named below.
 
 ## Why not GPU-CFR (the reviewed-and-rejected route)
 
@@ -69,6 +73,20 @@ Rough phasing when picked up: (a) corpus extractor over existing
 tables/bins, (b) net + held-out-value eval harness, (c) permissive
 depth-limited solver using the net, validated flop-by-flop against full
 solves. Research-L; each phase falsifiable on its own.
+
+Phase (a)/(b) implementation notes (shipped): the leaf interface is the
+**turn root** (stored node whose line ends with a deal token; always OOP to
+act). `export-value-corpus` reconstructs both pure reach vectors by walking
+line prefixes from the header ranges, takes OOP counterfactual values from
+the stored mix, and rolls IP values back from the stored IP children with
+card-removal-correct mixing — exact only when every child is stored (~66%
+of roots; the rest keep OOP labels and mask IP, since a pruned child can
+carry ~20%-pot bias). Every root is checked against two identities (stored
+weights = reach × unblocked-opponent mass; both sides' reach-weighted value
+averages sum to the pot — holds to ≤0.02 bb) and the run fails loudly on
+drift. Val split = flops with fnv1a64 % 10 == 0; the eval baseline is
+`cfv/pot := equity`. `train/` is a uv project (torch MLP, 2707→3×1024→2652,
+reach-weighted masked MSE); corpus and checkpoints stay out of git.
 
 This narrows doc 00's "no NN approximator" stance rather than reversing it:
 the net would accelerate **our own offline generation and off-tree lookups**,

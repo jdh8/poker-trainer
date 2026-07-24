@@ -23,7 +23,7 @@ const SUITS: &[u8; 4] = b"cdhs";
 /// Card id in the solver's encoding: `rank*4 + suit`, `2c = 0 … As = 51`.
 /// Case-insensitive (table filenames are lowercased wholesale, so be no
 /// stricter); `None` for anything that isn't a 2-char card.
-fn card_id(card: &str) -> Option<u8> {
+pub fn card_id(card: &str) -> Option<u8> {
     let mut it = card.chars();
     let (r, s) = (it.next()?, it.next()?);
     if it.next().is_some() {
@@ -39,7 +39,7 @@ fn card_id(card: &str) -> Option<u8> {
 }
 
 /// The solver's display form: uppercase rank, lowercase suit (`"Td"`).
-fn card_str(id: u8) -> String {
+pub fn card_str(id: u8) -> String {
     let r = RANKS[(id >> 2) as usize].to_ascii_uppercase() as char;
     let s = SUITS[(id & 3) as usize] as char;
     format!("{r}{s}")
