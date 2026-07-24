@@ -60,6 +60,7 @@ def main():
     corpus = Corpus(args.data)
     model = build_model().to(device)
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr)
+    sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=args.epochs)
     print(f"device={device} params={sum(p.numel() for p in model.parameters()):,}")
 
     best = float("inf")
@@ -70,6 +71,7 @@ def main():
         model.eval()
         with torch.no_grad():
             val_loss = run_split(model, corpus, "val", args.batch, rng, device)
+        sched.step()
         mark = ""
         if val_loss < best:
             best = val_loss
