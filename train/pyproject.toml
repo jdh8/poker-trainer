@@ -5,3 +5,13 @@ name = "valuenet-train"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = ["torch>=2.4", "numpy>=2"]
+
+# PyPI torch is the CUDA 13 build; this box's driver (570.x) tops out at CUDA
+# 12.8, so torch silently falls back to CPU. Pin the cu128 wheel index.
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
