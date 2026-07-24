@@ -39,3 +39,4 @@
 /train/.venv
 /train/*.pt
 /train/__pycache__
+/train/eval-report.txt

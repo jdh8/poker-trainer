@@ -1,9 +1,11 @@
 # 09 — Value net for depth-limited solving (GPU R&D)
 
-Status: **phases (a)+(b) in progress** (2026-07-24) — corpus extractor
+Status: **phases (a)+(b) shipped** (2026-07-24) — corpus extractor
 (`src/bin/export-value-corpus.rs`, one fixed-width record per stored turn
 root, both invariants checked against every file) and the `train/` harness
-(uv + torch MLP, equity-baseline eval) are shipped; phase (c) not started.
+(uv + torch MLP, equity-baseline eval) are done; phase (c) not started.
+First measured result below (2026-07-24): ~2× under the equity baseline
+on held-out flops, still far from the ~1%-pot floor.
 Written 2026-07 after a GPU-feasibility review of bulk generation. Records
 why GPU-porting the CFR engine is the wrong move, and the one route where
 the local GPU (RTX 4070 SUPER, 12 GB) genuinely pays. The trigger fired:
@@ -88,6 +90,16 @@ within ~1% of pot) and the run fails loudly on drift. Val split = flops
 with fnv1a64 % 10 == 0; the eval baseline is
 `cfv/pot := equity`. `train/` is a uv project (torch MLP, 2707→3×1024→2652,
 reach-weighted masked MSE); corpus and checkpoints stay out of git.
+
+First measured result (2026-07-24, all-1755 corpus: 3.34 M turn roots →
+3.02 M train / 0.32 M val on 175 held-out flops; 20 epochs ≈ 2 h on the
+4070): reach-weighted MAE of cfv/pot on held-out flops is **7.5–9.4% pot
+on the srp tiers and 12.4–16.7% on the 3bp tiers**, vs 16.9–19.7% for the
+equity baseline — roughly 2× under baseline, still far from the ~1% solve
+floor. Val loss was still falling at epoch 20, so the near-term levers are
+training time and input encoding (suit-iso augmentation, per-config
+heads), not more data. Good enough to justify phase (c) prototyping; not
+yet good enough to replace solves.
 
 This narrows doc 00's "no NN approximator" stance rather than reversing it:
 the net would accelerate **our own offline generation and off-tree lookups**,
