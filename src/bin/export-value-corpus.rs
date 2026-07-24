@@ -28,7 +28,9 @@
 //! Two invariants are checked on every root and fail the run loudly:
 //! stored `weights` must equal `own_reach × unblocked-opponent-mass` up to
 //! one global scale, and the reach-weighted averages of both cfv sides must
-//! sum to the pot (measured ≤ 0.0002 bb on real tables).
+//! sum to the pot. The store rounds everything to 3 decimals, so both hold
+//! to rounding, not exactly: residues stay within ~1% of the node's largest
+//! weight and ~1% of the pot; structural bugs measure 20×+ above that.
 
 use clap::Parser;
 use poker_trainer::iso;
@@ -48,11 +50,17 @@ const N_COMBOS: usize = 52 * 51 / 2;
 const RECORD_BYTES: usize = 16 + 4 * 2 * N_COMBOS;
 /// Every 10th flop by hash is held out for validation.
 const VAL_MOD: u64 = 10;
-/// Stored weights are ~4-decimal JSON: a 1% (of the max weight) residue after
-/// removing the global scale flags a structural bug, not rounding.
-const WEIGHT_DEV_TOL: f32 = 0.01;
-/// Measured zero-sum drift on real tables is ≤ 0.0002 bb; 0.3% of the pot
-/// (floored at 0.02 bb) flags real bugs with two orders of headroom.
+/// The store rounds weights/freqs/evs to 3 decimals; half an ulp of that
+/// grid is the per-value rounding radius the invariants must budget for.
+const ROUND3_HALF: f32 = 0.0005;
+/// Absolute residue floor for the weight identity: the stored weight itself
+/// is rounded (±½ulp) and the reconstruction carries f32 noise — 4 quanta
+/// of headroom on top of the propagated per-hand slack.
+const WEIGHT_DEV_FLOOR: f32 = 0.002;
+/// Zero-sum residue inherits freq-rounding × ev-magnitude, which scales with
+/// the pot (measured up to ~0.8% pot on 100bb-pot 3-bet lines); 1% pot
+/// (floored at 0.02 bb) still flags real bugs — the pruned-child bias this
+/// check caught was 20% pot.
 const ZERO_SUM_TOL_BB: f32 = 0.02;
 
 #[derive(Parser)]
@@ -273,6 +281,13 @@ struct FileStats {
     /// The line of the worst zero-sum root and how many of its actions had
     /// stored children — the first thing to look at when the check fails.
     worst_zero_sum: Option<(String, usize, usize)>,
+    /// The worst weight-identity root: line + the largest stored weight there
+    /// (a tiny max means the residue is JSON rounding, not structure).
+    worst_weight: Option<(String, f32)>,
+    /// The single worst budget-exceeding hand: (line, hand, stored, r·mine,
+    /// bound) at the maximum residue−bound excess. What a breach IS.
+    worst_breach: Option<(String, String, f32, f32, f32)>,
+    max_breach_excess: f32,
 }
 
 /// Shape guard: parallel `freqs`/`evs` rows, one per action, `n` hands each.
@@ -344,9 +359,16 @@ fn extract_file(
         }
 
         // Reach vectors: header ranges, board-blocked zeroed, then one
-        // frequency multiplication per betting step along the line.
+        // frequency multiplication per betting step along the line. The store
+        // rounds freqs to 3 decimals, so alongside each ρ we propagate its
+        // first-order rounding slack (d(ρ·f) = dρ·f + ρ·½ulp) — a hand whose
+        // path runs through a 0.010 freq legitimately carries ±5% ρ error,
+        // and the weight invariant must budget for that per hand, not
+        // globally.
         let mut rho_oop = base_oop.to_vec();
         let mut rho_ip = base_ip.to_vec();
+        let mut slack_oop = vec![0f32; N_COMBOS];
+        let mut slack_ip = vec![0f32; N_COMBOS];
         for &c in &board {
             for o in 0..52u8 {
                 if o != c {
@@ -365,9 +387,9 @@ fn extract_file(
                 stats.bad_nodes += 1;
                 continue 'roots;
             };
-            let (rho, combos) = match anc.node.player.as_str() {
-                "oop" => (&mut rho_oop, &oop_combos),
-                "ip" => (&mut rho_ip, &ip_combos),
+            let (rho, slack, combos) = match anc.node.player.as_str() {
+                "oop" => (&mut rho_oop, &mut slack_oop, &oop_combos),
+                "ip" => (&mut rho_ip, &mut slack_ip, &ip_combos),
                 _ => {
                     stats.bad_nodes += 1;
                     continue 'roots;
@@ -379,7 +401,9 @@ fn extract_file(
                 continue 'roots;
             };
             for (p, &(_, _, ix)) in combos.iter().enumerate() {
-                rho[ix] *= anc.node.freqs[ai][p];
+                let f = anc.node.freqs[ai][p];
+                slack[ix] = slack[ix] * f + rho[ix] * ROUND3_HALF;
+                rho[ix] *= f;
             }
         }
 
@@ -457,6 +481,8 @@ fn extract_file(
             n,
             &rho_oop,
             &rho_ip,
+            &slack_oop,
+            &slack_ip,
             &oop_combos,
             &ip_combos,
             &oop_cfv,
@@ -500,6 +526,8 @@ fn check_invariants(
     n: &poker_trainer::tree::TreeNode,
     rho_oop: &[f32],
     rho_ip: &[f32],
+    slack_oop: &[f32],
+    slack_ip: &[f32],
     oop_combos: &[(u8, u8, usize)],
     ip_combos: &[(u8, u8, usize)],
     oop_cfv: &[f32],
@@ -516,29 +544,59 @@ fn check_invariants(
         .map(|&(hi, lo, ix)| rho_oop[ix] * ip_sums.compat(rho_ip, hi, lo, ix))
         .collect();
 
-    // Invariant 1: stored weights == w_oop up to one global scale (median
-    // ratio), residues measured against the largest stored weight.
+    // Invariant 1: stored weights == w_oop up to one global scale. The scale
+    // is least-squares through the origin — magnitude-weighted, so the many
+    // 3dp-rounded tiny weights (±50% relative noise at 0.001) can't skew it
+    // the way a median ratio can. Each hand gets its own residue budget from
+    // the propagated freq-rounding slack: weight = own_ρ × opp_mass, so
+    // d·w = dρ·mass + ρ·d·mass, with d·mass the compat-sum of the opponent's
+    // per-combo slack.
     let max_stored = n.weights.iter().cloned().fold(0f32, f32::max);
     if max_stored > 0.0 {
-        let mut ratios: Vec<f32> = n
-            .weights
-            .iter()
-            .zip(&w_oop)
-            .filter(|&(&s, &w)| s > 1e-6 && w > 0.0)
-            .map(|(&s, &w)| s / w)
-            .collect();
-        if !ratios.is_empty() {
-            ratios.sort_by(f32::total_cmp);
-            let r = ratios[ratios.len() / 2];
-            let dev = n
-                .weights
+        let ip_slack_sums = removal_sums(slack_ip, ip_combos);
+        let (mut num, mut den) = (0f64, 0f64);
+        for (&s, &w) in n.weights.iter().zip(&w_oop) {
+            num += f64::from(s) * f64::from(w);
+            den += f64::from(w) * f64::from(w);
+        }
+        if den > 0.0 {
+            let r = (num / den) as f32;
+            // Pass 1: per-hand first-order slack. Pass 2: breach test with a
+            // δr term — the fitted scale itself moves by up to the aggregate
+            // relative slack, and that shift lands on every hand times its
+            // own weight.
+            let slacks: Vec<f32> = w_oop
                 .iter()
-                .zip(&w_oop)
-                .map(|(&s, &w)| (s - r * w).abs())
-                .fold(0f32, f32::max)
-                / max_stored;
-            stats.max_weight_dev = stats.max_weight_dev.max(dev);
-            if dev > WEIGHT_DEV_TOL {
+                .zip(oop_combos)
+                .map(|(&_w, &(hi, lo, ix))| {
+                    let mass = ip_sums.compat(rho_ip, hi, lo, ix);
+                    let mass_slack = ip_slack_sums.compat(slack_ip, hi, lo, ix);
+                    r * (slack_oop[ix] * mass + rho_oop[ix] * mass_slack)
+                })
+                .collect();
+            let dr =
+                slacks.iter().sum::<f32>() / w_oop.iter().map(|&w| r * w).sum::<f32>().max(1e-9);
+            let mut node_breach = false;
+            let mut worst = 0f32;
+            for (p, (&s, &w)) in n.weights.iter().zip(&w_oop).enumerate() {
+                let residue = (s - r * w).abs();
+                worst = worst.max(residue);
+                let bound = slacks[p] + dr * r * w + WEIGHT_DEV_FLOOR;
+                if residue > bound {
+                    node_breach = true;
+                    if residue - bound > stats.max_breach_excess {
+                        stats.max_breach_excess = residue - bound;
+                        stats.worst_breach =
+                            Some((n.line.join(" "), n.hands[p].clone(), s, r * w, bound));
+                    }
+                }
+            }
+            let dev = worst / max_stored;
+            if dev > stats.max_weight_dev {
+                stats.max_weight_dev = dev;
+                stats.worst_weight = Some((n.line.join(" "), max_stored));
+            }
+            if node_breach {
                 stats.weight_breaches += 1;
             }
         }
@@ -563,7 +621,7 @@ fn check_invariants(
                 stats.max_zero_sum_dev_bb = dev;
                 stats.worst_zero_sum = Some((n.line.join(" "), n_children, n.actions.len()));
             }
-            if dev > ZERO_SUM_TOL_BB.max(0.003 * n.pot_bb) {
+            if dev > ZERO_SUM_TOL_BB.max(0.01 * n.pot_bb) {
                 stats.zero_sum_breaches += 1;
             }
         }
@@ -834,7 +892,16 @@ fn extract_formation(
         agg.bad_nodes += st.bad_nodes;
         agg.weight_breaches += st.weight_breaches;
         agg.zero_sum_breaches += st.zero_sum_breaches;
-        agg.max_weight_dev = agg.max_weight_dev.max(st.max_weight_dev);
+        if st.max_weight_dev > agg.max_weight_dev {
+            agg.max_weight_dev = st.max_weight_dev;
+            agg.worst_weight = st.worst_weight.map(|(l, m)| (format!("{flop}: {l}"), m));
+        }
+        if st.max_breach_excess > agg.max_breach_excess {
+            agg.max_breach_excess = st.max_breach_excess;
+            agg.worst_breach = st
+                .worst_breach
+                .map(|(l, h, s, m, b)| (format!("{flop}: {l}"), h, s, m, b));
+        }
         if st.max_zero_sum_dev_bb > agg.max_zero_sum_dev_bb {
             agg.max_zero_sum_dev_bb = st.max_zero_sum_dev_bb;
             agg.worst_zero_sum = st
@@ -873,6 +940,19 @@ fn extract_formation(
             "{dir_name}: worst zero-sum root {line:?} ({stored}/{actions} children stored, \
              dev {:.4} bb)",
             agg.max_zero_sum_dev_bb
+        );
+    }
+    if let Some((line, max_stored)) = &agg.worst_weight {
+        eprintln!(
+            "{dir_name}: worst weight root {line:?} (max stored weight {max_stored:.5}, \
+             dev {:.2e})",
+            agg.max_weight_dev
+        );
+    }
+    if let Some((line, hand, s, m, b)) = &agg.worst_breach {
+        eprintln!(
+            "{dir_name}: worst weight breach {line:?} hand {hand}: stored {s:.4} vs \
+             reconstructed {m:.4} (budget {b:.4})"
         );
     }
 
