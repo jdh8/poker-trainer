@@ -1,0 +1,45 @@
+# Toggleable solve-gen tables worker for a shared box. Instance = manifest
+# name: `poker-worker@lines-mtt89` runs manifests/lines-mtt89.toml. Politeness
+# is the idle scheduling class, expressed natively (same policy as
+# scripts/idle-run.sh — see docs/shared-machine-data-gen.md). Workers sharing
+# one --out dir (e.g. NFS) coordinate through the per-flop .jsonl gate; no
+# stride needed.
+#
+# Install (per-user, zero privilege):
+#   mkdir -p ~/.config/systemd/user
+#   cp scripts/poker-worker@.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now poker-worker@lines-mtt89
+#   loginctl enable-linger "$USER"        # keep running while logged out
+# Toggle / status:
+#   systemctl --user stop|start poker-worker@lines-mtt89
+#   journalctl --user -u poker-worker@lines-mtt89 -f
+#
+# Expects ~/src/poker-trainer (checkout) and ~/poker-tables (output dir or
+# symlink). The manifest finishing is exit 0 => the service goes inactive.
+
+[Unit]
+Description=Poker solve-gen tables worker (%i)
+After=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+WorkingDirectory=%h/src/poker-trainer
+# ~/poker-tables must resolve (NFS mounted) before starting.
+ExecStartPre=/bin/sh -c 'test -d "$(readlink -f %h/poker-tables)"'
+# sh -lc: pick up cargo wherever it lives (snap, rustup, ...).
+ExecStart=/bin/sh -lc 'exec cargo run -p solve-gen --release -- tables --manifest manifests/%i.toml --no-save-bins --compress --out %h/poker-tables'
+# Idle class: runs only on otherwise-free cores, yields instantly.
+Nice=10
+CPUSchedulingPolicy=idle
+IOSchedulingClass=idle
+MemoryMax=48G
+# Crash/OOM => restart resumes via the .jsonl gate; manifest done => stays off.
+# ponytail: a flop that OOMs under MemoryMax retries forever — if the journal
+# shows the same flop looping, raise MemoryMax or drop the manifest line.
+Restart=on-failure
+RestartSec=60
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,26 @@
+# One value-net training run as a user service. Instance = run name; every
+# knob lives in ~/.config/poker-train/<run>.env, e.g.:
+#   CUDA_VISIBLE_DEVICES=0
+#   UV_CACHE_DIR=/mnt/ssd-data/jdh8/.uv-cache
+#   TRAIN_ARGS=--data /mnt/ssd-data/jdh8/valuenet --epochs 200 --batch 8192 --out value-net-200.pt
+#
+# Install:
+#   cp scripts/poker-train@.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user start poker-train@<run>     # started manually, never on boot
+# Status / log:
+#   systemctl --user status poker-train@<run>
+#   journalctl --user -u poker-train@<run> -f
+#
+# Two GPUs = two env files pinned to different CUDA_VISIBLE_DEVICES.
+
+[Unit]
+Description=Value-net training run (%i)
+
+[Service]
+Type=exec
+WorkingDirectory=%h/src/poker-trainer/train
+EnvironmentFile=%h/.config/poker-train/%i.env
+ExecStart=/bin/sh -lc 'exec uv run train.py $TRAIN_ARGS'
+Nice=10
+# No Restart: a dead training run should be looked at, not silently redone.
