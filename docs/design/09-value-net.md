@@ -83,8 +83,9 @@ card-removal-correct mixing — exact only when every child is stored (~66%
 of roots; the rest keep OOP labels and mask IP, since a pruned child can
 carry ~20%-pot bias). Every root is checked against two identities (stored
 weights = reach × unblocked-opponent mass; both sides' reach-weighted value
-averages sum to the pot — holds to ≤0.02 bb) and the run fails loudly on
-drift. Val split = flops with fnv1a64 % 10 == 0; the eval baseline is
+averages sum to the pot — each holds to the store's 3-decimal rounding,
+within ~1% of pot) and the run fails loudly on drift. Val split = flops
+with fnv1a64 % 10 == 0; the eval baseline is
 `cfv/pot := equity`. `train/` is a uv project (torch MLP, 2707→3×1024→2652,
 reach-weighted masked MSE); corpus and checkpoints stay out of git.
 
