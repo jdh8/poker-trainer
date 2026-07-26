@@ -34,7 +34,7 @@ is exactly the "unacceptable" case named below.
   full NLHE postflop trees against an optimized vectorized CPU solver.
 
 What we did instead (shipped alongside this doc): 16-bit solve storage
-(`tables --compress`) plus flop-level concurrency (`--stride/--offset` +
+(now the default in `tables`) plus flop-level concurrency (`--stride/--offset` +
 `RAYON_NUM_THREADS`) — ~20 lines for most of the wall-clock win GPU-CFR could
 have offered.
 

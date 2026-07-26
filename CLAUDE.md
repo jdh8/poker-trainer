@@ -105,13 +105,16 @@ minutes cold): run `cargo test -- --ignored` only when touching `tree.rs`,
   flop serves exactly via `src/iso.rs` (design 08) — else the live tree.
   Grounded `--from <ruleset>:<line>` configs get dirs like `cash-hu55_r2.5-c`
   (`formation_dir` swaps `:` for `_`). Generation solves one game per flop
-  (~7-12 GB RSS with `--compress`, ~1-5 min each; f32 without it is 14-24 GB
-  and ~12% slower for zero quality gain) — **never run bare**, wrap in
-  `scripts/idle-run.sh`, **always `--no-save-bins` on manifest runs** (a bin
-  is 0.65-12 GB/flop), and **one job at a time** (measured: a second
-  concurrent solve doesn't pay — memory-bandwidth-bound; design 08):
+  (compression is the default now — ~7-12 GB RSS on srp-* formations, but
+  grounded limped lines run much larger; the solver measures each flop and
+  skips any over an auto memory budget — `MemAvailable`-based, or `--max-mem
+  <GB>` — so a worst-case flop is deferred, not an OOM; ~1-5 min each) —
+  **never run bare**, wrap in `scripts/idle-run.sh`, **always `--no-save-bins`
+  on manifest runs** (a bin is 0.65-12 GB/flop), and **one job at a time**
+  (measured: a second concurrent solve doesn't pay — memory-bandwidth-bound;
+  design 08):
   `scripts/idle-run.sh cargo run -p solve-gen --release -- tables
-  --manifest manifests/all-1755.toml --no-save-bins --compress`.
+  --manifest manifests/all-1755.toml --no-save-bins`.
   Line tiers queue behind it: `manifests/lines-{cash-hu55,cash89,mtt89}.toml`.
   The solver bin cache also lives on the HDD
   (`~/.cache/poker-trainer/solves → /srv/var/poker/solves`).

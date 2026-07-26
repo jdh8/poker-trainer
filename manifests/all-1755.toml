@@ -14,7 +14,7 @@
 #     --manifest manifests/all-1755.toml --no-save-bins
 #
 # Fan out across the box fleet with --stride N --offset K (each box a disjoint
-# offset, local --out, --compress mandatory to fit 16 GB workers); then
+# offset, local --out; compression is the default now); then
 # scripts/collect-shards.sh into /srv and a full-manifest mop-up pass. See the
 # "Fanning a bulk tier across the fleet" section of docs/shared-machine-data-gen.md.
 #

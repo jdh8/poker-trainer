@@ -21,7 +21,11 @@
 [Unit]
 Description=Poker solve-gen tables worker (%i)
 After=network-online.target
-StartLimitIntervalSec=0
+# Cap restart storms: >3 starts in 5 min stops the unit. The in-job memory
+# budget should prevent a deterministic wedge, but nothing should hammer a
+# shared box unattended. Clear a tripped limiter with `reset-failed`.
+StartLimitIntervalSec=300
+StartLimitBurst=3
 
 [Service]
 Type=simple
@@ -29,15 +33,20 @@ WorkingDirectory=%h/src/poker-trainer
 # ~/poker-tables must resolve (NFS mounted) before starting.
 ExecStartPre=/bin/sh -c 'test -d "$(readlink -f %h/poker-tables)"'
 # sh -lc: pick up cargo wherever it lives (snap, rustup, ...).
-ExecStart=/bin/sh -lc 'exec cargo run -p solve-gen --release -- tables --manifest manifests/%i.toml --no-save-bins --compress --out %h/poker-tables'
+ExecStart=/bin/sh -lc 'exec cargo run -p solve-gen --release -- tables --manifest manifests/%i.toml --no-save-bins --out %h/poker-tables'
 # Idle class: runs only on otherwise-free cores, yields instantly.
 Nice=10
 CPUSchedulingPolicy=idle
 IOSchedulingClass=idle
-MemoryMax=48G
-# Crash/OOM => restart resumes via the .jsonl gate; manifest done => stays off.
-# ponytail: a flop that OOMs under MemoryMax retries forever — if the journal
-# shows the same flop looping, raise MemoryMax or drop the manifest line.
+# Backstop only: a contained cgroup kill of *our* process instead of the global
+# OOM killer picking a victim on a shared box. The real guard is the in-job
+# memory budget (auto: 80% of MemAvailable, or `tables --max-mem`), which skips
+# an oversized flop before allocating. 50% of physical suits a normally-shared
+# box; tune down on one that runs persistently hot.
+MemoryMax=50%
+# Crash => restart resumes via the .jsonl gate; manifest done => stays off. An
+# over-budget flop now prints `SKIPPED:` in the journal and is retried later on
+# a less-loaded box — it no longer wedges the worker.
 Restart=on-failure
 RestartSec=60
 

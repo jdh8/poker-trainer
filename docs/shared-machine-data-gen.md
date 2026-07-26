@@ -102,17 +102,21 @@ the boxes produce **disjoint** sets and the per-formation `header-<hash>.json`
 is a byte-identical idempotent write everywhere — merging is a plain `rsync`.
 
 The blocker used to be RAM: an f32 solve is 14–24 GB RSS, so a 16 GB worker
-OOM'd. `--compress` (16-bit solver storage, ~7–12 GB RSS, measured faster and
-same exploitability) fits a 16 GB box, so the fleet is viable again. It is
-**mandatory** here, alongside the usual `--no-save-bins`.
+OOM'd. 16-bit storage is now the **default** (half the RSS, ~12% faster, same
+exploitability — the old `--compress` flag is gone). That fits srp-* formations
+on a 16 GB box; grounded limped lines (high SPR → deep tree) run larger and some
+won't fit a small worker at all. So the solver now **measures each flop before
+allocating and skips any over a memory budget** — `--max-mem <GB>`, else 80% of
+the box's current `MemAvailable`. A skipped flop leaves no `.jsonl`, so a
+larger/less-loaded box picks it up: the fleet auto-partitions by free RAM.
 
 The fleet is N boxes → `--stride N`, one distinct offset each (example: 3):
 
 | offset | host | notes |
 | --- | --- | --- |
-| 0 | main box (has `/srv`) | writes straight to `/srv`, no `MemoryMax` |
-| 1 | worker A | local/shared `--out`, `MemoryMax=13G` if 16 GB |
-| 2 | worker B | local/shared `--out`, `MemoryMax=13G` if 16 GB |
+| 0 | main box (has `/srv`) | writes straight to `/srv`; mops up skipped flops |
+| 1 | worker A | local/shared `--out`; budget auto-skips flops it can't fit |
+| 2 | worker B | local/shared `--out`; budget auto-skips flops it can't fit |
 
 Each remote already has a checkout at `~/src/poker-trainer` (ranges and
 manifests are committed) — `git pull`, then run. It must pass `--out <dir>`
@@ -121,17 +125,17 @@ manifests are committed) — `git pull`, then run. It must pass `--out <dir>`
 
 ```sh
 # On each worker (offset 1..N-1), in ~/src/poker-trainer: git pull, then —
-# MemoryMax = box RAM minus OS headroom: 16 GB box -> 13G, 32 GB -> drop -p.
-# This is the OOM fix: a worst-case wide flop kills THIS PROCESS
-# (resumable — the .jsonl is skipped on restart), not the box.
-systemd-run --user --scope -p MemoryMax=13G \
+# The in-job budget (default: 80% of MemAvailable) skips any flop too big for
+# THIS box — resumable, the mop-up / main box gets it. Omit --max-mem to take
+# the default; the MemoryMax scope is a cheap belt-and-braces backstop.
+systemd-run --user --scope -p MemoryMax=50% \
   scripts/idle-run.sh cargo run -p solve-gen --release -- tables \
-    --manifest manifests/all-1755.toml --no-save-bins --compress \
+    --manifest manifests/all-1755.toml --no-save-bins \
     --stride 3 --offset 1 --out ~/poker-tables
 
-# On the main box (offset 0), same manifest, no cap, --out to /srv:
+# On the main box (offset 0), same manifest, --out to /srv:
 scripts/idle-run.sh cargo run -p solve-gen --release -- tables \
-  --manifest manifests/all-1755.toml --no-save-bins --compress \
+  --manifest manifests/all-1755.toml --no-save-bins \
   --stride 3 --offset 0
 ```
 
@@ -140,17 +144,20 @@ Then collect the remotes into `/srv` and run the mop-up pass on the main box:
 ```sh
 scripts/collect-shards.sh worker-a:poker-tables worker-b:poker-tables
 
-# Mop-up = run the FULL manifest (no --stride) once on the main box. The
-# per-flop .jsonl gate skips everything the fleet produced and solves only
-# leftovers — this doubles as the completeness check.
+# Mop-up = run the FULL manifest (no --stride) once on the main box (the most
+# memory, so it clears flops the smaller workers skipped). The per-flop .jsonl
+# gate skips everything the fleet produced and solves only leftovers — this
+# doubles as the completeness check.
 scripts/idle-run.sh cargo run -p solve-gen --release -- tables \
-  --manifest manifests/all-1755.toml --no-save-bins --compress
+  --manifest manifests/all-1755.toml --no-save-bins
 ```
 
-Compressed RSS tops out around 12 GB, so a 13G cap should never actually fire
-on a 16 GB box — but if a flop ever exceeds it, that one flop is left unsolved
-and the mop-up pass picks it up. Don't build a restart-supervisor unless a
-wedge actually recurs.
+This makes the fleet self-partitioning: a small worker skips the handful of
+wide, high-SPR flops it can't fit, and the big main box mops them up (the
+`SKIPPED:` journal lines show what each box deferred). srp-* flops top out
+around 12 GB compressed, but grounded limped lines go well past that — the
+budget check, not a fixed cap, is what keeps every box safe. Don't build a
+restart-supervisor unless a wedge actually recurs.
 
 ## Surviving disconnect
 

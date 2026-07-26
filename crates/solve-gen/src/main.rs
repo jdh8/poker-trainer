@@ -112,11 +112,12 @@ struct TablesArgs {
     /// Output root (defaults to the repo's data/tables).
     #[arg(long)]
     out: Option<PathBuf>,
-    /// Solve with the solver's 16-bit storage (roughly halves solve RAM; the
-    /// solve still runs to the same exploitability target). What makes two
-    /// concurrent strided jobs fit on a 64 GB box.
+    /// Refuse (skip) any flop whose compressed solver storage would exceed this
+    /// many GB, instead of risking an OOM. Default: 80% of the box's current
+    /// MemAvailable. A skipped flop leaves no `.jsonl`, so the resume gate
+    /// retries it on a less-loaded box or a later run.
     #[arg(long)]
-    compress: bool,
+    max_mem: Option<f64>,
     /// Solve only manifest entries where `index % stride == offset`, so N
     /// strided processes split one manifest for flop-level concurrency (pair
     /// with RAYON_NUM_THREADS to split the cores too; see
@@ -489,7 +490,11 @@ fn handle_op(sess: &mut Option<ServeSession>, req: &Value) -> Result<Value, Stri
                 flop: r.flop,
                 config: r.config,
             };
-            let (game, exploitability, cached) = load_or_solve(&spot, true, false)?;
+            // No explicit cap on the live path — auto-budget off MemAvailable so
+            // an over-sized spot returns a protocol error ("generate the table
+            // first") instead of OOMing the interactive box. Compressed like the
+            // bulk path and the .bin cache.
+            let (game, exploitability, cached) = load_or_solve(&spot, true, None)?;
             let s = sess.insert(ServeSession {
                 game,
                 starting_pot: (spot.config.pot_bb * CHIPS_PER_BB) as i32,
@@ -603,7 +608,7 @@ fn handle_op(sess: &mut Option<ServeSession>, req: &Value) -> Result<Value, Stri
             let here = s.game.history().to_vec();
             let target = s.starting_pot as f32 * 0.005;
             let locks = s.locks.clone(); // borrow s.game mutably in the loop
-            s.game.allocate_memory(false);
+            s.game.allocate_memory(true); // compressed, matching the initial solve
             for (hist, strat) in &locks {
                 s.game.apply_history(hist);
                 s.game.lock_current_strategy(strat);
@@ -773,11 +778,12 @@ fn write_all(spots: &[Spot], out_dir: &Path) {
         // tmp + rename (atomic within out_dir), with `-ip` — yielded first by
         // solve_spot — renamed LAST: the resume gate above checks `-ip`, so
         // its existence must imply every -oop sibling is fully in place.
-        // A kill leaves at worst a `.tmp` (overwritten next run) or orphan
-        // -oop files (re-solved and clobbered by the rename).
+        // A kill leaves at worst an orphan `.tmp` or orphan -oop files
+        // (re-solved and clobbered by the rename). The pid tag keeps two workers
+        // racing the same spot from sharing one tmp path.
         for (file_stem, solved) in solve_spot(spot, &stem).into_iter().rev() {
             let file = out_dir.join(format!("{file_stem}.json"));
-            let tmp = out_dir.join(format!("{file_stem}.json.tmp"));
+            let tmp = out_dir.join(format!("{file_stem}.json.{}.tmp", std::process::id()));
             fs::write(&tmp, serde_json::to_string_pretty(&solved).unwrap()).unwrap();
             fs::rename(&tmp, &file).unwrap();
             println!(
@@ -804,6 +810,15 @@ fn gen_info(exploitability_chips: f32) -> GenInfo {
 fn write_tables(spots: &[Spot], out_root: &Path, a: &TablesArgs) {
     let threshold = a.reach;
     let total = spots.len();
+    let pid = std::process::id(); // disambiguates tmp files between concurrent workers
+    println!(
+        "Memory budget: {}",
+        mem_budget(a.max_mem).map_or_else(
+            || "unlimited".to_string(),
+            |b| format!("{:.1} GB", b as f64 / 1e9)
+        )
+    );
+    let mut skipped = 0usize;
     for (i, spot) in spots.iter().enumerate() {
         if i % a.stride != a.offset {
             continue;
@@ -821,13 +836,23 @@ fn write_tables(spots: &[Spot], out_root: &Path, a: &TablesArgs) {
         }
         println!("Tabling: {} (reach ≥ {threshold})", spot.label);
         let started = std::time::Instant::now();
-        let (mut game, exploitability, _) =
-            load_or_solve(spot, !a.no_save_bins, a.compress).expect("spot must solve");
+        // Any solver error (over budget, unsolvable) becomes a skip, not a panic:
+        // it leaves no `.jsonl`, so the resume gate retries the spot next run /
+        // on a less-loaded box. A bad spot must not take down a 1755-flop run.
+        let (mut game, exploitability, _) = match load_or_solve(spot, !a.no_save_bins, a.max_mem) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("SKIPPED: {} ({stem}) — {e}", spot.label);
+                skipped += 1;
+                continue;
+            }
+        };
         game.back_to_root();
         let starting_pot = (spot.config.pot_bb * CHIPS_PER_BB) as i32;
 
         // Header per config-hash (overwrite is idempotent) — provenance + the
-        // version gate the trainer's loader checks.
+        // version gate the trainer's loader checks. tmp + rename (pid-tagged) so
+        // concurrent workers can't interleave into a half-written header.
         let header = TableHeader {
             version: 1,
             formation: spot.config.formation.clone(),
@@ -836,14 +861,16 @@ fn write_tables(spots: &[Spot], out_root: &Path, a: &TablesArgs) {
             generator: gen_info(exploitability),
             reach: threshold,
         };
-        fs::write(
-            dir.join(format!("header-{hash}.json")),
-            serde_json::to_string_pretty(&header).unwrap(),
-        )
-        .unwrap();
+        let header_file = dir.join(format!("header-{hash}.json"));
+        let header_tmp = dir.join(format!("header-{hash}.json.{pid}.tmp"));
+        fs::write(&header_tmp, serde_json::to_string_pretty(&header).unwrap()).unwrap();
+        fs::rename(&header_tmp, &header_file).unwrap();
 
-        // Nodes: tmp + rename so a mid-flop kill leaves at most a `.tmp`.
-        let tmp = dir.join(format!("{stem}.jsonl.tmp"));
+        // Nodes: tmp + rename so a mid-flop kill leaves at most a stray `.tmp`.
+        // The pid keeps two workers racing the same spot from sharing one tmp
+        // path (which would interleave into a corrupt `.jsonl` that passes the
+        // resume gate forever). A kill orphans one small `.tmp`; harmless.
+        let tmp = dir.join(format!("{stem}.jsonl.{pid}.tmp"));
         let count = {
             let mut w = BufWriter::new(fs::File::create(&tmp).unwrap());
             let mut labels = Vec::new();
@@ -858,6 +885,9 @@ fn write_tables(spots: &[Spot], out_root: &Path, a: &TablesArgs) {
             started.elapsed().as_secs_f32(),
             i + 1
         );
+    }
+    if skipped > 0 {
+        println!("{skipped}/{total} skipped (over budget or unsolvable)");
     }
 }
 
@@ -985,13 +1015,14 @@ fn solve_cache_path(spot: &Spot) -> Option<PathBuf> {
 /// The returned bool is `cached` for the serve ack. A corrupt/unreadable cache
 /// file just re-solves and overwrites; a failed save only warns — the cache is
 /// an optimization. Bulk table runs pass `save_bin = false`: their resume gate
-/// is the .jsonl, and a full-precision save is 0.65–12 GB per flop. `compress`
-/// picks 16-bit solver storage for the fresh-solve path only — a cache hit
-/// keeps whatever precision the bin was saved with.
+/// is the .jsonl, and a save is 0.65–12 GB per flop. `max_mem_gb` is the
+/// pre-flight memory ceiling handed to [`build_and_solve`] (see [`mem_budget`]);
+/// a fresh solve over budget returns `Err` instead of allocating. A cache hit
+/// skips the check — the bin already exists.
 fn load_or_solve(
     spot: &Spot,
     save_bin: bool,
-    compress: bool,
+    max_mem_gb: Option<f64>,
 ) -> Result<(PostFlopGame, f32, bool), String> {
     let path = solve_cache_path(spot);
     if let Some(p) = &path {
@@ -1001,7 +1032,7 @@ fn load_or_solve(
             return Ok((game, memo.parse().unwrap_or(f32::NAN), true));
         }
     }
-    let (game, exploitability) = build_and_solve(spot, compress)?;
+    let (game, exploitability) = build_and_solve(spot, max_mem_gb)?;
     if save_bin {
         if let Some(p) = &path {
             if let Err(e) = save_data_to_file(&game, &exploitability.to_string(), p, None) {
@@ -1012,7 +1043,31 @@ fn load_or_solve(
     Ok((game, exploitability, false))
 }
 
-fn build_and_solve(spot: &Spot, compress: bool) -> Result<(PostFlopGame, f32), String> {
+/// The memory ceiling (bytes) a fresh solve must fit under, else it is skipped.
+/// `--max-mem` wins; otherwise 80% of the box's current `MemAvailable`
+/// (`/proc/meminfo`, Linux only); otherwise `None` (no ceiling — non-Linux).
+///
+/// Deliberately **not** the cgroup limit: a cgroup kill is already a clean,
+/// contained, resumable single-process kill. The failure worth preventing is
+/// the *global* OOM killer on a shared box, and `MemAvailable` is exactly the
+/// number that predicts it — and it re-reads per solve, so it adapts to a
+/// neighbour that grabbed memory since the run started.
+fn mem_budget(max_mem_gb: Option<f64>) -> Option<u64> {
+    if let Some(gb) = max_mem_gb {
+        return Some((gb * 1e9) as u64);
+    }
+    let meminfo = fs::read_to_string("/proc/meminfo").ok()?;
+    let kb: u64 = meminfo
+        .lines()
+        .find_map(|l| l.strip_prefix("MemAvailable:"))?
+        .split_whitespace()
+        .next()?
+        .parse()
+        .ok()?;
+    Some(kb * 1024 / 5 * 4) // 80% of MemAvailable (kB → bytes)
+}
+
+fn build_and_solve(spot: &Spot, max_mem_gb: Option<f64>) -> Result<(PostFlopGame, f32), String> {
     let c = &spot.config;
     let starting_pot = (c.pot_bb * CHIPS_PER_BB) as i32;
     let card_config = CardConfig {
@@ -1042,7 +1097,22 @@ fn build_and_solve(spot: &Spot, compress: bool) -> Result<(PostFlopGame, f32), S
 
     let action_tree = ActionTree::new(tree_config)?;
     let mut game = PostFlopGame::with_config(card_config, action_tree)?;
-    game.allocate_memory(compress);
+    // Pre-flight: memory_usage() is exact and valid *before* allocate_memory
+    // touches a byte. allocate_memory maps lazily-zeroed pages, so an over-sized
+    // solve has no allocation to fail — it just gets OOM-killed mid-solve. This
+    // is the only place to catch it. `.1` is the compressed footprint (we always
+    // allocate compressed).
+    if let Some(budget) = mem_budget(max_mem_gb) {
+        let need = game.memory_usage().1;
+        if need > budget {
+            return Err(format!(
+                "needs {:.1} GB compressed, over the {:.1} GB budget",
+                need as f64 / 1e9,
+                budget as f64 / 1e9,
+            ));
+        }
+    }
+    game.allocate_memory(true);
     let target = starting_pot as f32 * 0.005; // 0.5% of pot
     let exploitability = solve(&mut game, 1000, target, false);
     eprintln!(
@@ -1054,7 +1124,7 @@ fn build_and_solve(spot: &Spot, compress: bool) -> Result<(PostFlopGame, f32), S
 }
 
 fn solve_spot(spot: &Spot, stem: &str) -> Vec<(String, SolvedSpot)> {
-    let (game, exploitability, _) = load_or_solve(spot, true, false).expect("spot must solve");
+    let (game, exploitability, _) = load_or_solve(spot, true, None).expect("spot must solve");
     let mut game = game;
     let generator = gen_info(exploitability);
     let starting_pot = (spot.config.pot_bb * CHIPS_PER_BB) as i32;
@@ -1219,6 +1289,19 @@ fn fmt_action(a: &Action) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mem_budget_flag_wins_and_auto_is_sane() {
+        // --max-mem is an exact GB → bytes conversion, no /proc read.
+        assert_eq!(mem_budget(Some(1.0)), Some(1_000_000_000));
+        assert_eq!(mem_budget(Some(12.5)), Some(12_500_000_000));
+        // Auto path: when MemAvailable is readable, 80% of it is a positive,
+        // plausible byte count. None (no /proc, non-Linux) is a valid "unlimited"
+        // fallback — not asserted against, so the test survives a sandbox.
+        if let Some(b) = mem_budget(None) {
+            assert!(b > 0 && b < 1 << 50); // <1 PB — a real machine
+        }
+    }
 
     /// The committed starter manifest must keep resolving to the v1 curated
     /// spots (8 flops, the default srp-btn-bb config), or regenerating would

@@ -71,10 +71,13 @@ element-for-element.
 - `tables --no-save-bins` is **mandatory for bulk runs**: a full-precision
   solver save is 0.65–12 GB per flop — the full tier would write 10+ TB of
   cache. Existing bins still load (warm hits for the old texture-25 spots).
-- `--compress` (the solver's 16-bit storage) is measured **strictly better
-  for bulk runs** (2026-07, Ryzen 8700F): ~12% faster and half the RSS
-  (7–12 GB vs 14–24 GB f32) at identical achieved exploitability — the
-  0.5%-pot target gates quality either way. Pass it on every manifest run.
+- The solver's 16-bit storage is **the default** (the old `--compress` flag is
+  gone): measured **strictly better for bulk runs** (2026-07, Ryzen 8700F):
+  ~12% faster and half the RSS (7–12 GB vs 14–24 GB f32) at identical achieved
+  exploitability — the 0.5%-pot target gates quality either way, so f32 bought
+  nothing. Those RSS figures are srp-* formations; grounded limped lines run
+  larger (high SPR → deep tree), which is why `tables` now measures each flop's
+  footprint and skips any over its memory budget rather than risk an OOM.
 - Flop-level concurrency does **not** pay on this box: two 8-thread solves
   measured a wash against one 16-thread stream (364 s vs ~333 s for the same
   two flops) — a single solve already saturates dual-channel DDR5 bandwidth,
@@ -92,7 +95,7 @@ element-for-element.
 
   ```sh
   scripts/idle-run.sh cargo run -p solve-gen --release -- tables \
-    --manifest manifests/all-1755.toml --no-save-bins --compress
+    --manifest manifests/all-1755.toml --no-save-bins
   ```
 
 ## Grounded preflop lines (`src/ground.rs`)
