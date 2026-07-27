@@ -39,9 +39,5 @@ from = "cash-hu55:r3-r9-c"    # 3-bet pot vs the 3x open (0.6%)
 flops = "all-iso-flops"
 
 [[runs]]
-from = "cash-hu55:r2-c"       # min-open called (0.2%)
-flops = "all-iso-flops"
-
-[[runs]]
 from = "cash-hu55:r2.5-r10-c" # big 3-bet vs 2.5x open (0.1%)
 flops = "all-iso-flops"
