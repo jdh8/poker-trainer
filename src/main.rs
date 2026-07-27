@@ -236,6 +236,11 @@ impl SolveArgs {
         if let Some(v) = self.rake_cap {
             config.rake_cap_bb = v;
         }
+        // Grounded tiers get the ≤2-button sizing map (rainbow → single 75%)
+        // before the config hash is taken, so table lookup, off-path live-solves,
+        // and the serve fallback all key on the same menu the writer stored under.
+        // A no-op for curated formations and any explicit --sizes.
+        poker_trainer::texture::specialize(&mut config, &flop);
         Some(SolveRequest { flop, config })
     }
 }

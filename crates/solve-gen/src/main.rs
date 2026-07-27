@@ -31,6 +31,23 @@ struct Spot {
     config: SpotConfig,
 }
 
+impl Spot {
+    /// Build a table-generation spot, applying the ≤2-button sizing map
+    /// ([`poker_trainer::texture::specialize`]) so a grounded rainbow flop is
+    /// stored under its degraded (single-`75%`) config hash — the same hash the
+    /// trainer derives on lookup. A no-op for curated formations and any
+    /// explicit `--sizes`. NOT used by `serve`, which must solve the exact
+    /// config the client sent.
+    fn generate(mut config: SpotConfig, flop: String) -> Self {
+        poker_trainer::texture::specialize(&mut config, &flop);
+        Spot {
+            label: spot_label(&config.formation, &flop),
+            flop,
+            config,
+        }
+    }
+}
+
 #[derive(Parser)]
 #[command(name = "solve-gen", about = "Offline GTO solution generator")]
 struct Cli {
@@ -127,6 +144,12 @@ struct TablesArgs {
     /// This process's stride residue (0-based, must be < --stride).
     #[arg(long, default_value_t = 0)]
     offset: usize,
+    /// Solve each spot and print its root EV (both players, in bb) plus
+    /// exploitability, instead of writing a table — the sizing-calibration
+    /// probe. Honors --sizes/--from/--flop/--manifest and --max-mem; pair with
+    /// --no-save-bins. EV-loss of a restricted menu = (rich_ev − this_ev).
+    #[arg(long)]
+    measure: bool,
 }
 
 #[derive(Args)]
@@ -259,11 +282,7 @@ fn spot_from_args(a: &SolveArgs) -> Result<Spot, String> {
     if let Some(v) = a.rake_cap {
         c.rake_cap_bb = v;
     }
-    Ok(Spot {
-        label: spot_label(&c.formation, &a.flop),
-        flop: a.flop.clone(),
-        config: c,
-    })
+    Ok(Spot::generate(c, a.flop.clone()))
 }
 
 /// Spots to table: a single `--flop` (with `solve`'s override flags) when given,
@@ -371,11 +390,7 @@ fn manifest_spots(m: &Manifest) -> Result<Vec<Spot>, String> {
                 .clone()
         };
         for flop in flops {
-            spots.push(Spot {
-                label: spot_label(&c.formation, &flop),
-                flop,
-                config: c.clone(),
-            });
+            spots.push(Spot::generate(c.clone(), flop));
         }
     }
     Ok(spots)
@@ -849,6 +864,28 @@ fn write_tables(spots: &[Spot], out_root: &Path, a: &TablesArgs) {
         };
         game.back_to_root();
         let starting_pot = (spot.config.pot_bb * CHIPS_PER_BB) as i32;
+
+        if a.measure {
+            // Root EV = range-weighted mean of the per-hand equilibrium EVs
+            // (chips → bb), same reduction as the JSONL writer (lines ~738-748).
+            game.cache_normalized_weights();
+            let root_ev_bb = |p: usize| -> f32 {
+                let w = game.normalized_weights(p);
+                let ev = game.expected_values(p);
+                let wsum: f32 = w.iter().sum();
+                let dot: f32 = w.iter().zip(&ev).map(|(wi, ei)| wi * ei).sum();
+                (dot / wsum) / CHIPS_PER_BB
+            };
+            println!(
+                "MEASURE {} sizes=[{}] ev_oop_bb={:.4} ev_ip_bb={:.4} exploit_bb={:.5}",
+                spot.flop.to_lowercase(),
+                spot.config.flop_sizes,
+                root_ev_bb(0),
+                root_ev_bb(1),
+                exploitability / CHIPS_PER_BB,
+            );
+            continue;
+        }
 
         // Header per config-hash (overwrite is idempotent) — provenance + the
         // version gate the trainer's loader checks. tmp + rename (pid-tagged) so
@@ -1510,5 +1547,29 @@ mod tests {
         assert!(manifest_spots(&neither)
             .unwrap_err()
             .contains("exactly one of formation/from"));
+    }
+
+    /// The ≤2-button sizing map fires on the write side: a grounded rainbow flop
+    /// is solved and stored under a single-`75%` config, its degraded hash — the
+    /// same one the trainer's `into_request` derives on lookup. Wet boards and
+    /// curated formations are untouched (covered by `texture::specialize` tests).
+    #[test]
+    fn grounded_rainbow_generates_at_the_degraded_single_size() {
+        let sizes_for = |flop: &str| {
+            let cli = Cli::parse_from([
+                "solve-gen",
+                "solve",
+                "--flop",
+                flop,
+                "--from",
+                "cash-hu55:c-x",
+            ]);
+            let Some(Command::Solve(a)) = cli.command else {
+                panic!("expected solve subcommand")
+            };
+            spot_from_args(&a).unwrap().config.flop_sizes
+        };
+        assert_eq!(sizes_for("Kh7c2d"), "75%"); // rainbow → the one cut
+        assert_eq!(sizes_for("Td9d6h"), "33%, 75%"); // two-tone keeps both
     }
 }

@@ -43,23 +43,40 @@ pub fn sizing_class(flop: [Card; 3]) -> &'static str {
 
 /// The ≤2-size flop bet menu for a formation × [`sizing_class`] (`"a"` = the
 /// all-in size token the solver parses). A `const` map baked from reference
-/// solves — every arm currently returns the solver default, so [`specialize`]
-/// is a no-op until the map is populated (design: postflop ≤2-button sizing).
-pub fn flop_sizes_for(_formation: &str, _sizing_class: &str) -> &'static str {
-    DEFAULT_FLOP_SIZES
+/// solves.
+///
+/// Measured 2026-07-27 (srp-btn-bb deep + cash-hu55:c-x limped, root-EV probe):
+/// `33%, 75%` is the EV-best ≤2 menu on *every* texture wherever it fits, so the
+/// only cut that pays is **rainbow → a single `75%`** — it halves the OOM-monster
+/// footprint (25.8→12.5 GB) at ≈EV-neutral (+2.6 mbb limped, −5.5 mbb deep, both
+/// inside the ~13 mbb/side noise floor). A lone `75%` on a *wet* board loses
+/// −17..−22 mbb, and all-in as a button never earns its slot above short-stack
+/// SPR — so the other three textures keep the two-size default.
+pub fn flop_sizes_for(_formation: &str, sizing_class: &str) -> &'static str {
+    match sizing_class {
+        "rainbow" => "75%",
+        _ => DEFAULT_FLOP_SIZES,
+    }
 }
 
-/// Derive `config.flop_sizes` from the flop's [`sizing_class`] — unless the
-/// caller already set an explicit menu (`flop_sizes` differs from the default,
-/// i.e. the `--sizes` escape hatch was used). Deterministic in
-/// `(formation, flop)`, so a writer and a reader independently agree on the
-/// hash. A malformed flop string is left untouched (the solve errors on it).
+/// Derive `config.flop_sizes` from the flop's [`sizing_class`]. Deterministic in
+/// `(formation, flop)`, so a table writer and the trainer reader independently
+/// agree on the config hash. Three ways to leave it untouched:
 ///
-/// ponytail: call sites are wired at sizing calibration (write side: solve-gen
-/// `Spot` construction; read side: the tables path `open_walk`/`load_table` —
-/// NOT the curated `data/solutions` provider, which stays at default sizes).
-/// Landing it uncalled keeps this commit a pure no-op.
+/// - **Curated formations** (`srp-*`, `3bp-*` — no `:` in the id) are skipped so
+///   their already-generated tables stay valid without a regen. Only grounded
+///   `<ruleset>:<line>` tiers, which we regen, get the map.
+/// - An explicit `--sizes` menu (`flop_sizes` already differs from the default)
+///   wins — the escape hatch.
+/// - A malformed flop string is left alone (the solve errors on it).
+///
+/// ponytail: grounded-only guard is what lets the regen stay grounded-tier-only.
+/// Upgrade to apply the map on curated too: drop the `contains(':')` guard and
+/// regen the curated tables.
 pub fn specialize(config: &mut SpotConfig, flop: &str) {
+    if !config.formation.contains(':') {
+        return; // curated formation — keep its existing tables valid
+    }
     if config.flop_sizes != DEFAULT_FLOP_SIZES {
         return; // an explicit --sizes override wins
     }
@@ -105,9 +122,9 @@ mod tests {
         assert_eq!(class(flop("8h", "8d", "2d")), "paired"); // paired two-tone
     }
 
-    fn cfg(flop_sizes: &str) -> SpotConfig {
+    fn cfg(formation: &str, flop_sizes: &str) -> SpotConfig {
         SpotConfig {
-            formation: "srp-btn-bb".into(),
+            formation: formation.into(),
             oop_range: String::new(),
             ip_range: String::new(),
             flop_sizes: flop_sizes.into(),
@@ -121,24 +138,42 @@ mod tests {
     }
 
     #[test]
-    fn specialize_is_a_noop_under_the_default_map() {
-        // Every map arm returns the default today, so specialize must not move
-        // flop_sizes (and hence the config hash) for any flop.
-        let mut c = cfg(DEFAULT_FLOP_SIZES);
-        specialize(&mut c, "Td9d6h");
+    fn specialize_leaves_curated_formations_alone() {
+        // Curated ids (no ':') keep the default so their existing tables stay
+        // valid without a regen — even on a rainbow flop the map would degrade.
+        let mut c = cfg("srp-btn-bb", DEFAULT_FLOP_SIZES);
+        specialize(&mut c, "Kh7c2d"); // rainbow
         assert_eq!(c.flop_sizes, DEFAULT_FLOP_SIZES);
     }
 
     #[test]
+    fn specialize_degrades_a_grounded_rainbow_to_a_single_75() {
+        let mut c = cfg("cash-hu55:c-x", DEFAULT_FLOP_SIZES);
+        specialize(&mut c, "Kh7c2d"); // rainbow → the one texture that cuts
+        assert_eq!(c.flop_sizes, "75%");
+    }
+
+    #[test]
+    fn specialize_keeps_grounded_wet_boards_at_the_default() {
+        // Only rainbow cuts; two-tone/monotone/paired keep both sizes.
+        for flop in ["Td9d6h", "Jh8h3h", "8h8c2d"] {
+            let mut c = cfg("cash-hu55:c-x", DEFAULT_FLOP_SIZES);
+            specialize(&mut c, flop);
+            assert_eq!(c.flop_sizes, DEFAULT_FLOP_SIZES, "flop {flop}");
+        }
+    }
+
+    #[test]
     fn specialize_respects_an_explicit_sizes_override() {
-        let mut c = cfg("50%"); // not the default → --sizes escape hatch
-        specialize(&mut c, "Td9d6h");
+        // Grounded rainbow that would otherwise degrade — the --sizes hatch wins.
+        let mut c = cfg("cash-hu55:c-x", "50%");
+        specialize(&mut c, "Kh7c2d");
         assert_eq!(c.flop_sizes, "50%");
     }
 
     #[test]
     fn specialize_leaves_a_malformed_flop_alone() {
-        let mut c = cfg(DEFAULT_FLOP_SIZES);
+        let mut c = cfg("cash-hu55:c-x", DEFAULT_FLOP_SIZES);
         specialize(&mut c, "not-a-flop");
         assert_eq!(c.flop_sizes, DEFAULT_FLOP_SIZES);
     }
