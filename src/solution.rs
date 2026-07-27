@@ -75,6 +75,11 @@ impl SolvedSpot {
     }
 }
 
+/// The solver's default flop bet menu (small + big). Also the sentinel
+/// [`crate::texture::specialize`] treats as "no explicit `--sizes`", so a
+/// flop-derived per-class menu may replace it (but an explicit override wins).
+pub const DEFAULT_FLOP_SIZES: &str = "33%, 75%";
+
 /// The full postflop game config, shared by both crates (design doc 02): it's
 /// the CLI's resolved knobs, the `serve`/`solve` request body, the cache-key
 /// input ([`SpotConfig::hash8`]), and the provenance embedded in every
@@ -120,7 +125,7 @@ impl SpotConfig {
             formation: id.into(),
             oop_range: read("oop")?,
             ip_range: read("ip")?,
-            flop_sizes: "33%, 75%".into(),
+            flop_sizes: DEFAULT_FLOP_SIZES.into(),
             turn_sizes: "33%".into(),
             river_sizes: "33%".into(),
             stack_bb: f.stack_bb,

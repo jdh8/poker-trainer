@@ -104,7 +104,7 @@ pub fn ground(spec: &str, preflop_root: impl AsRef<Path>) -> Result<Grounded, St
         ip_range: spot.ip_range.clone(),
         // The solver-default sizes, same literals as `SpotConfig::for_formation`
         // — a grounded config replaces only what the preflop equilibrium fixes.
-        flop_sizes: "33%, 75%".into(),
+        flop_sizes: crate::solution::DEFAULT_FLOP_SIZES.into(),
         turn_sizes: "33%".into(),
         river_sizes: "33%".into(),
         stack_bb: spot.stack,
