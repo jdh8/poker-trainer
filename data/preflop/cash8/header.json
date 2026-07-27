@@ -17,8 +17,7 @@
     "limp_scope": "sb",
     "open_to_bb": [
       2.0,
-      2.5,
-      3.0
+      2.5
     ],
     "rake_cap_bb": 3.0,
     "rake_rate": 0.05,
@@ -46,12 +45,12 @@
       4.0
     ]
   },
-  "config_hash": "ba4e77d2",
+  "config_hash": "07e29418",
   "ev_unit": "bb",
   "generator": {
     "version": "0.1.0",
     "traversals": 1000000000,
     "seed": 1,
-    "strategy_drift": 0.07769832
+    "strategy_drift": 0.074306905
   }
 }

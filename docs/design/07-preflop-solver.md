@@ -124,18 +124,19 @@ seat folded merge. Benign imperfect recall, standard for preflop solvers;
 full-history keys are the memory-multiplying fallback if it ever bites.
 
 Measured trees under the shipped menus (`preflop-gen tree`, pinned by
-`shipped_tree_counts_are_pinned`):
+`shipped_tree_counts_are_pinned`) — after the 2026-07-26 open-menu trim to
+`[2.5, 3]` (§Limp scope), ~⅓ smaller than the original `[2, 2.5, 3]`:
 
 | ruleset | decisions | distinct states | edges | fold-wins | all-in SD (multi) | flops (multi) | depth |
 |---|---|---|---|---|---|---|---|
-| cash144 | 885,384 | 311,682 | 1,907,869 | 137,107 | 765,294 (460,644) | 120,085 (74,724) | 26 |
-| cash89 | 885,384 | 311,682 | 1,907,869 | 137,107 | 765,294 (460,644) | 120,085 (74,724) | 26 |
-| cash55 | 673,940 | 254,423 | 1,451,617 | 103,743 | 582,956 (351,698) | 90,979 (56,770) | 26 |
-| cash34 | 175,394 | 105,715 | 376,051 | 25,269 | 153,046 (94,580) | 22,343 (14,370) | 22 |
-| cash21 | 70,076 | 50,301 | 149,853 | 9,707 | 61,456 (38,540) | 8,615 (5,632) | 21 |
-| cash13 | 18,832 | 16,936 | 40,017 | 2,359 | 16,714 (10,848) | 2,113 (1,440) | 16 |
-| cash8 | 3,572 | 3,572 | 7,569 | 431 | 3,192 (2,128) | 375 (254) | 12 |
-| cash5 | 1,876 | 1,876 | 3,945 | 199 | 1,696 (1,164) | 175 (126) | 11 |
+| cash144 | 590,258 | 207,790 | 1,271,915 | 91,405 | 510,196 (307,096) | 80,057 (49,816) | 26 |
+| cash89 | 590,258 | 207,790 | 1,271,915 | 91,405 | 510,196 (307,096) | 80,057 (49,816) | 26 |
+| cash55 | 378,814 | 150,531 | 815,663 | 58,041 | 327,858 (198,150) | 50,951 (31,862) | 26 |
+| cash34 | 91,166 | 58,536 | 195,199 | 12,873 | 79,740 (49,604) | 11,421 (7,416) | 21 |
+| cash21 | 24,496 | 21,036 | 52,257 | 3,271 | 21,586 (13,738) | 2,905 (1,924) | 17 |
+| cash13 | 12,576 | 11,312 | 26,721 | 1,575 | 11,162 (7,246) | 1,409 (960) | 16 |
+| cash8 | 2,968 | 2,968 | 6,297 | 367 | 2,646 (1,754) | 317 (212) | 12 |
+| cash5 | 1,272 | 1,272 | 2,673 | 135 | 1,150 (790) | 117 (84) | 11 |
 
 (SB-only limps keep just the one 2-way completed branch — the multiway limped
 pots that made the old all-seat tree ~8× larger at ~100bb are gone. cash89/144
@@ -155,15 +156,22 @@ shrink at ~89–100bb was ~8×). The knob's other settings: `none` = push/fold (
 HU Nash reference; `no_limps = true` is the shorthand) · `all` = the full
 multiway behaviour.
 
-Deliberately **no per-seat open menus** — one global `open_to_bb = [2, 2.5, 3]`
-for all seats, SB included. An isolated SB-vs-BB solve (100bb, cash rake, tested
-under both the single- and three-size 3-bet menus) found SB's open sizing ≈
-every other seat's: 2.5 and 3 both live, the 2bb open a harmless ~0.6%
-EV-neutral crumb, and offering 3.5/4 drew ~27% frequency for **+0.002–0.004 bb**
-(noise) — flat EV above 2.5bb, i.e. size-*indifference*, not a wish to open
-bigger. SB's ideal menu `{limp, 2.5, 3}` is thus the global menu minus one 0.6%
-button; a per-seat-menu refactor to delete that crumb isn't worth it, so `sb`
-keeps the one global menu and just drops the non-SB limps.
+Deliberately **no per-seat open menus** — one global `open_to_bb` for all seats,
+SB included. An isolated SB-vs-BB solve (100bb, cash rake, tested under both the
+single- and three-size 3-bet menus) found SB's open sizing ≈ every other seat's:
+2.5 and 3 both live, and offering 3.5/4 drew ~27% frequency for **+0.002–0.004 bb**
+(noise) — flat EV above 2.5bb, i.e. size-*indifference*, not a wish to open bigger.
+
+**Open menu trimmed to `[2.5, 3]` (2026-07-26).** The original `[2, 2.5, 3]`
+carried a third size — the single least-used open at nearly every depth (0.7–7%
+by rung, mostly <2% deep), removable for **≤0.01 mbb/hand ladder-wide** (measured
+from the committed charts' per-action EVs). Dropping it (the "keep ≤2 aggressive
+buttons / drop the least-used size per stack" simplification, all-in counted as a
+button) leaves `[2.5, 3]` and shrinks the root subtree ~⅓ (cash89 885k→590k
+decisions, cash21 −65%) at no measurable EV cost. Two short rungs keep the
+min-open instead — `cash8 = [2, 2.5]`, `cash-hu8 = [2, 3]` — where the 2bb open is
+the *dominant* size, not the crumb. 3-bet `{3,4}` is untouched (both sizes are
+load-bearing: 3× IP, 4× OOP, §Re-raise menu).
 
 ## Re-raise menu — 3-bet `{3, 4}`, multiplier-sized (shipped 2026-07-08)
 

@@ -16,7 +16,6 @@
     "label": "Cash HU, 13bb",
     "limp_scope": "sb",
     "open_to_bb": [
-      2.0,
       2.5,
       3.0
     ],
@@ -42,12 +41,12 @@
       4.0
     ]
   },
-  "config_hash": "4a88e8a9",
+  "config_hash": "cf4944e9",
   "ev_unit": "bb",
   "generator": {
     "version": "0.1.0",
     "traversals": 1000000000,
     "seed": 1,
-    "strategy_drift": 0.08574289
+    "strategy_drift": 0.031378746
   }
 }

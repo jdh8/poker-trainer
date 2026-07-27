@@ -16,7 +16,6 @@
     "label": "MTT HU, 3bb (1 BB ante)",
     "limp_scope": "sb",
     "open_to_bb": [
-      2.0,
       2.5,
       3.0
     ],
@@ -39,12 +38,12 @@
       3.0
     ]
   },
-  "config_hash": "5abe4f98",
+  "config_hash": "e661fbb6",
   "ev_unit": "bb",
   "generator": {
     "version": "0.1.0",
     "traversals": 1000000000,
     "seed": 1,
-    "strategy_drift": 0.027347624
+    "strategy_drift": 0.0077215135
   }
 }

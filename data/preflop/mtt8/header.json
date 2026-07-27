@@ -16,7 +16,6 @@
     "label": "6-max tournament, 8bb (1 BB ante)",
     "limp_scope": "sb",
     "open_to_bb": [
-      2.0,
       2.5,
       3.0
     ],
@@ -44,12 +43,12 @@
       4.0
     ]
   },
-  "config_hash": "1e5b63da",
+  "config_hash": "66212b0b",
   "ev_unit": "bb",
   "generator": {
     "version": "0.1.0",
     "traversals": 500000000,
     "seed": 1,
-    "strategy_drift": 0.08231565
+    "strategy_drift": 0.054734766
   }
 }

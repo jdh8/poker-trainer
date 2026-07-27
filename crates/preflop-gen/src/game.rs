@@ -880,12 +880,7 @@ mod tests {
         State::root(&rs).legal(&rs, &mut acts);
         assert_eq!(
             acts,
-            vec![
-                Action::Fold,
-                Action::RaiseTo(200),
-                Action::RaiseTo(250),
-                Action::RaiseTo(300)
-            ]
+            vec![Action::Fold, Action::RaiseTo(250), Action::RaiseTo(300)]
         );
         // An early limp is unreachable (no multiway limped pots).
         assert!(replay(&rs, "c").is_err());
@@ -899,7 +894,6 @@ mod tests {
             vec![
                 Action::Fold,
                 Action::Call, // the SB limp
-                Action::RaiseTo(200),
                 Action::RaiseTo(250),
                 Action::RaiseTo(300)
             ]
@@ -911,24 +905,19 @@ mod tests {
         st.legal(&rs, &mut acts);
         assert_eq!(
             acts,
-            vec![
-                Action::Check,
-                Action::RaiseTo(200),
-                Action::RaiseTo(250),
-                Action::RaiseTo(300)
-            ]
+            vec![Action::Check, Action::RaiseTo(250), Action::RaiseTo(300)]
         );
 
-        // 3-bet menu trimmed to 3/4 × the open (a 2bb open → 6/8bb).
-        let st = replay(&rs, "r2-f-f-f-f").unwrap();
+        // 3-bet menu trimmed to 3/4 × the open (a 2.5bb open → 7.5/10bb).
+        let st = replay(&rs, "r2.5-f-f-f-f").unwrap();
         st.legal(&rs, &mut acts);
         assert_eq!(
             acts,
             vec![
                 Action::Fold,
                 Action::Call,
-                Action::RaiseTo(600),
-                Action::RaiseTo(800)
+                Action::RaiseTo(750),
+                Action::RaiseTo(1000)
             ]
         );
     }
@@ -943,14 +932,14 @@ mod tests {
         // cash89 and cash144 share this exact shape — no raise size reaches
         // either stack, so only the equilibrium differs.
         let deep = TreeStats {
-            decisions: 885_384,
-            states: 311_682,
-            edges: 1_907_869,
-            fold_wins: 137_107,
-            allin_2way: 304_650,
-            allin_multi: 460_644,
-            flop_2way: 45_361,
-            flop_multi: 74_724,
+            decisions: 590_258,
+            states: 207_790,
+            edges: 1_271_915,
+            fold_wins: 91_405,
+            allin_2way: 203_100,
+            allin_multi: 307_096,
+            flop_2way: 30_241,
+            flop_multi: 49_816,
             max_depth: 26,
         };
         assert_eq!(tree_stats(&manifest("cash89")), deep);
@@ -960,42 +949,42 @@ mod tests {
         assert_eq!(
             tree_stats(&manifest("cash55")),
             TreeStats {
-                decisions: 673_940,
-                states: 254_423,
-                edges: 1_451_617,
-                fold_wins: 103_743,
-                allin_2way: 231_258,
-                allin_multi: 351_698,
-                flop_2way: 34_209,
-                flop_multi: 56_770,
+                decisions: 378_814,
+                states: 150_531,
+                edges: 815_663,
+                fold_wins: 58_041,
+                allin_2way: 129_708,
+                allin_multi: 198_150,
+                flop_2way: 19_089,
+                flop_multi: 31_862,
                 max_depth: 26,
             }
         );
         assert_eq!(
             tree_stats(&manifest("cash34")),
             TreeStats {
-                decisions: 175_394,
-                states: 105_715,
-                edges: 376_051,
-                fold_wins: 25_269,
-                allin_2way: 58_466,
-                allin_multi: 94_580,
-                flop_2way: 7_973,
-                flop_multi: 14_370,
-                max_depth: 22,
+                decisions: 91_166,
+                states: 58_536,
+                edges: 195_199,
+                fold_wins: 12_873,
+                allin_2way: 30_136,
+                allin_multi: 49_604,
+                flop_2way: 4_005,
+                flop_multi: 7_416,
+                max_depth: 21,
             }
         );
         assert_eq!(
             tree_stats(&manifest("cash13")),
             TreeStats {
-                decisions: 18_832,
-                states: 16_936,
-                edges: 40_017,
-                fold_wins: 2_359,
-                allin_2way: 5_866,
-                allin_multi: 10_848,
-                flop_2way: 673,
-                flop_multi: 1_440,
+                decisions: 12_576,
+                states: 11_312,
+                edges: 26_721,
+                fold_wins: 1_575,
+                allin_2way: 3_916,
+                allin_multi: 7_246,
+                flop_2way: 449,
+                flop_multi: 960,
                 max_depth: 16,
             }
         );
