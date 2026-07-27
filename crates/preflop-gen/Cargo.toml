@@ -18,4 +18,4 @@ rand = "0.10" # seeded MCCFR + Monte-Carlo equity (deterministic per seed)
 rs_poker = { version = "5", default-features = false } # hand ranking for equity tables
 serde = { version = "1", features = ["derive"] } # ruleset TOML schema
 serde_json = "1"
-toml = "0.8" # manifests/preflop/<id>.toml
+toml = "1" # manifests/preflop/<id>.toml

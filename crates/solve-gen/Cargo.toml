@@ -24,4 +24,4 @@ poker-trainer = { path = "../.." }
 clap = { version = "4", features = ["derive"] } # `gen` / `solve` subcommands
 serde = { version = "1", features = ["derive"] } # manifest schema
 serde_json = "1"
-toml = "0.8" # manifests/<name>.toml
+toml = "1" # manifests/<name>.toml
