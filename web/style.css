@@ -22,13 +22,12 @@
   --club: #1e8449;
   --good: #58b368;
   --bad: #d9534f;
-  /* action colors: aggression reds, passive green, fold blue-gray */
+  /* action colors: aggression ramp orange→dark red, passive green, fold blue-gray */
   --act-fold: #5d7285;
   --act-passive: #3f9e63;
   --act-bet1: #d98243;
   --act-bet2: #c0392b;
-  --act-bet3: #8e2437;
-  --act-allin: #6d3f9e;  /* amethyst — All-in, distinct from aggression reds */
+  --act-bet3: #8e2437;  /* darkest rung — All-in */
 }
 
 * { box-sizing: border-box; }

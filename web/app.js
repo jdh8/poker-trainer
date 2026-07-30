@@ -494,11 +494,13 @@ let grFiles = {};   // flop -> node -> filename
 function actionColor(label, i, actions) {
   if (/^fold/i.test(label)) return 'var(--act-fold)';
   if (/^(check|call)/i.test(label)) return 'var(--act-passive)';
-  if (/^all-?in/i.test(label)) return 'var(--act-allin)';
+  if (/^all-?in/i.test(label)) return 'var(--act-bet3)';
   // aggressive: darker red for the larger sizes, by position among bets/raises
   const aggr = actions.filter(a => !/^(fold|check|call)/i.test(a));
   const k = aggr.indexOf(label);
-  return ['var(--act-bet1)', 'var(--act-bet2)', 'var(--act-bet3)'][Math.min(k, 2)];
+  // ponytail: two sizing tiers — menus are ≤2 sizes since 30fa0b6/712dc31.
+  // A ruleset with 3 non-All-in sizes needs a new mid-tone, not another clamp.
+  return ['var(--act-bet1)', 'var(--act-bet2)'][Math.min(k, 1)];
 }
 
 function comboClass(hand) {
