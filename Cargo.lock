@@ -1548,6 +1548,7 @@ dependencies = [
  "postflop-solver",
  "serde",
  "serde_json",
+ "signal-hook",
  "toml",
 ]
 

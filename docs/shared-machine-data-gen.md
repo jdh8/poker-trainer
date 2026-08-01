@@ -166,6 +166,22 @@ restart-supervisor unless a wedge actually recurs.
 - The run is one-shot and the output is regenerable, so a dropped session just
   means re-running it — nothing to resume.
 
+The `scripts/poker-worker@.service` user service also supports a graceful
+`systemctl --user stop`: SIGTERM stops the manifest loop from taking another
+flop, lets the current flop finish its atomic `.jsonl` publish, then exits. The
+unit gives that drain up to ten minutes before force-killing it. For an
+immediate stop, use `systemctl --user kill --kill-whom=all --signal=SIGKILL
+poker-worker@<manifest>`; the unfinished flop remains resumable.
+Install both the service file and its `.service.d` directory: the latter keeps
+the forced timeout at SIGKILL even on systems with a global SIGABRT drop-in.
+
+A foreground `tables` run drains the same way on Ctrl-C, and prints that
+contract when it starts. Press Ctrl-C twice to give up on the drain and exit
+now, discarding the in-flight flop — the `.jsonl` gate re-solves it next run.
+Both decisions are made inside the signal handler, because these runs are
+`chrt --idle 0`: a receiver thread gets starved for minutes on a busy box, and
+signals arriving in that gap coalesce.
+
 ## Etiquette
 
 Check who is on first (`w` / `who`), prefer nights/weekends for full-throttle

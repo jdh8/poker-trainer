@@ -20,6 +20,10 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::io::{BufRead, BufWriter, Write};
 use std::path::{Path, PathBuf};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 
 const CHIPS_PER_BB: f32 = 100.0;
 
@@ -230,12 +234,52 @@ fn main() {
             if a.stride == 0 || a.offset >= a.stride {
                 die("--offset must be < --stride (and --stride ≥ 1)".into());
             }
+            let shutdown = Arc::new(AtomicBool::new(false));
+            install_drain_handler(&shutdown);
             let out = a.out.clone().unwrap_or_else(|| repo_path("data/tables"));
             let spots = tables_spots(&a).unwrap_or_else(|e| die(e));
-            write_tables(&spots, &out, &a);
+            write_tables(&spots, &out, &a, &shutdown);
         }
         Command::Serve => serve(),
     }
+}
+
+/// Set `shutdown` on SIGTERM (how systemd stops the worker) or Ctrl-C, so
+/// [`write_tables`] drains: the current flop finishes and publishes through its
+/// atomic rename, and the loop exits before starting another. A second Ctrl-C
+/// gives up on the drain and exits immediately, discarding the in-flight flop
+/// (the `.jsonl` resume gate re-solves it next run).
+///
+/// Everything here runs *in the signal handler*, which is the whole point.
+/// A receiver thread (signal-hook's `Signals`, tokio, ctrlc — they all work
+/// this way) is scheduled, and these runs are `chrt --idle 0` under
+/// `scripts/idle-run.sh`: measured on a busy box, such a thread was starved for
+/// minutes, and two SIGINTs arriving inside that gap coalesced into one
+/// delivery. So the state machine is two `AtomicBool`s written by the handler
+/// itself, and the contract is printed up front rather than in response to a
+/// press — a handler cannot safely allocate or take the stderr lock.
+fn install_drain_handler(shutdown: &Arc<AtomicBool>) {
+    use signal_hook::consts::{SIGINT, SIGTERM};
+    use signal_hook::flag::{register, register_conditional_shutdown};
+
+    // Registration order matters: this fires first and exits only if a previous
+    // press already set the flag, so the first Ctrl-C falls through to `register`.
+    let install = || -> Result<(), std::io::Error> {
+        register_conditional_shutdown(SIGINT, 130, Arc::clone(shutdown))?;
+        register(SIGINT, Arc::clone(shutdown))?;
+        // SIGTERM stays drain-only: systemd sends one, and `TimeoutStopSec`
+        // already backstops a flop that overruns its stop job.
+        register(SIGTERM, Arc::clone(shutdown))?;
+        Ok(())
+    };
+    if let Err(e) = install() {
+        eprintln!("failed to install signal handler: {e}");
+        std::process::exit(2);
+    }
+    println!(
+        "Ctrl-C (or SIGTERM) drains: the flop in flight finishes and publishes, \
+         then the run exits before the next one. Ctrl-C twice to abort now."
+    );
 }
 
 /// "SRP BTN vs BB, Td9d6h" — formation label + flop.
@@ -822,7 +866,7 @@ fn gen_info(exploitability_chips: f32) -> GenInfo {
 /// per-config `header-<hash8>.json`. Resumable and atomic, exactly like
 /// [`write_all`]: the final `.jsonl` is the resume gate, written via tmp+rename
 /// — which also makes `--stride`/`--offset` overlap harmless.
-fn write_tables(spots: &[Spot], out_root: &Path, a: &TablesArgs) {
+fn write_tables(spots: &[Spot], out_root: &Path, a: &TablesArgs, shutdown: &AtomicBool) {
     let threshold = a.reach;
     let total = spots.len();
     let pid = std::process::id(); // disambiguates tmp files between concurrent workers
@@ -835,6 +879,12 @@ fn write_tables(spots: &[Spot], out_root: &Path, a: &TablesArgs) {
     );
     let mut skipped = 0usize;
     for (i, spot) in spots.iter().enumerate() {
+        // This is deliberately the only shutdown check in the per-flop path.
+        // Once a spot crosses this boundary, finish solving and publishing it;
+        // the PID-tagged tmp + rename below keeps the result atomic.
+        if shutdown.load(Ordering::Relaxed) {
+            break;
+        }
         if i % a.stride != a.offset {
             continue;
         }
@@ -925,6 +975,9 @@ fn write_tables(spots: &[Spot], out_root: &Path, a: &TablesArgs) {
     }
     if skipped > 0 {
         println!("{skipped}/{total} skipped (over budget or unsolvable)");
+    }
+    if shutdown.load(Ordering::Relaxed) {
+        println!("Shutdown requested; current flop drained, exiting before the next flop");
     }
 }
 
@@ -1326,6 +1379,31 @@ fn fmt_action(a: &Action) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn shutdown_before_first_spot_starts_no_work() {
+        let spots = load_manifest(&repo_path("manifests/starter-8.toml")).unwrap();
+        let cli = Cli::parse_from(["solve-gen", "tables"]);
+        let Some(Command::Tables(args)) = cli.command else {
+            panic!("expected tables subcommand")
+        };
+        let shutdown = AtomicBool::new(true);
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let out = std::env::temp_dir().join(format!(
+            "poker-trainer-shutdown-test-{}-{unique}",
+            std::process::id()
+        ));
+
+        write_tables(&spots, &out, &args, &shutdown);
+
+        assert!(
+            !out.exists(),
+            "a drained worker must not start the next flop"
+        );
+    }
 
     #[test]
     fn mem_budget_flag_wins_and_auto_is_sane() {

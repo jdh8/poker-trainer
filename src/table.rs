@@ -13,7 +13,7 @@ use crate::report::is_aggressive;
 use crate::solution::SolvedSpot;
 use crate::trainer::{fmt_hand_str, parse_hole};
 use crate::tree::{RunoutSummary, TreeNode, TreeWalk};
-use ratatui::crossterm::event::{self, Event, KeyCode, KeyEventKind};
+use ratatui::crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
 use ratatui::layout::{Constraint, Layout};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
@@ -745,9 +745,16 @@ fn draw(
     );
 }
 
+/// Is this keypress Ctrl-C? `ratatui::init()` puts the terminal in raw mode,
+/// which clears `ISIG`, so Ctrl-C is delivered as an ordinary key event instead
+/// of a SIGINT. Both key loops quit on it — unhandled, it reads as a hang.
+fn ctrl_c(key: &event::KeyEvent) -> bool {
+    key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL)
+}
+
 /// Open the TUI on `spots`: walk the cursor over the grid, cycle nodes with
-/// `[`/`]`, quit with `q`/Esc. Restores the terminal on exit (and on panic, via
-/// ratatui's hook).
+/// `[`/`]`, quit with `q`/Esc/Ctrl-C. Restores the terminal on exit (and on
+/// panic, via ratatui's hook).
 pub fn run(spots: &[SolvedSpot]) {
     if spots.is_empty() {
         eprintln!("No solved spots to show — run `cargo run -p solve-gen` or pass --board.");
@@ -771,6 +778,11 @@ pub fn run(spots: &[SolvedSpot]) {
         };
         if key.kind != KeyEventKind::Press {
             continue; // ignore key-release (Windows fires both)
+        }
+        // Raw mode clears ISIG, so Ctrl-C arrives as a keypress, not a SIGINT.
+        // Unhandled it looks like a hang; treat it as quit.
+        if ctrl_c(&key) {
+            break;
         }
         match key.code {
             KeyCode::Char('q') | KeyCode::Esc => break,
@@ -1349,6 +1361,11 @@ pub fn run_tree(session: &mut dyn TreeWalk, mut node: TreeNode, mut lock_args: L
         };
         if key.kind != KeyEventKind::Press {
             continue;
+        }
+        // See `ctrl_c`: checked before the match so it wins over the
+        // lock-mode `c` (clear) arm below.
+        if ctrl_c(&key) {
+            break;
         }
         view.notice = None;
         let at_chance = node.player == "chance";

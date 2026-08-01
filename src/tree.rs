@@ -166,7 +166,9 @@ impl TreeSession {
 
 impl Drop for TreeSession {
     fn drop(&mut self) {
-        let _ = writeln!(self.stdin, "{}", json!({"op": "quit"}));
+        // Kill, not a `quit` op: the serve loop won't read stdin until an
+        // in-flight solve returns, so a graceful handshake here would either
+        // lose the race with `kill` anyway or hang `Drop` for minutes.
         let _ = self.child.kill();
         let _ = self.child.wait();
     }

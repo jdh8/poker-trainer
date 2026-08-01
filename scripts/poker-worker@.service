@@ -8,12 +8,16 @@
 # Install (per-user, zero privilege):
 #   mkdir -p ~/.config/systemd/user
 #   cp scripts/poker-worker@.service ~/.config/systemd/user/
+#   cp -r scripts/poker-worker@.service.d ~/.config/systemd/user/
 #   systemctl --user daemon-reload
 #   systemctl --user enable --now poker-worker@lines-mtt89
 #   loginctl enable-linger "$USER"        # keep running while logged out
 # Toggle / status:
 #   systemctl --user stop|start poker-worker@lines-mtt89
 #   journalctl --user -u poker-worker@lines-mtt89 -f
+# Stop drains the current flop, then exits before starting another. Emergency
+# stop (discard current-flop work immediately):
+#   systemctl --user kill --kill-whom=all --signal=SIGKILL poker-worker@lines-mtt89
 #
 # Expects ~/src/poker-trainer (checkout) and ~/poker-tables (output dir or
 # symlink). The manifest finishing is exit 0 => the service goes inactive.
@@ -44,6 +48,17 @@ IOSchedulingClass=idle
 # an oversized flop before allocating. 50% of physical suits a normally-shared
 # box; tune down on one that runs persistently hot.
 MemoryMax=50%
+# SIGTERM requests an nginx-style drain: finish and atomically publish the
+# current flop, then exit before starting another. `cargo run` and solve-gen
+# are both in this cgroup, so signal the whole group and allow ordinary flops
+# up to ten minutes to drain. Force-kill on timeout instead of inheriting a
+# distro SIGABRT policy that could core-dump a many-GB solver. The accompanying
+# unit-specific drop-in repeats the failure mode so it wins over Fedora's
+# global service.d/10-timeout-abort.conf.
+KillSignal=SIGTERM
+KillMode=control-group
+TimeoutStopSec=10min
+TimeoutStopFailureMode=kill
 # Crash => restart resumes via the .jsonl gate; manifest done => stays off. An
 # over-budget flop now prints `SKIPPED:` in the journal and is retried later on
 # a less-loaded box — it no longer wedges the worker.
