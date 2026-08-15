@@ -1,0 +1,27 @@
+# Grounded-line tier (design doc 08): every cash-hu34 flop-closing line with
+# at least 0.1% arrival mass, each solved across all 1,755 canonical flops.
+# Ordered by mass (`export-range --ruleset cash-hu34` reprints the ranking).
+
+[[runs]]
+from = "cash-hu34:c-x"               # Limped, checked through (mass 20.7%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "cash-hu34:r2.5-c"            # SB opens 2.5x, BB calls (16.2%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "cash-hu34:c-r3-c"            # SB limps, BB raises, SB calls (9.7%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "cash-hu34:r3-c"              # SB opens 3x, BB calls (3.6%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "cash-hu34:r2.5-r7.5-c"       # 3-bet pot, opener calls (0.4%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "cash-hu34:r2.5-r10-c"        # Big 3-bet vs 2.5x open (0.2%)
+flops = "all-iso-flops"

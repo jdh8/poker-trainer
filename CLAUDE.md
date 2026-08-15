@@ -115,7 +115,8 @@ minutes cold): run `cargo test -- --ignored` only when touching `tree.rs`,
   design 08):
   `scripts/idle-run.sh cargo run -p solve-gen --release -- tables
   --manifest manifests/all-1755.toml --no-save-bins`.
-  Line tiers queue behind it: `manifests/lines-{cash-hu55,cash89,mtt89}.toml`.
+  Line tiers queue behind it:
+  `manifests/lines-{cash-hu34,cash-hu55,cash89,mtt-hu34,mtt89}.toml`.
   The solver bin cache also lives on the HDD
   (`~/.cache/poker-trainer/solves → /srv/var/poker/solves`).
 - `scripts/serve-web.sh` — local web viewer against the full table store

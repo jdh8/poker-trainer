@@ -116,8 +116,9 @@ The tables pipeline has its own tier system with different rules:
 - Grounded preflop lines: `[[runs]] from = "<ruleset>:<line>"` instead of
   `formation =` (exactly one of the two). Rank a ruleset's lines by arrival
   mass with `cargo run -q -- export-range --ruleset <id>`; the shipped tiers
-  are `manifests/lines-{cash-hu55,cash89,mtt89}.toml`, queued behind the
-  formations. Tables land in `data/tables/<ruleset>_<line>/` and serve
+  are `manifests/lines-{cash-hu34,cash-hu55,cash89,mtt-hu34,mtt89}.toml`,
+  queued behind the formations. Tables land in
+  `data/tables/<ruleset>_<line>/` and serve
   `table --from <ruleset>:<line> --board <any flop>` instantly.
 - Hash discipline: `curated_formation_hashes_are_pinned` (src/solution.rs)
   and `grounded_from_aligns_with_the_shared_constructor` (solve-gen) guard

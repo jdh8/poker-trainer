@@ -1,0 +1,19 @@
+# Grounded-line tier (design doc 08): every mtt-hu34 flop-closing line with at
+# least 0.1% arrival mass, each solved across all 1,755 canonical flops.
+# Ordered by mass (`export-range --ruleset mtt-hu34` reprints the ranking).
+
+[[runs]]
+from = "mtt-hu34:c-x"                # Limped, checked through (mass 41.4%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt-hu34:c-r3-c"             # SB limps, BB raises, SB calls (24.1%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt-hu34:r3-c"               # SB opens 3x, BB calls (17.0%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt-hu34:r2.5-c"             # SB opens 2.5x, BB calls (0.3%)
+flops = "all-iso-flops"

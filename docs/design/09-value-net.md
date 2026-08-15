@@ -9,7 +9,7 @@ on held-out flops, still far from the ~1%-pot floor.
 Written 2026-07 after a GPU-feasibility review of bulk generation. Records
 why GPU-porting the CFR engine is the wrong move, and the one route where
 the local GPU (RTX 4070 SUPER, 12 GB) genuinely pays. The trigger fired:
-the line-tier queues' multi-month cost (49,140 solves, ~1% done at pickup)
+the line-tier queues' multi-month cost (64,935 solves, ~1% done at pickup)
 is exactly the "unacceptable" case named below.
 
 ## Why not GPU-CFR (the reviewed-and-rejected route)

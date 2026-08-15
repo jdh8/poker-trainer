@@ -114,9 +114,9 @@ combo-weighted arrival marginal — class-level, ranking-grade).
 On disk a grounded config's directory is `formation_dir(spec)` =
 `cash-hu55_r2.5-c` (`:` is Windows-illegal; `_` collides with nothing; a
 no-op for curated ids, so existing trees stayed valid). Line tiers:
-`manifests/lines-cash-hu55.toml` (every line ≥ 0.1% mass),
-`lines-cash89.toml` / `lines-mtt89.toml` (top 10 by mass), each
-× all-iso-flops, queued behind the formations.
+`manifests/lines-{cash-hu34,cash-hu55,mtt-hu34}.toml` (every line ≥ 0.1%
+mass) and `lines-{cash89,mtt89}.toml` (top 10 by mass), each ×
+all-iso-flops, queued behind the formations.
 
 `curated_formation_hashes_are_pinned` (src/solution.rs) pins the five curated
 hashes so nothing silently re-keys hundreds of GB of artifacts. (The old
@@ -156,7 +156,7 @@ the result exact.
 | one formation × all-1755 | 1,755 | ~4–6 days | ~20–80 GB |
 | five formations | 8,775 | ~3–4 weeks | ~220 GB |
 | one grounded line | 1,755 | ~4–6 days | ~20–70 GB |
-| shipped line tiers (28 lines) | ~49k | ~4–6 months | ~1–1.5 TB |
+| shipped line tiers (37 lines) | 64,935 | ~5–8 months | ~1.2–2.2 TB |
 
 All resumable, mass-ordered, and interruptible; `/srv` (2.4 TB free at
 adoption, zstd-compressed) absorbs the full ledger. Trim the line manifests
