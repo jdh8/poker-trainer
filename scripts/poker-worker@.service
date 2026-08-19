@@ -13,10 +13,15 @@
 #   systemctl --user enable --now poker-worker@lines-mtt89
 #   loginctl enable-linger "$USER"        # keep running while logged out
 # Toggle / status:
-#   systemctl --user stop|start poker-worker@lines-mtt89
+#   systemctl --user stop --no-block poker-worker@lines-mtt89
+#   systemctl --user start poker-worker@lines-mtt89
 #   journalctl --user -u poker-worker@lines-mtt89 -f
-# Stop drains the current flop, then exits before starting another. Emergency
-# stop (discard current-flop work immediately):
+# Stop drains the current flop, then exits before starting another. --no-block
+# returns at once instead of holding the terminal for the drain (Ctrl-C on a
+# plain `stop` also just detaches the client; the job continues). Emergency
+# stop (discard current-flop work immediately) — stop first, else the SIGKILL
+# reads as a failure and Restart= brings the worker back a minute later:
+#   systemctl --user stop --no-block poker-worker@lines-mtt89
 #   systemctl --user kill --kill-whom=all --signal=SIGKILL poker-worker@lines-mtt89
 #
 # Expects ~/src/poker-trainer (checkout) and ~/poker-tables (output dir or
@@ -50,14 +55,17 @@ IOSchedulingClass=idle
 MemoryMax=50%
 # SIGTERM requests an nginx-style drain: finish and atomically publish the
 # current flop, then exit before starting another. `cargo run` and solve-gen
-# are both in this cgroup, so signal the whole group and allow ordinary flops
-# up to ten minutes to drain. Force-kill on timeout instead of inheriting a
-# distro SIGABRT policy that could core-dump a many-GB solver. The accompanying
-# unit-specific drop-in repeats the failure mode so it wins over Fedora's
-# global service.d/10-timeout-abort.conf.
+# are both in this cgroup, so signal the whole group. Two minutes is a drain
+# window, not a guarantee: a flop still solving when it expires is force-killed
+# and simply re-solved on the next run (the publish is tmp+rename, so nothing
+# partial lands and the per-flop .jsonl gate re-queues it). Bounding the wait
+# beats saving one flop's CPU on a shared box. Force-kill rather than inherit a
+# distro SIGABRT policy that would core-dump a many-GB solver onto the same
+# disk as the tables — the accompanying unit-specific drop-in repeats the
+# failure mode so it wins over Fedora's global service.d/10-timeout-abort.conf.
 KillSignal=SIGTERM
 KillMode=control-group
-TimeoutStopSec=10min
+TimeoutStopSec=2min
 TimeoutStopFailureMode=kill
 # Crash => restart resumes via the .jsonl gate; manifest done => stays off. An
 # over-budget flop now prints `SKIPPED:` in the journal and is retried later on

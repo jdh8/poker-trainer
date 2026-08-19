@@ -169,9 +169,13 @@ restart-supervisor unless a wedge actually recurs.
 The `scripts/poker-worker@.service` user service also supports a graceful
 `systemctl --user stop`: SIGTERM stops the manifest loop from taking another
 flop, lets the current flop finish its atomic `.jsonl` publish, then exits. The
-unit gives that drain up to ten minutes before force-killing it. For an
-immediate stop, use `systemctl --user kill --kill-whom=all --signal=SIGKILL
-poker-worker@<manifest>`; the unfinished flop remains resumable.
+unit gives that drain up to two minutes before force-killing it; a flop still
+solving at that point is killed and re-solved on the next run, so a stop is
+always bounded. Add `--no-block` so the stop returns at once instead of holding
+the terminal for the drain. To also free the memory at once, follow it with
+`systemctl --user kill --kill-whom=all --signal=SIGKILL poker-worker@<manifest>`
+— after the stop, not instead of it, or the SIGKILL reads as a failure and
+`Restart=on-failure` starts the worker again a minute later.
 Install both the service file and its `.service.d` directory: the latter keeps
 the forced timeout at SIGKILL even on systems with a global SIGABRT drop-in.
 
