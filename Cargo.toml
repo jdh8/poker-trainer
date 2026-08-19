@@ -27,3 +27,6 @@ tui = ["dep:ratatui"]
 # it's an offline generator, not trainer code.
 [workspace]
 members = ["crates/preflop-gen", "crates/solve-gen"]
+
+[profile.dev]
+debug = "line-tables-only"
