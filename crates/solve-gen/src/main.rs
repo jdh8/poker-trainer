@@ -244,7 +244,7 @@ fn main() {
     }
 }
 
-/// Set `shutdown` on SIGTERM (how systemd stops the worker) or Ctrl-C, so
+/// Set `shutdown` on SIGTERM (a manual drain or systemd restart) or Ctrl-C, so
 /// [`write_tables`] drains: the current flop finishes and publishes through its
 /// atomic rename, and the loop exits before starting another. A second Ctrl-C
 /// gives up on the drain and exits immediately, discarding the in-flight flop
@@ -267,8 +267,7 @@ fn install_drain_handler(shutdown: &Arc<AtomicBool>) {
     let install = || -> Result<(), std::io::Error> {
         register_conditional_shutdown(SIGINT, 130, Arc::clone(shutdown))?;
         register(SIGINT, Arc::clone(shutdown))?;
-        // SIGTERM stays drain-only: systemd sends one, and `TimeoutStopSec`
-        // already backstops a flop that overruns its stop job.
+        // SIGTERM stays drain-only for manual signals and systemd restarts.
         register(SIGTERM, Arc::clone(shutdown))?;
         Ok(())
     };

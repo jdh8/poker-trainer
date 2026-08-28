@@ -166,18 +166,16 @@ restart-supervisor unless a wedge actually recurs.
 - The run is one-shot and the output is regenerable, so a dropped session just
   means re-running it — nothing to resume.
 
-The `scripts/poker-worker@.service` user service also supports a graceful
-`systemctl --user stop`: SIGTERM stops the manifest loop from taking another
-flop, lets the current flop finish its atomic `.jsonl` publish, then exits. The
-unit gives that drain up to two minutes before force-killing it; a flop still
-solving at that point is killed and re-solved on the next run, so a stop is
-always bounded. Add `--no-block` so the stop returns at once instead of holding
-the terminal for the drain. To also free the memory at once, follow it with
-`systemctl --user kill --kill-whom=all --signal=SIGKILL poker-worker@<manifest>`
-— after the stop, not instead of it, or the SIGKILL reads as a failure and
-`Restart=on-failure` starts the worker again a minute later.
-Install both the service file and its `.service.d` directory: the latter keeps
-the forced timeout at SIGKILL even on systems with a global SIGABRT drop-in.
+The `scripts/poker-worker@.service` user service splits stop from restart.
+`systemctl --user stop` sends SIGKILL to the whole worker cgroup, releasing its
+resources immediately. The unfinished flop remains absent because publication
+is tmp+rename, so the `.jsonl` resume gate re-solves it on the next run. A stop
+job does not trigger `Restart=on-failure`.
+
+`systemctl --user restart` instead sends SIGTERM and waits without a deadline
+for the current flop to publish before replacing the process. The manifest then
+continues from the next unfinished flop, making restart nearly a no-op for live
+work.
 
 A foreground `tables` run drains the same way on Ctrl-C, and prints that
 contract when it starts. Press Ctrl-C twice to give up on the drain and exit

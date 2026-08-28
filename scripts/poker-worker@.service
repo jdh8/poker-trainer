@@ -8,21 +8,16 @@
 # Install (per-user, zero privilege):
 #   mkdir -p ~/.config/systemd/user
 #   cp scripts/poker-worker@.service ~/.config/systemd/user/
-#   cp -r scripts/poker-worker@.service.d ~/.config/systemd/user/
 #   systemctl --user daemon-reload
 #   systemctl --user enable --now poker-worker@lines-mtt89
 #   loginctl enable-linger "$USER"        # keep running while logged out
 # Toggle / status:
-#   systemctl --user stop --no-block poker-worker@lines-mtt89
+#   systemctl --user stop poker-worker@lines-mtt89
+#   systemctl --user restart poker-worker@lines-mtt89
 #   systemctl --user start poker-worker@lines-mtt89
 #   journalctl --user -u poker-worker@lines-mtt89 -f
-# Stop drains the current flop, then exits before starting another. --no-block
-# returns at once instead of holding the terminal for the drain (Ctrl-C on a
-# plain `stop` also just detaches the client; the job continues). Emergency
-# stop (discard current-flop work immediately) — stop first, else the SIGKILL
-# reads as a failure and Restart= brings the worker back a minute later:
-#   systemctl --user stop --no-block poker-worker@lines-mtt89
-#   systemctl --user kill --kill-whom=all --signal=SIGKILL poker-worker@lines-mtt89
+# Stop frees the worker's resources immediately; the unfinished flop is safely
+# re-solved next time. Restart drains that flop before replacing the process.
 #
 # Expects ~/src/poker-trainer (checkout) and ~/poker-tables (output dir or
 # symlink). The manifest finishing is exit 0 => the service goes inactive.
@@ -53,20 +48,14 @@ IOSchedulingClass=idle
 # an oversized flop before allocating. 50% of physical suits a normally-shared
 # box; tune down on one that runs persistently hot.
 MemoryMax=50%
-# SIGTERM requests an nginx-style drain: finish and atomically publish the
-# current flop, then exit before starting another. `cargo run` and solve-gen
-# are both in this cgroup, so signal the whole group. Two minutes is a drain
-# window, not a guarantee: a flop still solving when it expires is force-killed
-# and simply re-solved on the next run (the publish is tmp+rename, so nothing
-# partial lands and the per-flop .jsonl gate re-queues it). Bounding the wait
-# beats saving one flop's CPU on a shared box. Force-kill rather than inherit a
-# distro SIGABRT policy that would core-dump a many-GB solver onto the same
-# disk as the tables — the accompanying unit-specific drop-in repeats the
-# failure mode so it wins over Fedora's global service.d/10-timeout-abort.conf.
-KillSignal=SIGTERM
+# Stop is preemption: SIGKILL the whole cgroup and release its resources now.
+# The publish is tmp+rename, so an interrupted flop remains absent and the
+# .jsonl gate re-solves it next time. Restart instead sends SIGTERM and waits
+# without a deadline for the current flop to publish before replacing the run.
+KillSignal=SIGKILL
+RestartKillSignal=SIGTERM
 KillMode=control-group
-TimeoutStopSec=2min
-TimeoutStopFailureMode=kill
+TimeoutStopSec=infinity
 # Crash => restart resumes via the .jsonl gate; manifest done => stays off. An
 # over-budget flop now prints `SKIPPED:` in the journal and is retried later on
 # a less-loaded box — it no longer wedges the worker.
