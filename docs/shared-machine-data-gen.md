@@ -165,20 +165,56 @@ restart-supervisor unless a wedge actually recurs.
   `setsid nohup scripts/idle-run.sh cargo run -p solve-gen --release >run.log 2>&1 < /dev/null &`.
 - The run is one-shot and the output is regenerable, so a dropped session just
   means re-running it — nothing to resume.
+- `setsid` is the part that shields a detached run, not `nohup`. solve-gen
+  installs a SIGHUP handler, which overrides the `SIG_IGN` `nohup` sets, so a
+  hangup reaching the process drains it rather than being ignored. `setsid`
+  detaches the controlling terminal, so no SIGHUP is sent in the first place.
 
-The `scripts/poker-worker@.service` user service splits stop from restart.
-`systemctl --user stop` sends SIGKILL to the whole worker cgroup, releasing its
-resources immediately. The unfinished flop remains absent because publication
-is tmp+rename, so the `.jsonl` resume gate re-solves it on the next run. A stop
+The `scripts/poker-worker@.service` user service splits stop from restart, and
+the signal each uses is chosen deliberately.
+
+`systemctl --user stop` sends SIGTERM to the whole worker cgroup, releasing its
+resources immediately. solve-gen leaves SIGTERM at its default disposition, so
+this is a kernel kill that needs no cooperation — which is the point, because
+the drain flag is only read between flops and so could never preempt a solve
+already in flight. The unfinished flop remains absent because publication is
+tmp+rename, so the `.jsonl` resume gate re-solves it on the next run. A stop
 job does not trigger `Restart=on-failure`.
 
-`systemctl --user restart` instead sends SIGTERM and waits without a deadline
-for the current flop to publish before replacing the process. The manifest then
-continues from the next unfinished flop, making restart nearly a no-op for live
-work.
+`systemctl --user restart` instead sends SIGHUP, which solve-gen handles as a
+drain, and waits without a deadline for the current flop to publish before
+replacing the process. The manifest then continues from the next unfinished
+flop, making restart nearly a no-op for live work. Escalate a drain that will
+not finish with a second signal, `systemctl --user kill --signal=SIGHUP`.
 
-A foreground `tables` run drains the same way on Ctrl-C, and prints that
-contract when it starts. Press Ctrl-C twice to give up on the drain and exit
+Why HUP for the graceful path when TERM is the usual choice: HUP already means
+"the controlling process went away", so an orderly wind-down is its natural
+reading, while TERM is left free to mean stop *now*. The payoff is that both
+signals sit in systemd's clean-exit set (SIGTERM, SIGINT, SIGHUP, SIGPIPE), so
+neither path parks the unit in `failed` — SIGKILL is not in that set, and using
+it for stop meant every ordinary toggle needed a `reset-failed`. Keeping
+SIGKILL out of routine use also keeps it meaningful: an actual SIGKILL now
+signals a genuine abnormal death for `Restart=on-failure` to act on, rather
+than being whitelisted as success.
+
+For the drain to work at all, solve-gen must be the unit's *main* process, so
+`ExecStart` names the built binary rather than going through `cargo run`. When
+the main process exits while the cgroup still has members, systemd advances to
+its `FINAL_SIGTERM` phase and sends `KillSignal=` — SIGTERM, "stop now" — to the
+survivors. A `cargo` wrapper dies instantly on SIGHUP, so it turned every
+restart's drain into a stop; measured, the SIGHUP and the SIGTERM landed in the
+same millisecond. Two smaller wins came with it: no rebuild can start while a
+drain is in flight, and a snap-packaged cargo no longer escapes `MemoryMax`.
+
+The cost is that `cargo build -p solve-gen --release` is now a step you run
+yourself before `start` or `restart`; `ExecStartPre` only checks the binary is
+there. That also enforces the ordering this change needs — deploy the binary
+before the unit file. A new unit against an old binary sends `stop` the signal
+that binary still treats as a drain, and `TimeoutStopSec=infinity` would then
+wait forever; the reverse mismatch is harmless.
+
+A foreground `tables` run drains the same way on Ctrl-C or SIGHUP, and prints
+that contract when it starts. Signal twice to give up on the drain and exit
 now, discarding the in-flight flop — the `.jsonl` gate re-solves it next run.
 Both decisions are made inside the signal handler, because these runs are
 `chrt --idle 0`: a receiver thread gets starved for minutes on a busy box, and

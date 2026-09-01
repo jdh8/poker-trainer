@@ -7,6 +7,7 @@
 #
 # Install (per-user, zero privilege):
 #   mkdir -p ~/.config/systemd/user
+#   cargo build -p solve-gen --release    # ExecStart is the binary, not cargo
 #   cp scripts/poker-worker@.service ~/.config/systemd/user/
 #   systemctl --user daemon-reload
 #   systemctl --user enable --now poker-worker@lines-mtt89
@@ -16,11 +17,12 @@
 #   systemctl --user restart poker-worker@lines-mtt89
 #   systemctl --user start poker-worker@lines-mtt89
 #   journalctl --user -u poker-worker@lines-mtt89 -f
-# Stop frees the worker's resources immediately; the unfinished flop is safely
-# re-solved next time. Restart drains that flop before replacing the process.
+# TERM stops, HUP drains. Stop frees the worker's resources immediately and the
+# unfinished flop is safely re-solved next time; restart drains that flop before
+# replacing the process. Rebuild before either — ExecStart is the binary.
 #
-# Expects ~/src/poker-trainer (checkout) and ~/poker-tables (output dir or
-# symlink). The manifest finishing is exit 0 => the service goes inactive.
+# Expects ~/src/poker-trainer (checkout, built --release) and ~/poker-tables
+# (output dir or symlink). The manifest finishing is exit 0 => service inactive.
 
 [Unit]
 Description=Poker solve-gen tables worker (%i)
@@ -36,8 +38,20 @@ Type=simple
 WorkingDirectory=%h/src/poker-trainer
 # ~/poker-tables must resolve (NFS mounted) before starting.
 ExecStartPre=/bin/sh -c 'test -d "$(readlink -f %h/poker-tables)"'
-# sh -lc: pick up cargo wherever it lives (snap, rustup, ...).
-ExecStart=/bin/sh -lc 'exec cargo run -p solve-gen --release -- tables --manifest manifests/%i.toml --no-save-bins --out %h/poker-tables'
+# The prebuilt binary, deliberately not `cargo run`. solve-gen has to be this
+# unit's MAIN process for the drain below to work at all: when the main process
+# exits while the cgroup still has members, systemd advances to its
+# FINAL_SIGTERM phase and sends KillSignal= — SIGTERM, "stop now" — to the
+# survivors. A cargo wrapper dies instantly on SIGHUP, so it would turn every
+# restart's drain into a stop (measured: SIGHUP and SIGTERM arriving in the
+# same millisecond). Fronting with cargo also lets a rebuild run while a drain
+# is in flight, and a snap-packaged cargo escapes MemoryMax.
+#
+# So build before you start or restart — this is also the binary-before-unit
+# ordering the kill block below depends on:
+#   cargo build -p solve-gen --release
+ExecStartPre=/bin/sh -c 'test -x %h/src/poker-trainer/target/release/solve-gen'
+ExecStart=%h/src/poker-trainer/target/release/solve-gen tables --manifest manifests/%i.toml --no-save-bins --out %h/poker-tables
 # Idle class: runs only on otherwise-free cores, yields instantly.
 Nice=10
 CPUSchedulingPolicy=idle
@@ -48,12 +62,32 @@ IOSchedulingClass=idle
 # an oversized flop before allocating. 50% of physical suits a normally-shared
 # box; tune down on one that runs persistently hot.
 MemoryMax=50%
-# Stop is preemption: SIGKILL the whole cgroup and release its resources now.
-# The publish is tmp+rename, so an interrupted flop remains absent and the
-# .jsonl gate re-solves it next time. Restart instead sends SIGTERM and waits
-# without a deadline for the current flop to publish before replacing the run.
-KillSignal=SIGKILL
-RestartKillSignal=SIGTERM
+# Stop is preemption: SIGTERM the whole cgroup and release its resources now.
+# solve-gen deliberately leaves SIGTERM at its default disposition, so this is a
+# kernel kill needing no cooperation from the process — the drain flag is only
+# read between flops and could never preempt a solve mid-flight. The publish is
+# tmp+rename, so an interrupted flop remains absent and the .jsonl gate
+# re-solves it next time.
+#
+# Restart instead sends SIGHUP, which solve-gen handles as a drain: finish and
+# publish the current flop, then exit before starting another. TimeoutStopSec
+# governs both paths and there is no per-operation knob, so it stays infinite —
+# the drain is worth waiting out and the stop path does not need a deadline.
+#
+# The signal choice is not arbitrary. HUP already means "the controlling
+# process went away", which reads naturally as an orderly wind-down, where TERM
+# means stop. Both happen to be in systemd's clean-exit set (SIGTERM, SIGINT,
+# SIGHUP, SIGPIPE), so neither path parks the unit in `failed` the way SIGKILL
+# did — and SIGKILL stays meaningful as a genuine abnormal death for
+# Restart=on-failure to catch, instead of being whitelisted away.
+#
+# Rollout order matters: deploy the binary before this unit. A new unit against
+# an old binary sends `stop` the signal that binary still treats as a drain,
+# and TimeoutStopSec=infinity would then wait forever. The reverse mismatch is
+# harmless. Escalate a drain that will not finish with a second signal:
+#   systemctl --user kill --signal=SIGHUP poker-worker@<manifest>
+KillSignal=SIGTERM
+RestartKillSignal=SIGHUP
 KillMode=control-group
 TimeoutStopSec=infinity
 # Crash => restart resumes via the .jsonl gate; manifest done => stays off. An
