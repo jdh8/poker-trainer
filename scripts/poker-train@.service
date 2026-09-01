@@ -13,6 +13,9 @@
 #   journalctl --user -u poker-train@<run> -f
 #
 # Two GPUs = two env files pinned to different CUDA_VISIBLE_DEVICES.
+#
+# ExecSearchPath needs systemd >= 250; on an older box, name uv's absolute
+# path in ExecStart instead.
 
 [Unit]
 Description=Value-net training run (%i)
@@ -21,6 +24,10 @@ Description=Value-net training run (%i)
 Type=exec
 WorkingDirectory=%h/src/poker-trainer/train
 EnvironmentFile=%h/.config/poker-train/%i.env
-ExecStart=/bin/sh -lc 'exec uv run train.py $TRAIN_ARGS'
+# No shell wrapper: systemd word-splits unquoted $TRAIN_ARGS itself, and
+# ExecSearchPath finds uv wherever this box installed it (the standalone
+# installer's ~/.local/bin, or a distro package) without a login shell.
+ExecSearchPath=%h/.local/bin:/usr/local/bin:/usr/bin
+ExecStart=uv run train.py $TRAIN_ARGS
 Nice=10
 # No Restart: a dead training run should be looked at, not silently redone.

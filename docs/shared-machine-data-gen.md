@@ -207,11 +207,11 @@ same millisecond. Two smaller wins came with it: no rebuild can start while a
 drain is in flight, and a snap-packaged cargo no longer escapes `MemoryMax`.
 
 The cost is that `cargo build -p solve-gen --release` is now a step you run
-yourself before `start` or `restart`; `ExecStartPre` only checks the binary is
-there. That also enforces the ordering this change needs — deploy the binary
-before the unit file. A new unit against an old binary sends `stop` the signal
-that binary still treats as a drain, and `TimeoutStopSec=infinity` would then
-wait forever; the reverse mismatch is harmless.
+yourself before `start` or `restart`; a missing binary just fails `ExecStart`
+with 203/EXEC and names the path. That also enforces the ordering this change
+needs — deploy the binary before the unit file. A new unit against an old
+binary sends `stop` the signal that binary still treats as a drain, and
+`TimeoutStopSec=infinity` would then wait forever; the reverse mismatch is harmless.
 
 A foreground `tables` run drains the same way on Ctrl-C or SIGHUP, and prints
 that contract when it starts. Signal twice to give up on the drain and exit

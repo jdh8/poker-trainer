@@ -250,22 +250,13 @@ fn main() {
 /// gives up on the drain and exits immediately, discarding the in-flight flop
 /// (the `.jsonl` resume gate re-solves it next run).
 ///
-/// SIGHUP rather than SIGTERM, which is the non-obvious part. Two reasons, and
-/// the first is what the split is for: SIGTERM is left at its default
-/// disposition so the kernel can end this process *now*, without our
-/// cooperation. The drain flag is only read between flops, so a handled signal
-/// could not preempt a solve mid-flight — and preemption is exactly what
-/// `systemctl stop` means on a shared box (see `scripts/poker-worker@.service`).
-/// Second, HUP already means "the controlling process went away": winding down
-/// in an orderly fashion is its natural reading, where TERM means stop. The
-/// happy side effect is that both are in systemd's clean-exit set, so neither
-/// path parks the unit in `failed` — and a SIGKILL still reads as a real
-/// failure, which is what `Restart=on-failure` is there to catch.
-///
-/// Consequence worth knowing: registering a handler overrides the `SIG_IGN`
-/// that `nohup` installs, so `nohup` alone no longer shields a detached run
-/// from a terminal hangup — it drains instead. `setsid` does shield it, by
-/// removing the controlling terminal so no SIGHUP is ever sent.
+/// SIGHUP rather than SIGTERM is the non-obvious part, and the split is what it
+/// buys: SIGTERM stays at its default disposition so the kernel can end this
+/// process *now*, without our cooperation. The drain flag is only read between
+/// flops, so a handled signal could not preempt a solve mid-flight — and
+/// preemption is exactly what `systemctl stop` means on a shared box. The rest
+/// of the rationale, plus the `nohup`/`setsid` consequence of handling SIGHUP
+/// at all, lives in `docs/shared-machine-data-gen.md`.
 ///
 /// Everything here runs *in the signal handler*, which is the whole point.
 /// A receiver thread (signal-hook's `Signals`, tokio, ctrlc — they all work
@@ -279,16 +270,16 @@ fn install_drain_handler(shutdown: &Arc<AtomicBool>) {
     use signal_hook::consts::{SIGHUP, SIGINT};
     use signal_hook::flag::{register, register_conditional_shutdown};
 
-    // Registration order matters: this fires first and exits only if a previous
-    // press already set the flag, so the first Ctrl-C falls through to `register`.
-    // Exit status follows the 128+signo convention.
+    // Two-stage escalation per signal, so a drain that will not finish can be
+    // given up on with a second Ctrl-C or `systemctl kill -s HUP`. Registration
+    // order matters: the conditional shutdown fires first and exits only if an
+    // earlier signal already set the flag, so the first one falls through to
+    // `register`. Exit status follows the 128+signo convention.
     let install = || -> Result<(), std::io::Error> {
-        register_conditional_shutdown(SIGINT, 130, Arc::clone(shutdown))?;
-        register(SIGINT, Arc::clone(shutdown))?;
-        // Same two-stage escalation for HUP, so a drain that will not finish can
-        // be given up on with a second `systemctl kill -s HUP`.
-        register_conditional_shutdown(SIGHUP, 129, Arc::clone(shutdown))?;
-        register(SIGHUP, Arc::clone(shutdown))?;
+        for sig in [SIGINT, SIGHUP] {
+            register_conditional_shutdown(sig, 128 + sig, Arc::clone(shutdown))?;
+            register(sig, Arc::clone(shutdown))?;
+        }
         // SIGTERM is deliberately NOT registered: default disposition is the
         // immediate, uncatchable stop.
         Ok(())
@@ -1428,11 +1419,10 @@ mod tests {
     }
 
     /// The whole stop/restart split rests on *which* signal is registered:
-    /// SIGHUP drains, SIGTERM stays at its default disposition so that
-    /// `systemctl stop` is an uncatchable kill. Regressing to a registered
-    /// SIGTERM would silently turn every stop back into a multi-minute drain.
-    /// An unregistered SIGHUP would kill this test process outright rather
-    /// than trip the assert — either way the failure is loud.
+    /// SIGHUP drains, SIGTERM stays at its default disposition so `systemctl
+    /// stop` is an uncatchable kill. A regression is loud either way — a
+    /// registered SIGTERM turns every stop back into a multi-minute drain, an
+    /// unregistered SIGHUP kills this test process outright.
     #[test]
     fn sighup_requests_a_drain() {
         let shutdown = Arc::new(AtomicBool::new(false));
