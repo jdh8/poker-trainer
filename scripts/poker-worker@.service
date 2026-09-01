@@ -47,10 +47,11 @@ WorkingDirectory=%h/src/poker-trainer
 # unit's MAIN process or RestartKillSignal never reaches it. A missing binary
 # needs no guard — ExecStart fails 203/EXEC and names the path.
 ExecStart=%h/src/poker-trainer/target/release/solve-gen tables --manifest manifests/%i.toml --no-save-bins --out %h/poker-tables
-# Idle class: runs only on otherwise-free cores, yields instantly. No Nice=,
-# which SCHED_IDLE ignores.
+# Idle class: runs only on otherwise-free cores, yields instantly. Nice= is
+# ignored by SCHED_IDLE — it's set only so htop shows the worker blue.
 CPUSchedulingPolicy=idle
 IOSchedulingClass=idle
+Nice=19
 # Backstop only: a contained cgroup kill of *our* process instead of the global
 # OOM killer picking a victim on a shared box. The real guard is the in-job
 # memory budget (auto: 80% of MemAvailable, or `tables --max-mem`), which skips
