@@ -40,3 +40,6 @@
 /train/*.pt
 /train/__pycache__
 /train/eval-report.txt
+
+# Agent worktrees (Claude Code /worktree).
+/.claude/worktrees
