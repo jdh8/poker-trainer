@@ -30,5 +30,6 @@ fi
 
 for src in "$@"; do
 	echo "collect-shards: $src -> $dest/"
-	rsync -a "$src/" "$dest/"
+	# *.tmp = a flop that was in flight when a worker was killed; never publish it.
+	rsync -a --exclude="*.tmp" "$src/" "$dest/"
 done
