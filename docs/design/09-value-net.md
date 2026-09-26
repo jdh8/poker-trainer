@@ -3,10 +3,12 @@
 Status: **phases (a)+(b) shipped** (2026-07-24) — corpus extractor
 (`src/bin/export-value-corpus.rs`, one fixed-width record per stored turn
 root, both invariants checked against every file) and the `train/` harness
-(uv + torch MLP, equity-baseline eval) are done. **Phase (c) prototyped**
-(2026-09-26, `train/dls.py`): the depth-limited flop solve works end to end
-and pins the blocker — the net is only accurate at equilibrium reaches, and
-CFR queries it everywhere else (see "Phase (c) result" below).
+(uv + torch MLP, equity-baseline eval) are done. **Phase (c) works**
+(2026-09-27, `train/dls.py` + the off-equilibrium labeler): a depth-limited
+flop solve with net leaves lands within **2.7% pot** of the full solver's
+root EVs on held-out flops — the same as the net's own error at
+equilibrium, and 2× the 1.4% floor a perfect-leaf run reaches (see "Phase
+(c) result" below). Scope so far: srp-btn-bb only.
 First measured result below (2026-07-24): ~2× under the equity baseline
 on held-out flops; the 200-epoch run (evaluated 2026-09-26) reaches
 2.7–3.4% pot on every formation and side, ~6× under baseline.
@@ -216,7 +218,40 @@ labeler is sound and cheap, so (3) is never the bottleneck again.
 flops 9–11%, and the equilibrium eval *improved* to 2.72/2.80%. Training
 time was the first bottleneck; the fit-vs-unseen gap that remains is what
 more labels buy, so round 3 (600 fresh flops, requests from the ft3 net's
-own reaches, fleet-sharded, 100 epochs) runs overnight.
+own reaches, fleet-sharded, 100 epochs) ran overnight.
+
+**Round 3 (2026-09-27): acceptance met.** 600 fresh train flops × every 4th
+iteration of the ft3 net's own solves → 338k requests, 334,523 labels in
+~2.6 h on the fleet (~36/s); `value-net-offeq4.pt` = 100 epochs at lr 3e-4
+from `value-net-200` on the srp-btn-bb equilibrium shard + all three
+off-equilibrium shards (~1.2M records/epoch, 31 s each).
+
+| net | live root EV MAE (6 val flops) | root L1 | fit on own off-eq labels | off-eq, unseen flops | eq eval srp-btn-bb |
+|---|---|---|---|---|---|
+| value-net-200 | 13.7% pot | 0.67 | 15–21% | 15–19% | 2.78 / 2.78% |
+| round 1 (12k labels) | 8.1% | — | 5–9% | 11–15% | 9.3% (shard-only) |
+| round 2, 10 ep (157k) | 6.5% | 0.53 | 9–14% | 12–15% | 2.96 / 3.17% |
+| round 2, 60 ep (ft3) | 5.4% | 0.45 | 5–9% | 9–11% | 2.72 / 2.80% |
+| **round 3, 100 ep (490k)** | **2.7%** | **0.32** | **4.3–5.4%** | **6.8–9.3%** | **2.70 / 2.62%** |
+| perfect leaves (frozen diagnostic) | 1.4% | 0.26 | — | — | — |
+
+Per flop: 1.2–3.9% pot. The live row now sits at the net's own equilibrium
+error and within 2× of the perfect-leaf floor; the equilibrium eval got
+*better* with every round (the off-equilibrium labels regularise it).
+Each round's requests came from the previous net's reaches, so the sampled
+distribution tracked the solver toward equilibrium — ReBeL's loop, three
+turns of it, in one evening on four idle boxes. Costs: labels 0.1 s each,
+CPU-only; requests need the GPU (~100 min per 600 flops); training ~1 h.
+
+What this does and does not show: one formation (srp-btn-bb, 100bb SRP,
+rake-free), 6 validation flops, EV at the flop root and stored flop nodes.
+Not yet: other formations or the grounded (rake, short-stack) tiers — the
+v2 corpus has their equilibrium data; a per-formation round of labels is
+the same recipe — nor exploitability of the DLS strategy against the full
+game, nor the permissive Rust solver that would make this a product path
+(doc 00 still rules the trainer's product surface). Diminishing returns
+from here are likely on the label axis; the next real lever for the last
+1% is the low-mass input encoding noted above.
 
 This narrows doc 00's "no NN approximator" stance rather than reversing it:
 the net would accelerate **our own offline generation and off-tree lookups**,

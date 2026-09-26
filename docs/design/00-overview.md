@@ -91,7 +91,7 @@ P4–P10 are shipped**; the table is kept for the dependency map.
 | **P10** | Nodelocking end-to-end (lock, re-solve, compare) + presets + saved-lock files — done | M | P4, P7 | [06](06-solver-capabilities.md) |
 | **P11** | Preflop MCCFR solver + solved chart library (6-max, size menus, antes, ICM) — done | L | — | [07](07-preflop-solver.md) |
 | — | ICM postflop (solver fork), bunching, multiway postflop | research | — | [06](06-solver-capabilities.md) |
-| — | Turn/river value net → depth-limited flop solves (GPU R&D; would cut bulk-gen cost ~10×) — phases a+b shipped: `export-value-corpus` + `train/`; 200-epoch net 2.7–3.4% pot MAE; phase c prototype `train/dls.py` solves the flop with net leaves — 1.4% pot from the solver at equilibrium reaches, 13.7% at live CFR reaches (needs off-equilibrium labels) | research | 08 store as corpus | [09](09-value-net.md) |
+| — | Turn/river value net → depth-limited flop solves (GPU R&D; would cut bulk-gen cost ~10×) — phases a+b shipped: `export-value-corpus` + `train/`; 200-epoch net 2.7–3.4% pot MAE; phase c works on srp-btn-bb: `train/dls.py` depth-limited flop solve with net leaves is 2.7% pot from the full solver on held-out flops after three rounds of off-equilibrium labels (`solve-gen turn-solve`, 490k labels, fleet); other formations, exploitability and a permissive Rust solver still open | research | 08 store as corpus | [09](09-value-net.md) |
 
 P4 and P6 were independent and both unblocked most of the rest; P4 was the
 keystone. What remains open: spot filters + curated-library sampling for
