@@ -159,6 +159,20 @@ to approach the frozen row. Until then the net serves equilibrium-reach
 lookups only — which is what the trainer's off-tree drills actually need,
 and is why the corpus-side work (grounded tiers, rake inputs) still pays.
 
+**Labeler (shipped 2026-09-26).** `dls.py --log-reaches` writes one request
+per deal node every k-th iteration (a random turn card each; empty-side
+reaches skipped); `solve-gen turn-solve` reads them on stdin, builds the
+turn-rooted game with `Range::from_raw_data` (combo order permuted from the
+corpus's `hi*(hi-1)/2+lo` to the solver's `lo*(101-lo)/2+hi-1`), solves to
+0.5% pot and echoes both sides' `expected_values` in pot units;
+`offeq.py check` scores the net on them and `pack` makes a corpus shard.
+Cost: **0.1 s per label** on the 8-core box (turn subgame ≈ 1/49 of the
+flop game), so the off-equilibrium corpus is hours, not months. Round 1:
+60 non-validation srp-btn-bb flops, stride 10 → 11,797 labels in 18 min,
+on which `value-net-200.pt` measures 14–16% pot (OOP) / 18–20% (IP) — the
+distribution gap, versus 2.9% at equilibrium. Fine-tune + re-run of the
+table above is the next entry here.
+
 This narrows doc 00's "no NN approximator" stance rather than reversing it:
 the net would accelerate **our own offline generation and off-tree lookups**,
 not chase datacenter solve-speed parity as a product.
