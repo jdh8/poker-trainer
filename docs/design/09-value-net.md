@@ -170,8 +170,24 @@ Cost: **0.1 s per label** on the 8-core box (turn subgame ≈ 1/49 of the
 flop game), so the off-equilibrium corpus is hours, not months. Round 1:
 60 non-validation srp-btn-bb flops, stride 10 → 11,797 labels in 18 min,
 on which `value-net-200.pt` measures 14–16% pot (OOP) / 18–20% (IP) — the
-distribution gap, versus 2.9% at equilibrium. Fine-tune + re-run of the
-table above is the next entry here.
+distribution gap, versus 2.9% at equilibrium. The labeler agrees with the
+store to 0.29% pot when fed the store's own equilibrium reaches (441 turn
+roots of one flop), so the labels are sound.
+
+**Round 1 fine-tune (2026-09-26).** 11.8k labels are 1.6% of the srp-btn-bb
+shard: mixed in for 5 epochs they changed nothing (live root EV 13.7 →
+12.4% pot). Trained on alone for 40 epochs the net fits them to 5–9% pot,
+generalizes to other flops' off-equilibrium labels at 11–15%, and the live
+table improves to **8.1% pot** (from 13.7) while the equilibrium eval
+regresses to 9.3% (catastrophic forgetting, expected with no equilibrium
+data in the mix). Error scales with reach mass: labels where one side has
+under one combo of mass sit at 35% pot, mass ≥ 80 at 8–10%. Reading: right
+direction, two orders of magnitude too little data — the equilibrium corpus
+is 3M samples, and CFR's reach space is far larger than the equilibrium
+manifold. Round 2 (`/srv/var/poker/valuenet-offeq/round2.sh`, 300 flops ×
+every 4th iteration ≈ 60k labels, mixed with the equilibrium shard) is the
+scaling test; if the live row keeps tracking label count, the fleet turns
+the labeler loose (a million labels is a day on one 8-core box).
 
 This narrows doc 00's "no NN approximator" stance rather than reversing it:
 the net would accelerate **our own offline generation and off-tree lookups**,
