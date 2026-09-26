@@ -253,6 +253,74 @@ game, nor the permissive Rust solver that would make this a product path
 from here are likely on the label axis; the next real lever for the last
 1% is the low-mass input encoding noted above.
 
+## Follow-up choices (2026-09-27)
+
+Phase (c) is proven on one formation. Everything below is a choice, not a
+plan; costs are from the measured round-3 numbers (labels 0.1 s each
+CPU-only on the fleet, requests ~100 GPU-min per 600 flops, a 100-epoch
+train ~1 h on the 4070). Roughly in order of value per effort:
+
+1. **Same recipe on the other four curated formations** (srp-co-bb,
+   srp-sb-bb, 3bp-bb-btn, 3bp-btn-co). One evening each: `dls.py
+   --log-reaches` with the formation's tables, fleet `turn-solve`, `offeq.py
+   pack`, fine-tune from `value-net-offeq4.pt` with that formation's
+   equilibrium shard in the mix. Buys: a net that solves any curated flop
+   spot off-tree in seconds. Risk: low — the 3bp tiers start from a worse
+   equilibrium baseline (their v1 error was 2× the srp tiers'), so expect
+   two rounds, not one. Open question it answers for free: whether one net
+   serves several pot/stack geometries or wants per-config heads.
+
+2. **Grounded tiers** (the `--from <ruleset>:<line>` store: rake, 34/55/89bb
+   stacks, 27 line dirs). Different shape of work: the rake inputs make it
+   IN_DIM 2709, so it is a train-from-scratch on the v2 corpus (206 GB, HDD:
+   copy to dl02's SSD and use its 4090, or subsample), then per-tier label
+   rounds. A few days. Buys: the thing the trainer actually drills; also the
+   only way to learn whether rake/stack generalise or fragment. Do (1)
+   first — it is the cheap rehearsal of the same loop.
+
+3. **Low-mass reach encoding** for the residual 1% (2.7 → ~1.4). Error still
+   scales with the smaller side's mass; try log-mass features and/or the raw
+   per-combo reach alongside the L1-normalised one. An afternoon with the
+   existing 490k labels, no new generation. Small expected gain; do it when
+   a train is running anyway.
+
+4. **Exploitability of the DLS strategy against the full game.** Today's
+   metric is root-EV distance to the solver, not how much a best responder
+   wins. postflop-solver can nodelock: load the full flop game, lock every
+   flop node to the DLS average strategy, resolve the rest, read
+   exploitability. A `solve-gen` op plus a `dls.py` export, ~1 day, needs
+   one full solve per validated flop (cache hits for the 6 val flops). Buys
+   the number a sceptic asks for; changes no engineering decision unless it
+   disagrees with the EV metric.
+
+5. **Permissive Rust depth-limited solver** (the product path in the section
+   above): flop-only vector DCFR in the spirit of `crates/preflop-gen`, net
+   inference via `tract` or `ort` (a dependency decision — doc 00's
+   "few dependencies" rule; the wasm build must stay clean, so gate it),
+   exact all-in leaf from `flop-equity`'s algorithm, fold leaves exact.
+   1–2 weeks. Buys: instant off-tree spots in `drill hand` / `table`, and a
+   ~10× cheaper bulk generator for any future tier. This is the doc 00
+   decision — it widens the trainer's product surface from "stored exact
+   solves + live full solves" to "net-backed depth-limited solves" and
+   needs the honest accuracy label in the UI (the 2.7%). Not a research
+   step; do not start it to "see if it works".
+
+6. **Stop here.** The current tiers are fully solved and stored; the trainer
+   needs nothing from the net today. `dls.py` stays a research tool, the
+   labeler and corpus stay for when a new tier or a new stack depth makes
+   bulk generation hurt again. Zero cost, nothing lost — the recipe is
+   scripted (`/srv/var/poker/valuenet-offeq/round3.sh`) and documented.
+
+Ops that go with any choice: re-enable fishnet/shoginet on jdh8-22/24
+(disabled 2026-09-26 for the labeling), delete the `~/labels-r{2,3}-*`
+copies on the workers, and decide whether cash-hu34/mtt-hu34 (785 GB, NFS
+only) come to zoo.
+
+Recommendation: (1) now, because it is cheap and settles the
+single-net-vs-per-config question that (2) and (5) both depend on; then
+(5) only if the answer to "do we want net-backed spots in the product" is
+yes; (4) before shipping anything under (5).
+
 This narrows doc 00's "no NN approximator" stance rather than reversing it:
 the net would accelerate **our own offline generation and off-tree lookups**,
 not chase datacenter solve-speed parity as a product.
