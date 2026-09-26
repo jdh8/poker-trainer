@@ -75,8 +75,8 @@ struct Args {
     /// Output directory for the .bin shards + corpus.json.
     #[arg(long)]
     out: PathBuf,
-    /// Comma-separated formation dirs (default: every curated formation
-    /// present under --tables).
+    /// Comma-separated formation dirs (default: every dir under --tables
+    /// that holds a header-*.json — curated and grounded tiers alike).
     #[arg(long)]
     formations: Option<String>,
     /// Cap canonical flops per formation (smoke tests).
@@ -304,6 +304,10 @@ fn extract_file(
     base_ip: &[f32],
 ) -> (Vec<RootRecord>, FileStats) {
     let mut stats = FileStats::default();
+    let (rake_rate, rake_cap_bb) = (
+        table.header.config.rake_rate,
+        table.header.config.rake_cap_bb,
+    );
     let mut out = Vec::new();
 
     // The hands arrays are constant per player per file; index them once.
@@ -489,6 +493,7 @@ fn extract_file(
             &ip_cfv,
             flags,
             children.len(),
+            (rake_rate, rake_cap_bb),
             &mut stats,
         );
 
@@ -534,6 +539,7 @@ fn check_invariants(
     ip_cfv: &[f32],
     flags: u8,
     n_children: usize,
+    (rake_rate, rake_cap_bb): (f32, f32),
     stats: &mut FileStats,
 ) {
     // Entangled weights: own reach × unblocked opponent mass.
@@ -616,7 +622,13 @@ fn check_invariants(
             e_i += f64::from(w) * f64::from(ip_cfv[ix]);
         }
         if s_o > 0.0 && s_i > 0.0 {
-            let dev = (e_o / s_o + e_i / s_i - f64::from(n.pot_bb)).abs() as f32;
+            // Rake (solver: min(pot·rate, cap) off every terminal pot, folds
+            // included) leaves a deficit somewhere between the rake on the
+            // pot as it stands and the cap; measure the distance outside
+            // that band (a point at zero when unraked).
+            let deficit = (f64::from(n.pot_bb) - e_o / s_o - e_i / s_i) as f32;
+            let lo = (n.pot_bb * rake_rate).min(rake_cap_bb);
+            let dev = (lo - deficit).max(deficit - rake_cap_bb).max(0.0);
             if dev > stats.max_zero_sum_dev_bb {
                 stats.max_zero_sum_dev_bb = dev;
                 stats.worst_zero_sum = Some((n.line.join(" "), n_children, n.actions.len()));
@@ -705,9 +717,12 @@ struct FormationSummary {
     id: u8,
     name: String,
     dir: String,
-    config_hash: String,
+    /// Every config hash read from this dir (one per header).
+    config_hashes: Vec<String>,
     pot_bb: f32,
     stack_bb: f32,
+    rake_rate: f32,
+    rake_cap_bb: f32,
     files: usize,
     skipped_files: usize,
     roots: usize,
@@ -746,11 +761,22 @@ fn run(args: &Args) -> Result<bool, String> {
             .filter(|s| !s.is_empty())
             .map(String::from)
             .collect(),
-        None => FORMATIONS
-            .iter()
-            .map(|f| f.id.to_string())
-            .filter(|id| args.tables.join(id).is_dir())
-            .collect(),
+        None => {
+            let mut v: Vec<String> = fs::read_dir(&args.tables)
+                .map_err(|e| format!("{}: {e}", args.tables.display()))?
+                .filter_map(|e| e.ok())
+                .filter(|e| header_hashes(&e.path()).is_ok_and(|h| !h.is_empty()))
+                .map(|e| e.file_name().to_string_lossy().into_owned())
+                .collect();
+            // Curated first (stable formation ids vs the v1 corpus), then the rest.
+            v.sort_by_key(|d| {
+                (
+                    FORMATIONS.iter().position(|f| f.id == d).is_none(),
+                    d.clone(),
+                )
+            });
+            v
+        }
     };
     if dir_names.is_empty() {
         return Err(format!(
@@ -803,6 +829,23 @@ fn run(args: &Args) -> Result<bool, String> {
     Ok(clean)
 }
 
+/// Hashes of every `header-<hash8>.json` in a formation dir.
+fn header_hashes(dir: &std::path::Path) -> std::io::Result<Vec<String>> {
+    let mut v = Vec::new();
+    for entry in fs::read_dir(dir)? {
+        let name = entry?.file_name();
+        if let Some(hash) = name
+            .to_string_lossy()
+            .strip_prefix("header-")
+            .and_then(|s| s.strip_suffix(".json"))
+        {
+            v.push(hash.to_string());
+        }
+    }
+    v.sort();
+    Ok(v)
+}
+
 fn extract_formation(
     args: &Args,
     dir_name: &str,
@@ -812,35 +855,31 @@ fn extract_formation(
     let dir = args.tables.join(dir_name);
     let err = |e: &dyn std::fmt::Display| format!("{}: {e}", dir.display());
 
-    // Exactly one header per formation dir (verified property of the store);
-    // refusing to guess beats silently mixing configs.
-    let mut headers = Vec::new();
-    for entry in fs::read_dir(&dir).map_err(|e| err(&e))? {
-        let name = entry.map_err(|e| err(&e))?.file_name();
-        let name = name.to_string_lossy();
-        if let Some(hash) = name
-            .strip_prefix("header-")
-            .and_then(|s| s.strip_suffix(".json"))
-        {
-            headers.push(hash.to_string());
-        }
+    // Curated dirs hold one header; grounded line dirs hold one per texture
+    // class of the sizing map (design 08) plus any superseded config whose
+    // files were never purged. Every header is an exact solve of its own
+    // config, and the net's input carries the ranges, so all of them are
+    // corpus: each flop file is read against the header its hash names.
+    let mut headers: HashMap<String, (Vec<f32>, Vec<f32>)> = HashMap::new();
+    let hashes = header_hashes(&dir).map_err(|e| err(&e))?;
+    let mut first: Option<TableHeader> = None;
+    for hash8 in hashes.clone() {
+        let header_path = dir.join(format!("header-{hash8}.json"));
+        let header: TableHeader =
+            serde_json::from_str(&fs::read_to_string(&header_path).map_err(|e| err(&e))?)
+                .map_err(|e| err(&e))?;
+        let base_oop = parse_weighted_range(&header.config.oop_range)?;
+        let base_ip = parse_weighted_range(&header.config.ip_range)?;
+        headers.insert(hash8, (base_oop, base_ip));
+        first.get_or_insert(header);
     }
-    let [hash8] = headers.as_slice() else {
-        return Err(err(&format!(
-            "expected exactly one header-*.json, found {}",
-            headers.len()
-        )));
+    let Some(header) = first else {
+        return Err(err(&"no header-*.json"));
     };
-    let header_path = dir.join(format!("header-{hash8}.json"));
-    let header: TableHeader =
-        serde_json::from_str(&fs::read_to_string(&header_path).map_err(|e| err(&e))?)
-            .map_err(|e| err(&e))?;
-    let base_oop = parse_weighted_range(&header.config.oop_range)?;
-    let base_ip = parse_weighted_range(&header.config.ip_range)?;
 
     // Canonical flops only: legacy pre-iso-dedup files are exact duplicates
     // of their canonical representative.
-    let mut flops: Vec<(String, String)> = Vec::new();
+    let mut flops: Vec<(String, String, String)> = Vec::new();
     let mut skipped = 0usize;
     for entry in fs::read_dir(&dir).map_err(|e| err(&e))? {
         let name = entry.map_err(|e| err(&e))?.file_name();
@@ -851,13 +890,13 @@ fn extract_formation(
         let Some((flop, hash)) = stem.rsplit_once('-') else {
             continue;
         };
-        if hash != hash8 {
+        if !headers.contains_key(hash) {
             skipped += 1;
             continue;
         }
         match iso::canonical_flop(flop) {
             Some((canon, _)) if canon.eq_ignore_ascii_case(flop) => {
-                flops.push((flop.to_string(), canon));
+                flops.push((flop.to_string(), canon, hash.to_string()));
             }
             _ => skipped += 1,
         }
@@ -880,12 +919,13 @@ fn extract_formation(
     let mut agg = FileStats::default();
     let (mut n_train, mut n_val) = (0u64, 0u64);
     let (mut f_train, mut f_val) = (0usize, 0usize);
-    for (i, (flop, canon)) in flops.iter().enumerate() {
+    for (i, (flop, canon, hash8)) in flops.iter().enumerate() {
         let table = PostflopTable::load(&dir, flop, hash8)
             .map_err(|e| format!("{dir_name}/{flop}: {e}"))?;
         let flop_id = registry.id(canon);
         let is_val = fnv1a64(canon).is_multiple_of(VAL_MOD);
-        let (records, st) = extract_file(&table, &base_oop, &base_ip);
+        let (base_oop, base_ip) = &headers[hash8];
+        let (records, st) = extract_file(&table, base_oop, base_ip);
         agg.roots += st.roots;
         agg.ip_masked += st.ip_masked;
         agg.denom_zero += st.denom_zero;
@@ -960,9 +1000,11 @@ fn extract_formation(
         id: fid,
         name: header.formation,
         dir: dir_name.to_string(),
-        config_hash: hash8.clone(),
+        config_hashes: hashes,
         pot_bb: header.config.pot_bb,
         stack_bb: header.config.stack_bb,
+        rake_rate: header.config.rake_rate,
+        rake_cap_bb: header.config.rake_cap_bb,
         files: flops.len(),
         skipped_files: skipped,
         roots: agg.roots,

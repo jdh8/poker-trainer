@@ -7,7 +7,7 @@ import argparse
 import numpy as np
 import torch
 
-from corpus import N_COMBOS, Corpus, features
+from corpus import IN_DIM, N_COMBOS, Corpus, features
 from train import build_model
 
 
@@ -19,10 +19,13 @@ def main():
     args = ap.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = build_model().to(device)
-    model.load_state_dict(torch.load(args.ckpt, map_location=device)["model"])
+    state = torch.load(args.ckpt, map_location=device)["model"]
+    in_dim = state["0.weight"].shape[1]  # v1 checkpoints predate the rake inputs
+    model = build_model(in_dim).to(device)
+    model.load_state_dict(state)
     model.eval()
     corpus = Corpus(args.data)
+    rake = corpus.rake if in_dim == IN_DIM else None
 
     print(f"{'formation':<12} {'side':<4} {'net MAE %pot':>12} {'net MAE bb':>11} {'equity-baseline %pot':>21}")
     for f, mm in corpus.shards("val"):
@@ -31,7 +34,7 @@ def main():
         base = [0.0, 0.0]  # Σw|equity − cfv|, Σw
         for start in range(0, len(mm), args.batch):
             arr = np.asarray(mm[start : start + args.batch])
-            x, y, w = features(arr)
+            x, y, w = features(arr, rake)
             with torch.no_grad():
                 pred = model(torch.from_numpy(x).to(device)).cpu().numpy()
             ae = np.abs(pred - y)

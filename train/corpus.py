@@ -23,7 +23,8 @@ RECORD = np.dtype(
     ]
 )
 
-IN_DIM = 2 * N_COMBOS + 2 + 52 + 1  # ranges, their masses, board, pot
+IN_DIM_V1 = 2 * N_COMBOS + 2 + 52 + 1  # ranges, their masses, board, pot
+IN_DIM = IN_DIM_V1 + 2  # + rake rate, rake cap (v2 corpora carry raked tiers)
 OUT_DIM = 2 * N_COMBOS
 
 
@@ -32,6 +33,10 @@ class Corpus:
         self.root = Path(root)
         self.meta = json.loads((self.root / "corpus.json").read_text())
         assert self.meta["record_bytes"] == RECORD.itemsize, "layout drift"
+        # Per-formation rake, indexed by formation_id (v1 corpora: unraked).
+        self.rake = np.zeros((256, 2), np.float32)
+        for f in self.meta["formations"]:
+            self.rake[f["id"]] = (f.get("rake_rate", 0.0), f.get("rake_cap_bb", 0.0))
 
     def shards(self, split):
         """Yield (formation meta, records memmap) for non-empty shards."""
@@ -60,10 +65,12 @@ def batches(corpus, split, batch, rng, chunk=32768):
                 yield arr[idx[b : b + batch]]
 
 
-def features(batch):
+def features(batch, rake=None):
     """Model input (float32): L1-normalized ranges + raw masses + board
-    multi-hot + pot/10. Returns (x, y, w) numpy arrays; w is the per-slot
-    loss weight (reach; IP side gated by flags bit0)."""
+    multi-hot + pot/10 (+ rake rate, cap/10 when `rake` — the corpus's
+    per-formation table — is given; None = the v1 layout). Returns (x, y, w)
+    numpy arrays; w is the per-slot loss weight (reach; IP side gated by
+    flags bit0)."""
     oop = batch["oop_reach"].astype(np.float32)
     ip = batch["ip_reach"].astype(np.float32)
     so = oop.sum(1, keepdims=True)
@@ -78,7 +85,8 @@ def features(batch):
             si,
             board,
             batch["pot_bb"][:, None] / 10.0,
-        ],
+        ]
+        + ([rake[batch["formation_id"]] * [1.0, 0.1]] if rake is not None else []),
         axis=1,
     )
     y = np.concatenate(

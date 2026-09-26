@@ -12,9 +12,9 @@ from torch import nn
 from corpus import Corpus, IN_DIM, OUT_DIM, batches, features
 
 
-def build_model():
+def build_model(in_dim=IN_DIM):
     return nn.Sequential(
-        nn.Linear(IN_DIM, 1024),
+        nn.Linear(in_dim, 1024),
         nn.GELU(),
         nn.Linear(1024, 1024),
         nn.GELU(),
@@ -31,7 +31,7 @@ def weighted_mse(pred, y, w):
 def run_split(model, corpus, split, batch, rng, device, opt=None):
     total, denom = 0.0, 0.0
     for arr in batches(corpus, split, batch, rng):
-        x, y, w = (torch.from_numpy(a).to(device) for a in features(arr))
+        x, y, w = (torch.from_numpy(a).to(device) for a in features(arr, corpus.rake))
         pred = model(x)
         loss = weighted_mse(pred, y, w)
         if opt is not None:
