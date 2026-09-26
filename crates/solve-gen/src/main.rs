@@ -80,6 +80,13 @@ enum Command {
     /// allocation. Design doc 09 phase (c) builds its depth-limited tree from
     /// this so the shape (sizes, all-in/merge thresholds) matches the store.
     Tree(SolveArgs),
+    /// Label turn roots for the value net (design doc 09, phase c): read
+    /// line-delimited JSON requests on stdin — `board` (4 cards), `pot_bb`,
+    /// `stack_bb` (behind), `turn_sizes`, `river_sizes`, `rake_rate`,
+    /// `rake_cap_bb`, `oop`/`ip` (1326 per-combo reach weights in the corpus
+    /// combo order) — solve each turn-rooted subgame exactly and echo the
+    /// request plus both sides' `*_cfv` (per combo, pot units) on stdout.
+    TurnSolve,
 }
 
 #[derive(Args)]
@@ -250,7 +257,123 @@ fn main() {
             let tree = flop_tree(&spot).unwrap_or_else(|e| die(e));
             println!("{}", serde_json::to_string(&tree).unwrap());
         }
+        Command::TurnSolve => turn_solve(),
     }
+}
+
+/// `turn-solve`: one exact turn-rooted solve per stdin line, request echoed
+/// with the labels appended (or an `error`). Inputs stay in the echo so the
+/// packer (`train/offeq.py`) has the reaches next to their values.
+fn turn_solve() {
+    use std::io::{BufRead, Write};
+    let stdin = std::io::stdin();
+    let mut out = std::io::stdout().lock();
+    for line in stdin.lock().lines() {
+        let line = line.expect("stdin");
+        if line.trim().is_empty() {
+            continue;
+        }
+        let mut req: Value = serde_json::from_str(&line).expect("request JSON");
+        match label_turn_root(&req) {
+            Ok(fields) => {
+                for (k, v) in fields {
+                    req[k] = v;
+                }
+            }
+            Err(e) => req["error"] = e.into(),
+        }
+        writeln!(out, "{}", serde_json::to_string(&req).unwrap()).expect("stdout");
+    }
+}
+
+/// Corpus combo order (`hi*(hi-1)/2 + lo`, hi > lo) → the solver's
+/// (`lo*(101-lo)/2 + hi - 1`, lo < hi). Card ids agree (`rank*4 + suit`, cdhs).
+fn corpus_to_solver_range(w: &[f32]) -> Result<Range, String> {
+    if w.len() != 1326 {
+        return Err(format!("range must have 1326 weights, got {}", w.len()));
+    }
+    let mut raw = vec![0f32; 1326];
+    for hi in 1..52usize {
+        for lo in 0..hi {
+            raw[lo * (101 - lo) / 2 + hi - 1] = w[hi * (hi - 1) / 2 + lo];
+        }
+    }
+    Range::from_raw_data(&raw)
+}
+
+fn label_turn_root(req: &Value) -> Result<Vec<(&'static str, Value)>, String> {
+    let num = |k: &str| {
+        req[k]
+            .as_f64()
+            .map(|x| x as f32)
+            .ok_or(format!("missing {k}"))
+    };
+    let text = |k: &str| {
+        req[k]
+            .as_str()
+            .map(String::from)
+            .ok_or(format!("missing {k}"))
+    };
+    let weights = |k: &str| -> Result<Vec<f32>, String> {
+        req[k]
+            .as_array()
+            .ok_or(format!("missing {k}"))?
+            .iter()
+            .map(|x| x.as_f64().map(|v| v as f32).ok_or(format!("bad {k}")))
+            .collect()
+    };
+    let board: Vec<&str> = req["board"]
+        .as_array()
+        .ok_or("missing board")?
+        .iter()
+        .filter_map(Value::as_str)
+        .collect();
+    if board.len() != 4 {
+        return Err("board must be 4 cards".into());
+    }
+    let config = SpotConfig {
+        formation: text("formation").unwrap_or_default(),
+        oop_range: String::new(),
+        ip_range: String::new(),
+        flop_sizes: text("turn_sizes")?, // unused from the turn on, must parse
+        turn_sizes: text("turn_sizes")?,
+        river_sizes: text("river_sizes")?,
+        stack_bb: num("stack_bb")?,
+        pot_bb: num("pot_bb")?,
+        rake_rate: num("rake_rate")?,
+        rake_cap_bb: num("rake_cap_bb")?,
+    };
+    let mut tc = tree_config(&config)?;
+    tc.initial_state = BoardState::Turn;
+    let card_config = CardConfig {
+        range: [
+            corpus_to_solver_range(&weights("oop")?)?,
+            corpus_to_solver_range(&weights("ip")?)?,
+        ],
+        flop: flop_from_str(&board[..3].concat())?,
+        turn: card_from_str(board[3])?,
+        river: NOT_DEALT,
+    };
+    let t0 = std::time::Instant::now();
+    let mut game = PostFlopGame::with_config(card_config, ActionTree::new(tc)?)?;
+    game.allocate_memory(false); // small game: full precision for labels
+    let pot = config.pot_bb * CHIPS_PER_BB;
+    let exploitability = solve(&mut game, 1000, pot * 0.005, false);
+    game.cache_normalized_weights();
+    let mut cfv = [vec![0f32; 1326], vec![0f32; 1326]];
+    for (p, side) in cfv.iter_mut().enumerate() {
+        let ev = game.expected_values(p);
+        for (i, &(a, b)) in game.private_cards(p).iter().enumerate() {
+            let (hi, lo) = (a.max(b) as usize, a.min(b) as usize);
+            side[hi * (hi - 1) / 2 + lo] = ev[i] / pot;
+        }
+    }
+    Ok(vec![
+        ("oop_cfv", json!(cfv[0])),
+        ("ip_cfv", json!(cfv[1])),
+        ("exploitability_pot", json!(exploitability / pot)),
+        ("secs", json!(t0.elapsed().as_secs_f32())),
+    ])
 }
 
 /// Set `shutdown` on SIGHUP (a manual drain or systemd restart) or Ctrl-C, so

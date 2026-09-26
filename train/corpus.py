@@ -29,8 +29,9 @@ OUT_DIM = 2 * N_COMBOS
 
 
 class Corpus:
-    def __init__(self, root):
+    def __init__(self, root, only=None):
         self.root = Path(root)
+        self.only = set(only) if only else None  # restrict to these formation dirs
         self.meta = json.loads((self.root / "corpus.json").read_text())
         assert self.meta["record_bytes"] == RECORD.itemsize, "layout drift"
         # Per-formation rake, indexed by formation_id (v1 corpora: unraked).
@@ -41,6 +42,8 @@ class Corpus:
     def shards(self, split):
         """Yield (formation meta, records memmap) for non-empty shards."""
         for f in self.meta["formations"]:
+            if self.only is not None and f["dir"] not in self.only:
+                continue
             n = f[split]["records"]
             if n:
                 path = self.root / f[split]["file"]

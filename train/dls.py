@@ -237,6 +237,25 @@ class DLS:
                 k += 1
             n.u /= 45.0
 
+    def log_reaches(self, t, fdir):
+        """Append one turn-root labeling request per deal node (a random turn
+        card each) at the current reaches — the off-equilibrium corpus."""
+        for n in self.deal:
+            c = int(self.rng.choice(self.turns))
+            if min(n.reach[0].sum(), n.reach[1].sum()) <= 0:
+                continue  # an empty side is no game (the solver refuses it)
+            req = {
+                "formation": fdir, "flop": "".join(RANKS[x // 4] + SUITS[x % 4] for x in self.flop),
+                "line": n.line, "iter": t,
+                "board": [RANKS[x // 4] + SUITS[x % 4] for x in self.flop + [c]],
+                "pot_bb": n.matched, "stack_bb": self.cfg["stack_bb"] - (n.matched - self.cfg["pot_bb"]) / 2,
+                "turn_sizes": self.cfg["turn_sizes"], "river_sizes": self.cfg["river_sizes"],
+                "rake_rate": self.cfg["rake_rate"], "rake_cap_bb": self.cfg["rake_cap_bb"],
+                "oop": np.round(n.reach[0] * ~BLOCK[c], 5).tolist(),
+                "ip": np.round(n.reach[1] * ~BLOCK[c], 5).tolist(),
+            }
+            self.log.write(json.dumps(req, separators=(",", ":")) + "\n")
+
     def iterate(self, t):
         for n in self.dec:
             n.sigma = regret_match(n.regret)
@@ -336,6 +355,9 @@ def main():
     ap.add_argument("--leaf-reach", choices=["live", "stored"], default="live",
                     help="stored = diagnostic: net inputs frozen at the solver's equilibrium reaches")
     ap.add_argument("--hands", nargs="*", default=[], help="print root freqs/EVs for these hands")
+    ap.add_argument("--log-reaches", default=None, help="append turn-solve requests (JSONL) sampled from the iterations")
+    ap.add_argument("--log-stride", type=int, default=20, help="log every k-th iteration (plus the final average)")
+    ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -366,11 +388,15 @@ def main():
         stored = stored_nodes(Path(args.tables) / fdir / f"{flop.lower()}-{tj['hash']}.jsonl")
 
         dls = DLS(tj, net, in_dim, equity, device, stored=stored if args.leaf_reach == "stored" else None)
+        dls.rng = np.random.default_rng(args.seed)
+        dls.log = open(args.log_reaches, "a") if args.log_reaches else None
         if dls.frozen is not None:
             print(f"  net at equilibrium reaches vs stored turn roots: OOP MAE {net_check(dls, stored):.2f}% pot")
         t0 = time.time()
         for t in range(1, args.iters + 1):
             dls.iterate(t)
+            if dls.log and t % args.log_stride == 0:
+                dls.log_reaches(t, fdir)
             if t % args.log_every == 0 or t == args.iters:
                 dls.average()
                 root = compare(dls, stored)[0]
@@ -378,6 +404,9 @@ def main():
                 for n in dls.dec:
                     n.sigma = regret_match(n.regret)
         dls.average()
+        if dls.log:
+            dls.log_reaches(-1, fdir)  # the average-strategy reaches
+            dls.log.close()
         rows = compare(dls, stored)
         root = rows[0]
         if args.hands:

@@ -28,10 +28,10 @@ def weighted_mse(pred, y, w):
     return (w * (pred - y) ** 2).sum() / w.sum().clamp_min(1e-9)
 
 
-def run_split(model, corpus, split, batch, rng, device, opt=None):
+def run_split(model, corpus, split, batch, rng, device, opt=None, rake=None):
     total, denom = 0.0, 0.0
     for arr in batches(corpus, split, batch, rng):
-        x, y, w = (torch.from_numpy(a).to(device) for a in features(arr, corpus.rake))
+        x, y, w = (torch.from_numpy(a).to(device) for a in features(arr, rake))
         pred = model(x)
         loss = weighted_mse(pred, y, w)
         if opt is not None:
@@ -52,13 +52,20 @@ def main():
     ap.add_argument("--lr", type=float, default=3e-4)
     ap.add_argument("--out", default="value-net.pt")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--init", default=None, help="fine-tune from this checkpoint")
+    ap.add_argument("--formations", default=None, help="comma-separated corpus dirs to train on (default all)")
     args = ap.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     torch.manual_seed(args.seed)
     rng = np.random.default_rng(args.seed)
-    corpus = Corpus(args.data)
-    model = build_model().to(device)
+    corpus = Corpus(args.data, only=args.formations.split(",") if args.formations else None)
+    state = torch.load(args.init, map_location=device)["model"] if args.init else None
+    in_dim = state["0.weight"].shape[1] if state else IN_DIM
+    rake = corpus.rake if in_dim == IN_DIM else None  # v1 checkpoints predate the rake inputs
+    model = build_model(in_dim).to(device)
+    if state:
+        model.load_state_dict(state)
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=args.epochs)
     print(f"device={device} params={sum(p.numel() for p in model.parameters()):,}")
@@ -67,15 +74,15 @@ def main():
     for epoch in range(1, args.epochs + 1):
         t0 = time.time()
         model.train()
-        train_loss = run_split(model, corpus, "train", args.batch, rng, device, opt)
+        train_loss = run_split(model, corpus, "train", args.batch, rng, device, opt, rake)
         model.eval()
         with torch.no_grad():
-            val_loss = run_split(model, corpus, "val", args.batch, rng, device)
+            val_loss = run_split(model, corpus, "val", args.batch, rng, device, rake=rake)
         sched.step()
         mark = ""
         if val_loss < best:
             best = val_loss
-            torch.save({"model": model.state_dict(), "in_dim": IN_DIM}, args.out)
+            torch.save({"model": model.state_dict(), "in_dim": in_dim}, args.out)
             mark = " *"
         print(
             f"epoch {epoch:3}: train {train_loss:.6f}  val {val_loss:.6f}"
