@@ -5,7 +5,8 @@ Status: **phases (a)+(b) shipped** (2026-07-24) — corpus extractor
 root, both invariants checked against every file) and the `train/` harness
 (uv + torch MLP, equity-baseline eval) are done; phase (c) not started.
 First measured result below (2026-07-24): ~2× under the equity baseline
-on held-out flops, still far from the ~1%-pot floor.
+on held-out flops; the 200-epoch run (evaluated 2026-09-26) reaches
+2.7–3.4% pot on every formation and side, ~6× under baseline.
 Written 2026-07 after a GPU-feasibility review of bulk generation. Records
 why GPU-porting the CFR engine is the wrong move, and the one route where
 the local GPU (RTX 4070 SUPER, 12 GB) genuinely pays. The trigger fired:
@@ -98,8 +99,18 @@ on the srp tiers and 12.4–16.7% on the 3bp tiers**, vs 16.9–19.7% for the
 equity baseline — roughly 2× under baseline, still far from the ~1% solve
 floor. Val loss was still falling at epoch 20, so the near-term levers are
 training time and input encoding (suit-iso augmentation, per-config
-heads), not more data. Good enough to justify phase (c) prototyping; not
-yet good enough to replace solves.
+heads), not more data.
+
+Second result (`train/value-net-200.pt`, 200 epochs with cosine decay on
+the same corpus, evaluated 2026-09-26): **2.7–3.4% pot MAE on every
+formation and side** (srp oop 2.8–2.9%, ip 2.8–3.2%; 3bp oop 2.7–2.8%, ip
+2.7–3.4%), i.e. training time alone closed most of the srp/3bp gap and
+took the net ~6× under the equity baseline. Still ~3× the ~1%-pot solve
+floor. Good enough to justify phase (c) prototyping; not yet good enough
+to replace solves. The corpus is still the curated all-1755 store only;
+the grounded tiers (cash-hu34/hu55, mtt-hu34, cash89, mtt89 — all complete
+2026-09) carry two headers per line dir (rainbow vs non-rainbow sizing
+map), which `export-value-corpus` does not yet accept.
 
 This narrows doc 00's "no NN approximator" stance rather than reversing it:
 the net would accelerate **our own offline generation and off-tree lookups**,
