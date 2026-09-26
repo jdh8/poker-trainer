@@ -137,7 +137,7 @@ def pack(args):
     meta["flops"] = [f for f, _ in sorted(flop_ids.items(), key=lambda kv: kv[1])]
     meta["formations"].append({
         "id": fid, "name": f"{r0['formation']} off-equilibrium turn roots", "dir": args.name,
-        "config_hashes": [], "pot_bb": pot_sum / total, "stack_bb": stack_sum / total,
+        "config_hashes": [], "pot_bb": float(pot_sum / total), "stack_bb": float(stack_sum / total),
         "rake_rate": r0["rake_rate"], "rake_cap_bb": r0["rake_cap_bb"],
         "files": len(flops["train"] | flops["val"]), "skipped_files": 0, "roots": total,
         "train": {"file": paths["train"].name, "records": count["train"], "flops": len(flops["train"])},
