@@ -76,6 +76,10 @@ enum Command {
     /// Tree-session server: solve a spot, keep it resident, and answer
     /// line-delimited JSON node queries on stdio (protocol v2, design doc 01).
     Serve,
+    /// Print a spot's flop-street action tree as JSON — no solve, no game
+    /// allocation. Design doc 09 phase (c) builds its depth-limited tree from
+    /// this so the shape (sizes, all-in/merge thresholds) matches the store.
+    Tree(SolveArgs),
 }
 
 #[derive(Args)]
@@ -241,6 +245,11 @@ fn main() {
             write_tables(&spots, &out, &a, &shutdown);
         }
         Command::Serve => serve(),
+        Command::Tree(a) => {
+            let spot = spot_from_args(&a).unwrap_or_else(|e| die(e));
+            let tree = flop_tree(&spot).unwrap_or_else(|e| die(e));
+            println!("{}", serde_json::to_string(&tree).unwrap());
+        }
     }
 }
 
@@ -1170,21 +1179,15 @@ fn mem_budget(max_mem_gb: Option<f64>) -> Option<u64> {
     Some(kb * 1024 / 5 * 4) // 80% of MemAvailable (kB → bytes)
 }
 
-fn build_and_solve(spot: &Spot, max_mem_gb: Option<f64>) -> Result<(PostFlopGame, f32), String> {
-    let c = &spot.config;
-    let starting_pot = (c.pot_bb * CHIPS_PER_BB) as i32;
-    let card_config = CardConfig {
-        range: [c.oop_range.parse()?, c.ip_range.parse()?],
-        flop: flop_from_str(&spot.flop)?,
-        turn: NOT_DEALT,
-        river: NOT_DEALT,
-    };
+/// The solver's tree shape for a config: our sizes, `2.5x` raises, and the
+/// fixed all-in/merge thresholds every stored table was generated with.
+fn tree_config(c: &SpotConfig) -> Result<TreeConfig, String> {
     let flop_bets = BetSizeOptions::try_from((c.flop_sizes.as_str(), "2.5x"))?;
     let turn_bets = BetSizeOptions::try_from((c.turn_sizes.as_str(), "2.5x"))?;
     let river_bets = BetSizeOptions::try_from((c.river_sizes.as_str(), "2.5x"))?;
-    let tree_config = TreeConfig {
+    Ok(TreeConfig {
         initial_state: BoardState::Flop,
-        starting_pot,
+        starting_pot: (c.pot_bb * CHIPS_PER_BB) as i32,
         effective_stack: (c.stack_bb * CHIPS_PER_BB) as i32,
         rake_rate: f64::from(c.rake_rate),
         rake_cap: f64::from(c.rake_cap_bb * CHIPS_PER_BB),
@@ -1196,9 +1199,66 @@ fn build_and_solve(spot: &Spot, max_mem_gb: Option<f64>) -> Result<(PostFlopGame
         add_allin_threshold: 1.5,
         force_allin_threshold: 0.15,
         merging_threshold: 0.1,
-    };
+    })
+}
 
-    let action_tree = ActionTree::new(tree_config)?;
+/// The flop street of a spot's action tree as nested JSON: decision nodes
+/// carry `actions` + `children` (labels as the tables spell them); leaves are
+/// `terminal` (someone folded — `folder` 0/1) or `chance` (street closed —
+/// `allin` when both stacks are in, else the turn-root value-net interface).
+/// Pots/bets in bb; `matched_pot` excludes an uncalled bet.
+fn flop_tree(spot: &Spot) -> Result<Value, String> {
+    fn walk(tree: &mut ActionTree, starting_pot: i32, stack: i32) -> Result<Value, String> {
+        let bets = tree.total_bet_amount();
+        let bb = |x: i32| x as f32 / CHIPS_PER_BB;
+        let matched = bets[0].min(bets[1]);
+        let mut node = json!({
+            "pot": bb(starting_pot + bets[0] + bets[1]),
+            "matched_pot": bb(starting_pot + 2 * matched),
+            "bets": [bb(bets[0]), bb(bets[1])],
+        });
+        let depth = tree.history().len();
+        if tree.is_terminal_node() {
+            node["player"] = "terminal".into();
+            node["folder"] = ((depth + 1) % 2).into();
+        } else if tree.is_chance_node() {
+            node["player"] = "chance".into();
+            node["allin"] = (matched >= stack).into();
+        } else {
+            node["player"] = if depth.is_multiple_of(2) { "oop" } else { "ip" }.into();
+            let actions = tree.available_actions().to_vec();
+            let (mut labels, mut children) = (Vec::new(), Vec::new());
+            for a in actions {
+                labels.push(fmt_action(&a));
+                tree.play(a)?;
+                children.push(walk(tree, starting_pot, stack)?);
+                tree.undo()?;
+            }
+            node["actions"] = labels.into();
+            node["children"] = children.into();
+        }
+        Ok(node)
+    }
+    let c = &spot.config;
+    let mut tree = ActionTree::new(tree_config(c)?)?;
+    let root = walk(
+        &mut tree,
+        (c.pot_bb * CHIPS_PER_BB) as i32,
+        (c.stack_bb * CHIPS_PER_BB) as i32,
+    )?;
+    Ok(json!({ "flop": spot.flop, "hash": c.hash8(), "config": c, "tree": root }))
+}
+
+fn build_and_solve(spot: &Spot, max_mem_gb: Option<f64>) -> Result<(PostFlopGame, f32), String> {
+    let c = &spot.config;
+    let starting_pot = (c.pot_bb * CHIPS_PER_BB) as i32;
+    let card_config = CardConfig {
+        range: [c.oop_range.parse()?, c.ip_range.parse()?],
+        flop: flop_from_str(&spot.flop)?,
+        turn: NOT_DEALT,
+        river: NOT_DEALT,
+    };
+    let action_tree = ActionTree::new(tree_config(c)?)?;
     let mut game = PostFlopGame::with_config(card_config, action_tree)?;
     // Pre-flight: memory_usage() is exact and valid *before* allocate_memory
     // touches a byte. allocate_memory maps lazily-zeroed pages, so an over-sized

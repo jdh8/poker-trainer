@@ -3,7 +3,10 @@
 Status: **phases (a)+(b) shipped** (2026-07-24) — corpus extractor
 (`src/bin/export-value-corpus.rs`, one fixed-width record per stored turn
 root, both invariants checked against every file) and the `train/` harness
-(uv + torch MLP, equity-baseline eval) are done; phase (c) not started.
+(uv + torch MLP, equity-baseline eval) are done. **Phase (c) prototyped**
+(2026-09-26, `train/dls.py`): the depth-limited flop solve works end to end
+and pins the blocker — the net is only accurate at equilibrium reaches, and
+CFR queries it everywhere else (see "Phase (c) result" below).
 First measured result below (2026-07-24): ~2× under the equity baseline
 on held-out flops; the 200-epoch run (evaluated 2026-09-26) reaches
 2.7–3.4% pot on every formation and side, ~6× under baseline.
@@ -111,6 +114,50 @@ to replace solves. The corpus is still the curated all-1755 store only;
 the grounded tiers (cash-hu34/hu55, mtt-hu34, cash89, mtt89 — all complete
 2026-09) carry two headers per line dir (rainbow vs non-rainbow sizing
 map), which `export-value-corpus` does not yet accept.
+
+## Phase (c) result (2026-09-26): the leaf is right, the distribution is wrong
+
+`train/dls.py` is the prototype: vector DCFR over all 1326 combos per side on
+the flop street only, tree shape from `solve-gen tree` (the solver's own
+`ActionTree`, so sizes/all-in/merge rules match the store), fold leaves exact,
+the all-in leaf from `flop-equity` (exact 1326×1326 showdown matrix, ~1.5 s
+per flop), and every street-closing node batched through the net for both
+sides' turn-root values under the current reaches (49 turn cards × 17 deal
+nodes on an srp tree — one forward pass per iteration, 200 iterations in
+~8 s on the 4070). Validation is against the stored full solve of the same
+flop: reach-weighted root EV MAE in % pot and L1 strategy distance.
+
+Six held-out srp-btn-bb flops, `value-net-200.pt`, 200 iterations:
+
+| leaf inputs | root EV MAE | root strategy L1 | deeper-node L1 |
+|---|---|---|---|
+| net at the **solver's equilibrium reaches** (frozen, diagnostic) | **1.36% pot** | 0.26 | 0.29 |
+| net at the **live CFR reaches** (the real thing) | **13.7% pot** | 0.67 | 0.51 |
+
+The frozen row proves the pipeline: through `dls.py`'s own feature path the
+net sits at 2.1–3.3% pot on those flops' stored turn roots, and a flop solve
+over those leaves lands within the net's own error of the solver (per-action
+root EVs within 0.1–0.4 bb; the residual strategy L1 is the solver's mixing
+at near-indifferent hands, which no 3%-pot value can pin). The live row is
+the known depth-limited-solving failure: the corpus holds turn roots **only
+at equilibrium reaches**, so the reach vectors CFR feeds the net during its
+early (uniform-strategy) and exploratory iterations are out of distribution,
+the net returns nonsense there (root EVs off by 3–6 bb), and regret matching
+exploits exactly those errors. More epochs or a bigger equilibrium corpus
+cannot fix this; the training distribution must cover the reaches the
+solver visits.
+
+Next lever (ReBeL's answer, scoped to our pipeline): **label off-equilibrium
+turn roots by solving turn-rooted subgames.** postflop-solver takes
+per-combo weighted ranges and `initial_state: Turn`, so any (board4, pot,
+reach pair) the DLS visits is an exact label after a turn+river solve
+(~100 MB, seconds, not the 9 GB flop game). Sample the reach pairs from
+`dls.py`'s own iterations (log them per deal node per iteration), solve them
+under `idle-run.sh` on the now-idle fleet, append to the corpus, retrain,
+re-run this table. The table above is the acceptance test: the live row has
+to approach the frozen row. Until then the net serves equilibrium-reach
+lookups only — which is what the trainer's off-tree drills actually need,
+and is why the corpus-side work (grounded tiers, rake inputs) still pays.
 
 This narrows doc 00's "no NN approximator" stance rather than reversing it:
 the net would accelerate **our own offline generation and off-tree lookups**,

@@ -65,6 +65,19 @@ def batches(corpus, split, batch, rng, chunk=32768):
                 yield arr[idx[b : b + batch]]
 
 
+def features_raw(oop, ip, board, pot_bb, rake=None):
+    """The model input for explicit arrays: `oop`/`ip` reach (n, 1326),
+    `board` card ids (n, k), `pot_bb` (n,), `rake` (n, 2) or None."""
+    so = oop.sum(1, keepdims=True)
+    si = ip.sum(1, keepdims=True)
+    b = np.zeros((len(oop), 52), np.float32)
+    b[np.arange(len(oop))[:, None], board] = 1.0
+    cols = [oop / np.maximum(so, 1e-9), ip / np.maximum(si, 1e-9), so, si, b, pot_bb[:, None] / 10.0]
+    if rake is not None:
+        cols.append(rake * [1.0, 0.1])
+    return np.concatenate(cols, axis=1).astype(np.float32, copy=False)
+
+
 def features(batch, rake=None):
     """Model input (float32): L1-normalized ranges + raw masses + board
     multi-hot + pot/10 (+ rake rate, cap/10 when `rake` — the corpus's
@@ -73,21 +86,12 @@ def features(batch, rake=None):
     flags bit0)."""
     oop = batch["oop_reach"].astype(np.float32)
     ip = batch["ip_reach"].astype(np.float32)
-    so = oop.sum(1, keepdims=True)
-    si = ip.sum(1, keepdims=True)
-    board = np.zeros((len(batch), 52), np.float32)
-    board[np.arange(len(batch))[:, None], batch["board"].astype(int)] = 1.0
-    x = np.concatenate(
-        [
-            oop / np.maximum(so, 1e-9),
-            ip / np.maximum(si, 1e-9),
-            so,
-            si,
-            board,
-            batch["pot_bb"][:, None] / 10.0,
-        ]
-        + ([rake[batch["formation_id"]] * [1.0, 0.1]] if rake is not None else []),
-        axis=1,
+    x = features_raw(
+        oop,
+        ip,
+        batch["board"].astype(int),
+        batch["pot_bb"].astype(np.float32),
+        None if rake is None else rake[batch["formation_id"]],
     )
     y = np.concatenate(
         [batch["oop_cfv"].astype(np.float32), batch["ip_cfv"].astype(np.float32)], axis=1
