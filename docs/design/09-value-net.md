@@ -189,6 +189,28 @@ every 4th iteration ≈ 60k labels, mixed with the equilibrium shard) is the
 scaling test; if the live row keeps tracking label count, the fleet turns
 the labeler loose (a million labels is a day on one 8-core box).
 
+**Round 2 (2026-09-26, fleet).** 300 train flops × every 4th iteration →
+147k requests, 145k labels; the remaining 95k after the local head were
+sharded over dl02 (two processes), jdh8-22, jdh8-24 and zoo under idle-run
+at ~40 labels/s combined (40 min). Fine-tune of `value-net-200` on the
+srp-btn-bb equilibrium shard + both off-equilibrium shards, 10 epochs:
+
+| labels in the fine-tune | live root EV MAE (6 val flops) | fit on own off-eq labels | off-eq labels, unseen flops |
+|---|---|---|---|
+| 0 (`value-net-200`) | 13.7% pot | 15–21% | 15–19% |
+| 12k (round 1, shard only) | 8.1% | 5–9% | 11–15% |
+| 157k (round 2, mixed) | **6.5%** | 9–14% | 12–15% |
+
+Equilibrium eval stays at 3.0/3.2% on srp-btn-bb. Progress is sublinear in
+labels and the training loss says why: the net still misses its **own**
+off-equilibrium training samples by ~10% pot, so the fit is optimization- or
+representation-bound before it is data-bound. Order of attack: (1) longer /
+hotter training on the same data (`ft3`, same acceptance tail); (2) input
+encoding for spiky, low-mass reaches (error at min-side mass < 1 combo is
+35% pot vs 8–10% at mass ≥ 80 — log-mass features, or per-combo reach
+straight in without L1 normalisation); (3) only then more labels. The
+labeler is sound and cheap, so (3) is never the bottleneck again.
+
 This narrows doc 00's "no NN approximator" stance rather than reversing it:
 the net would accelerate **our own offline generation and off-tree lookups**,
 not chase datacenter solve-speed parity as a product.
