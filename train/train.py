@@ -41,7 +41,7 @@ def run_split(model, corpus, split, batch, rng, device, opt=None, rake=None):
         ws = float(w.sum())
         total += float(loss.detach()) * ws
         denom += ws
-    return total / max(denom, 1e-9)
+    return total / denom if denom > 0 else float("nan")  # nan: split is empty
 
 
 def main():
@@ -80,7 +80,7 @@ def main():
             val_loss = run_split(model, corpus, "val", args.batch, rng, device, rake=rake)
         sched.step()
         mark = ""
-        if val_loss < best:
+        if not val_loss >= best:  # also saves when the val split is empty (nan)
             best = val_loss
             torch.save({"model": model.state_dict(), "in_dim": in_dim}, args.out)
             mark = " *"
