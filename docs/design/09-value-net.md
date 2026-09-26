@@ -211,6 +211,13 @@ encoding for spiky, low-mass reaches (error at min-side mass < 1 combo is
 straight in without L1 normalisation); (3) only then more labels. The
 labeler is sound and cheap, so (3) is never the bottleneck again.
 
+(1) answered the same evening: 60 epochs at lr 3e-4 on the round-2 data
+(`ft3`) → live root EV **5.4% pot**, fit on own off-eq labels 5–9%, unseen
+flops 9–11%, and the equilibrium eval *improved* to 2.72/2.80%. Training
+time was the first bottleneck; the fit-vs-unseen gap that remains is what
+more labels buy, so round 3 (600 fresh flops, requests from the ft3 net's
+own reaches, fleet-sharded, 100 epochs) runs overnight.
+
 This narrows doc 00's "no NN approximator" stance rather than reversing it:
 the net would accelerate **our own offline generation and off-tree lookups**,
 not chase datacenter solve-speed parity as a product.
