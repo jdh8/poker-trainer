@@ -22,14 +22,20 @@ from dls import card_id
 from train import build_model
 
 
-def load(path):
+def chunks(path, n=2048):
+    """Stream the labels file in chunks of parsed rows (solver errors skipped):
+    a full round is 300k+ rows × 5k floats, far too big to hold as objects."""
     rows = []
     for line in open(path):
         if line.strip():
             j = json.loads(line)
             if "oop_cfv" in j:
                 rows.append(j)
-    return rows
+                if len(rows) == n:
+                    yield rows
+                    rows = []
+    if rows:
+        yield rows
 
 
 def arrays(rows):
@@ -42,34 +48,44 @@ def arrays(rows):
     return oop, ip, board, pot, rake, y
 
 
+EDGES = [(-1, -1), (1, 40), (41, 100), (101, 200), (201, 10**9)]
+
+
 def check(args):
-    rows = load(args.labels)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     state = torch.load(args.ckpt, map_location=device)["model"]
     in_dim = state["0.weight"].shape[1]
     net = build_model(in_dim).to(device)
     net.load_state_dict(state)
     net.eval()
-    oop, ip, board, pot, rake, y = arrays(rows)
-    x = features_raw(oop, ip, board, pot, rake if in_dim == IN_DIM else None)
-    with torch.no_grad():
-        pred = net(torch.from_numpy(x).to(device)).cpu().numpy()
-    ae = np.abs(pred - y)
-    w = np.concatenate([oop, ip], 1)
-    it = np.array([r["iter"] for r in rows])
-    secs = np.array([r["secs"] for r in rows])
-    expl = np.array([r["exploitability_pot"] for r in rows])
-    print(f"{len(rows)} labels, solve {secs.mean():.1f} s each (max {secs.max():.1f}), exploitability {100 * expl.mean():.2f}% pot")
+    # per bucket: n, Σw|e| oop, Σw oop, Σw|e| ip, Σw ip
+    acc = {e: np.zeros(5) for e in EDGES}
+    n = secs = secs_max = expl = 0.0
+    for rows in chunks(args.labels):
+        oop, ip, board, pot, rake, y = arrays(rows)
+        x = features_raw(oop, ip, board, pot, rake if in_dim == IN_DIM else None)
+        with torch.no_grad():
+            pred = net(torch.from_numpy(x).to(device)).cpu().numpy()
+        ae = np.abs(pred - y)
+        w = np.concatenate([oop, ip], 1)
+        it = np.array([r["iter"] for r in rows])
+        for lo, hi in EDGES:
+            m = (it >= lo) & (it <= hi)
+            if m.any():
+                acc[(lo, hi)] += [m.sum(), (w[m, :N_COMBOS] * ae[m, :N_COMBOS]).sum(), w[m, :N_COMBOS].sum(),
+                                  (w[m, N_COMBOS:] * ae[m, N_COMBOS:]).sum(), w[m, N_COMBOS:].sum()]
+        s = np.array([r["secs"] for r in rows])
+        n += len(rows)
+        secs += s.sum()
+        secs_max = max(secs_max, s.max())
+        expl += sum(r["exploitability_pot"] for r in rows)
+    print(f"{int(n)} labels, solve {secs / n:.1f} s each (max {secs_max:.1f}), exploitability {100 * expl / n:.2f}% pot")
     print(f"{'iterations':>12} {'n':>5} {'OOP MAE %pot':>13} {'IP MAE %pot':>12}")
-    edges = [(-1, -1), (1, 40), (41, 100), (101, 200), (201, 10**9)]
-    for lo, hi in edges:
-        m = (it >= lo) & (it <= hi)
-        if not m.any():
-            continue
-        o = 100 * (w[m, :N_COMBOS] * ae[m, :N_COMBOS]).sum() / w[m, :N_COMBOS].sum()
-        i = 100 * (w[m, N_COMBOS:] * ae[m, N_COMBOS:]).sum() / w[m, N_COMBOS:].sum()
-        label = "final avg" if lo == -1 else f"{lo}-{hi if hi < 10**9 else ''}"
-        print(f"{label:>12} {m.sum():5d} {o:13.2f} {i:12.2f}")
+    for lo, hi in EDGES:
+        c, eo, wo, ei, wi = acc[(lo, hi)]
+        if c:
+            label = "final avg" if lo == -1 else f"{lo}-{hi if hi < 10**9 else ''}"
+            print(f"{label:>12} {int(c):5d} {100 * eo / wo:13.2f} {100 * ei / wi:12.2f}")
 
 
 def fnv1a64(s):
@@ -80,43 +96,56 @@ def fnv1a64(s):
 
 
 def pack(args):
-    rows = load(args.labels)
     data = Path(args.data)
     meta = json.loads((data / "corpus.json").read_text())
     fid = max(f["id"] for f in meta["formations"]) + 1
     flop_ids = {f: i for i, f in enumerate(meta["flops"])}
-    oop, ip, board, pot, rake, y = arrays(rows)
-    rec = np.zeros(len(rows), RECORD)
-    rec["formation_id"] = fid
-    rec["flags"] = 1
-    rec["board"] = board
-    rec["pot_bb"] = pot
-    rec["reach"] = 1.0
-    rec["oop_reach"], rec["ip_reach"] = oop, ip
-    rec["oop_cfv"], rec["ip_cfv"] = y[:, :N_COMBOS], y[:, N_COMBOS:]
-    is_val = np.array([fnv1a64(r["flop"].lower()) % 10 == 0 for r in rows])
-    for r in rows:
-        flop_ids.setdefault(r["flop"].lower(), len(flop_ids))
-    rec["flop_id"] = [flop_ids[r["flop"].lower()] for r in rows]
-    meta["flops"] = [f for f, _ in sorted(flop_ids.items(), key=lambda kv: kv[1])]
-    files = {}
-    for split, m in (("train", ~is_val), ("val", is_val)):
-        path = data / f"{args.name}.{split}.bin"
-        rec[m].tofile(path)
-        files[split] = {"file": path.name, "records": int(m.sum()), "flops": len({r["flop"] for r, k in zip(rows, m) if k})}
-    # val_equity sidecar: eval.py's baseline column; not meaningful here, zeros.
+    paths = {s: data / f"{args.name}.{s}.bin" for s in ("train", "val")}
+    out = {s: open(p, "wb") for s, p in paths.items()}
     eqp = data / f"{args.name}.val-equity.bin"
-    np.zeros((int(is_val.sum()), N_COMBOS), "<f2").tofile(eqp)
-    r0 = rows[0]
+    eq = open(eqp, "wb")  # eval.py's baseline column; zeros, not meaningful here
+    count = {"train": 0, "val": 0}
+    flops = {"train": set(), "val": set()}
+    pot_sum = stack_sum = 0.0
+    r0 = None
+    for rows in chunks(args.labels):
+        r0 = r0 or rows[0]
+        oop, ip, board, pot, rake, y = arrays(rows)
+        rec = np.zeros(len(rows), RECORD)
+        rec["formation_id"] = fid
+        rec["flags"] = 1
+        rec["board"] = board
+        rec["pot_bb"] = pot
+        rec["reach"] = 1.0
+        rec["oop_reach"], rec["ip_reach"] = oop, ip
+        rec["oop_cfv"], rec["ip_cfv"] = y[:, :N_COMBOS], y[:, N_COMBOS:]
+        for r in rows:
+            flop_ids.setdefault(r["flop"].lower(), len(flop_ids))
+        rec["flop_id"] = [flop_ids[r["flop"].lower()] for r in rows]
+        is_val = np.array([fnv1a64(r["flop"].lower()) % 10 == 0 for r in rows])
+        for split, m in (("train", ~is_val), ("val", is_val)):
+            rec[m].tofile(out[split])
+            count[split] += int(m.sum())
+            flops[split] |= {r["flop"] for r, k in zip(rows, m) if k}
+        np.zeros((int(is_val.sum()), N_COMBOS), "<f2").tofile(eq)
+        pot_sum += pot.sum()
+        stack_sum += sum(r["stack_bb"] for r in rows)
+    for f in out.values():
+        f.close()
+    eq.close()
+    total = count["train"] + count["val"]
+    meta["flops"] = [f for f, _ in sorted(flop_ids.items(), key=lambda kv: kv[1])]
     meta["formations"].append({
         "id": fid, "name": f"{r0['formation']} off-equilibrium turn roots", "dir": args.name,
-        "config_hashes": [], "pot_bb": float(pot.mean()), "stack_bb": float(np.mean([r["stack_bb"] for r in rows])),
+        "config_hashes": [], "pot_bb": pot_sum / total, "stack_bb": stack_sum / total,
         "rake_rate": r0["rake_rate"], "rake_cap_bb": r0["rake_cap_bb"],
-        "files": len({r["flop"] for r in rows}), "skipped_files": 0, "roots": len(rows),
-        "train": files["train"], "val": files["val"], "val_equity_file": eqp.name,
+        "files": len(flops["train"] | flops["val"]), "skipped_files": 0, "roots": total,
+        "train": {"file": paths["train"].name, "records": count["train"], "flops": len(flops["train"])},
+        "val": {"file": paths["val"].name, "records": count["val"], "flops": len(flops["val"])},
+        "val_equity_file": eqp.name,
     })
     (data / "corpus.json").write_text(json.dumps(meta, indent=1))
-    print(f"packed {len(rows)} labels as formation {fid} ({files['train']['records']} train / {files['val']['records']} val)")
+    print(f"packed {total} labels as formation {fid} ({count['train']} train / {count['val']} val)")
 
 
 def main():
