@@ -321,6 +321,44 @@ single-net-vs-per-config question that (2) and (5) both depend on; then
 (5) only if the answer to "do we want net-backed spots in the product" is
 yes; (4) before shipping anything under (5).
 
+## Follow-up (1) result (2026-09-27): one net serves all five
+
+Round 3's recipe, once per remaining curated formation
+(`/srv/var/poker/valuenet-offeq/formations/round1.sh`): 300 train flops
+each from `value-net-offeq4`'s own reaches, every 4th iteration → 480k
+labels (srp-co 168k, srp-sb 169k, 3bp-bb-btn 101k, 3bp-btn-co 42k — the 3bp
+trees are smaller, so fewer requests per flop); ~4 h of `dls.py` logging
+with the fleet labelling behind it, then **one** joint fine-tune:
+`value-net-offeq5.pt` = 60 epochs at lr 3e-4 from offeq4 on every
+equilibrium shard + every off-equilibrium shard (104 s/epoch, 1 h 45 min on
+the 4070).
+
+| formation | live root EV, offeq4 | **live root EV, offeq5** | root L1 | eq eval oop / ip, offeq4 | **eq eval, offeq5** | fit on own off-eq labels |
+|---|---|---|---|---|---|---|
+| srp-btn-bb | 2.71% pot | **2.01%** | 0.29 | 2.70 / 2.62% | **2.52 / 2.53%** | — |
+| srp-co-bb | 5.70% | **2.64%** | 0.18 | 5.28 / 5.26% | **2.72 / 2.90%** | 4.5–5.9% |
+| srp-sb-bb | 5.88% | **2.69%** | 0.25 | 3.74 / 3.99% | **2.64 / 2.68%** | 4.2–4.8% |
+| 3bp-bb-btn | 16.1% | **3.85%** | 0.40 | 13.9 / 11.2% | **2.97 / 2.71%** | 5.4–6.1% |
+| 3bp-btn-co | 11.1% | **3.91%** | 0.32 | 18.2 / 17.5% | **2.76 / 3.27%** | 4.8–5.6% |
+
+Same 6 validation flops per formation; offeq4's 3bp equilibrium rows show
+what the srp-only rounds had cost (value-net-200 had them at ~3%). Answers:
+
+- **One net, no per-config heads.** Every formation's equilibrium error is
+  back to 2.5–3.3% pot, and srp-btn-bb — no new labels this round — still
+  improved (2.7 → 2.0% live): the other formations' labels help it, they
+  don't compete with it. The pot/stack geometry inputs are enough.
+- **The 3bp pots trail by ~1.3 points** on the fewest labels (101k and 42k
+  vs ~170k and srp-btn-bb's 490k), with their offeq4 starting point far
+  worse — the "expect two rounds" prediction. Round 2 on just those two
+  (`formations/round2/round2.sh`): all 600 flops at stride 2 from offeq5's
+  reaches → joint fine-tune from offeq5 on everything → `value-net-offeq6.pt`,
+  same acceptance on all five.
+
+Ops: the workers' `~/labels-*` / `~/reqs-*` copies are deleted (local
+copies under `valuenet-offeq/`); fishnet/shoginet stay off until round 2's
+labels are in.
+
 This narrows doc 00's "no NN approximator" stance rather than reversing it:
 the net would accelerate **our own offline generation and off-tree lookups**,
 not chase datacenter solve-speed parity as a product.
