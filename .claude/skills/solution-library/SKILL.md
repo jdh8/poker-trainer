@@ -145,7 +145,7 @@ way `gen` does):
 
 ```sh
 cargo build -p preflop-gen --release
-for r in cash5 cash10 cash15 cash20 cash32 cash50 cash75 cash100 cash150; do
+for f in manifests/preflop/*.toml; do r=$(basename $f .toml)
   setsid nohup scripts/idle-run.sh \
     ./target/release/preflop-gen solve --ruleset manifests/preflop/$r.toml \
     >/tmp/preflop-$r.log 2>&1 </dev/null &

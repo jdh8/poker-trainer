@@ -15,6 +15,7 @@ mod export;
 mod game;
 mod icm;
 mod mccfr;
+mod r_table;
 
 use clap::{Parser, Subcommand};
 use std::path::{Path, PathBuf};

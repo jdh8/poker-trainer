@@ -302,12 +302,21 @@ deliberately changed. Custom local rulesets are gitignored wholesale.
   blocker-exact, bounded cost. (A memoized class-tuple cache was tried and
   lost: 5/6-way tuples almost never repeat, so it degenerated to one fresh
   20k-board estimate per terminal plus unbounded memory.) Non-all-in pots
-  that see a flop are valued as equity × a static **realization factor**
-  table (`r_factor`: playability × position × multiway; IP > OOP) — *the*
-  load-bearing approximation of the whole design; upgrade path: calibrate R
-  against the in-repo `data/solutions/` postflop outputs (reading solve-gen
-  JSON, no AGPL link). An `R ≡ 1.0` check-down baseline stays behind
-  `solve --check-down` for A/B.
+  that see a flop are valued as equity × a **realization factor** `R(class,
+  position)` — *the* load-bearing approximation of the whole design. Since
+  2026-09-27 the heads-up table is **measured**, not guessed:
+  `scripts/calibrate-r.py` streams the flop-root records of every 2-player
+  line in `data/tables` with a (near-)complete flop set, averages each
+  class's solver-exact postflop EV over all flops (iso-multiplicity
+  weighted; IP's pre-action EV is recovered by mixing its nodes with the
+  OOP action probabilities given IP's blockers), divides by preflop-gen's
+  own check-down value `(pot − rake) × class equity vs the villain range`,
+  and blends sources by the class's share of the hero range. Output:
+  `crates/preflop-gen/src/r_table.rs` (generated, provenance in its header).
+  Classes no source takes to a flop keep the old hand-shape heuristic;
+  multiway keeps a flat 0.96 per extra player (nothing 3+-way to calibrate
+  against). Postflop rake beyond the preflop pot's is absorbed into R. An
+  `R ≡ 1.0` check-down baseline stays behind `solve --check-down` for A/B.
 - **ICM**: Malmuth–Harville over the paid places, applied at terminals.
   Split pots fold into the share vector; SeeFlop under ICM commits the
   ICM(E[stack]) ≈ E[ICM(stack)] approximation. `stack_bb` is the post-ante
@@ -347,8 +356,9 @@ deliberately changed. Custom local rulesets are gitignored wholesale.
 - 3+-player CFR has no Nash-equilibrium guarantee; commercial preflop solvers
   ship the same caveat. Headers mark solves `cfr-approx-multiplayer`-style
   via provenance rather than claiming equilibrium.
-- R-factor terminal valuation is an approximation (see above). Known leak:
-  per-hero R without joint normalization is not exactly zero-sum.
+- R-factor terminal valuation is calibrated heads-up only (see above); the
+  multiway decay is a heuristic, a class's R is one number across pot types and
+  SPRs, and per-hero R without joint normalization is not exactly zero-sum.
 - Tournament charts want per-seat stacks and future-game considerations
   eventually; the ladder of uniform-stack solves is the shipped
   approximation.

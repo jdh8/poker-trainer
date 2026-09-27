@@ -69,12 +69,28 @@ pub enum Utility {
 
 /// Equity-realization factor for a see-a-flop terminal: how much of its raw
 /// pot share a hand actually banks across the postflop streets.
-// ponytail: THE load-bearing approximation of design 07 — a static
-// playability × position × multiway heuristic, tuned until the chart-shape
-// tests hold; the upgrade path is calibrating against the in-repo
-// data/solutions postflop outputs. Known leak: per-hero factors aren't
-// jointly normalized, so see-a-flop terminals aren't exactly zero-sum.
+///
+/// Heads-up the factor is measured, not guessed: [`crate::r_table::R_TABLE`]
+/// is the class's flop-averaged solver EV over its check-down value across
+/// the postflop table store (`scripts/calibrate-r.py`). A class no source
+/// ever takes to a flop falls back to the hand-shape heuristic.
+// ponytail: multiway keeps a flat 0.96 per extra player (the postflop engine
+// is 2-player, so there is nothing to calibrate against), and per-hero
+// factors still aren't jointly normalized, so see-a-flop terminals aren't
+// exactly zero-sum.
 pub fn r_factor(class: usize, last_to_act: bool, players: u32) -> f64 {
+    let measured = crate::r_table::R_TABLE[usize::from(last_to_act)][class];
+    let hu = if measured.is_nan() {
+        r_heuristic(class, last_to_act)
+    } else {
+        f64::from(measured)
+    };
+    hu * 0.96f64.powi(players.saturating_sub(2) as i32)
+}
+
+/// Pre-calibration guess: playability × position, tuned until the chart-shape
+/// tests held. Only reached for classes outside every calibration range.
+fn r_heuristic(class: usize, last_to_act: bool) -> f64 {
     let (r, c) = (class / 13, class % 13);
     let (hi, lo) = (r.min(c), r.max(c)); // rank indices, 0 = ace
     let hi_v = (12 - hi) as f64 / 12.0;
@@ -90,8 +106,7 @@ pub fn r_factor(class: usize, last_to_act: bool, players: u32) -> f64 {
     if !pair && lo - hi <= 2 {
         p += 0.03; // connectedness
     }
-    let position = if last_to_act { 1.06 } else { 0.94 };
-    p * position * 0.96f64.powi(players.saturating_sub(2) as i32)
+    p * if last_to_act { 1.06 } else { 0.94 }
 }
 
 /// The seat that acts last postflop among `players`: the live seat closest
@@ -288,8 +303,11 @@ mod tests {
     fn realization_factors_bend_the_right_way() {
         let aa = 0;
         let so = poker_trainer::preflop::class_index_of("72o").unwrap();
-        // Position: in position beats out of position for every class.
-        assert!(r_factor(aa, true, 2) > r_factor(aa, false, 2));
+        // Position: in position realizes more than out of position on average
+        // (AA is the measured exception — the OOP trap-flat outruns it).
+        let mean = |ip| (0..CLASSES).map(|c| r_factor(c, ip, 2)).sum::<f64>() / CLASSES as f64;
+        assert!(mean(true) > mean(false));
+        assert!(r_factor(so, true, 2) > r_factor(so, false, 2));
         // Playability: AA realizes more than 72o everywhere.
         assert!(r_factor(aa, false, 2) > r_factor(so, false, 2));
         // Multiway squeezes realization down.
@@ -298,7 +316,7 @@ mod tests {
         for class in 0..CLASSES {
             for (ip, k) in [(true, 2), (false, 2), (true, 6), (false, 6)] {
                 let r = r_factor(class, ip, k);
-                assert!((0.6..=1.25).contains(&r), "class {class}: {r}");
+                assert!((0.5..=1.65).contains(&r), "class {class}: {r}");
             }
         }
     }
