@@ -359,6 +359,34 @@ Ops: the workers' `~/labels-*` / `~/reqs-*` copies are deleted (local
 copies under `valuenet-offeq/`); fishnet/shoginet stay off until round 2's
 labels are in.
 
+## Follow-up (1) round 2 (2026-09-27): the 3bp gap closes
+
+`formations/round2/round2.sh`: 600 flops at stride 2 for the two 3bp
+formations only, from `value-net-offeq5`'s reaches → 594k labels
+(3bp-bb-btn 419k, 3bp-btn-co 175k; offeq5 on them 5.3–6.4% pot, i.e.
+still off-distribution) in ~3 h with the fleet, then one joint 60-epoch
+fine-tune from offeq5 on all fourteen shards → `value-net-offeq6.pt`
+(~2.5 h on the 4070 — the corpus has grown, 130–200 s/epoch).
+
+| formation | live root EV, offeq5 | **live root EV, offeq6** | root L1 | eq eval oop / ip, offeq6 | fit on own round-2 labels |
+|---|---|---|---|---|---|
+| srp-btn-bb | 2.01% pot | **1.75%** | 0.24 | 2.35 / 2.33% | — |
+| srp-co-bb | 2.64% | **2.19%** | 0.15 | 2.47 / 2.59% | — |
+| srp-sb-bb | 2.69% | **2.28%** | 0.22 | 2.42 / 2.43% | — |
+| 3bp-bb-btn | 3.85% | **2.32%** | 0.32 | 2.61 / 2.38% | 3.7–3.8% |
+| 3bp-btn-co | 3.91% | **3.37%** | 0.27 | 2.54 / 2.92% | 3.4–3.6% |
+
+- Every formation improved, including the three that got no new labels —
+  the same "labels transfer across geometries" result as round 1.
+- 3bp-bb-btn now sits with the srp tiers. 3bp-btn-co trails on the fewest
+  labels (217k total vs ≥520k) and one outlier flop (4c4dth, 6.1% pot);
+  a third round there would be data, not method.
+- srp-btn-bb live (1.75%) is now near the 1.4% perfect-leaf floor, so
+  follow-up 3 (low-mass encoding) has little left to buy.
+
+Follow-up (1) is done: one net, all five curated formations, 1.8–3.4% pot
+live. The remaining choices are (2), (4), (5) and (6) above.
+
 This narrows doc 00's "no NN approximator" stance rather than reversing it:
 the net would accelerate **our own offline generation and off-tree lookups**,
 not chase datacenter solve-speed parity as a product.
