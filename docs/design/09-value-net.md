@@ -387,6 +387,14 @@ fine-tune from offeq5 on all fourteen shards → `value-net-offeq6.pt`
 Follow-up (1) is done: one net, all five curated formations, 1.8–3.4% pot
 live. The remaining choices are (2), (4), (5) and (6) above.
 
+**Decision (2026-09-28): (6), parked.** Every tier the trainer drills is
+solved and stored, and there is no concrete need for off-tree spots, so
+(2), (4) and (5) have nothing to serve yet. `dls.py`, the labeler and the
+round scripts (`/srv/var/poker/valuenet-offeq/{round3.sh,formations/}`)
+stay as they are; `value-net-offeq6.pt` is the checkpoint to resume from.
+Reopen when a new tier or stack depth makes bulk generation hurt, or when
+net-backed spots become a product want — then (4) before (5).
+
 This narrows doc 00's "no NN approximator" stance rather than reversing it:
 the net would accelerate **our own offline generation and off-tree lookups**,
 not chase datacenter solve-speed parity as a product.
