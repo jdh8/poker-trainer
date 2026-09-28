@@ -43,6 +43,7 @@ design doc (`01`–`07`).
 | **Full-hand practice** (flop→river vs. equilibrium villain) | ✅ `drill hand` (`--board` spots; curated-library sampling not yet built) | — |
 | **Reach-pruned postflop tables** (offline flop+turn strategy, live-solve off the frontier) | ✅ `solve-gen tables` → `drill hand` / `table --board` read a table when generated | — |
 | **Instant tables for any flop** (GTO-Wizard feel: canonical 1,755-flop store + suit relabeling at lookup, exact) | ✅ iso lookup + `all-1755` / grounded-line manifests + `--from` hash alignment + local web flop entry; the store itself fills over idle weeks | [08](08-instant-flops.md) |
+| **Public flop lookup on Pages** (preflop chart → type the flop → grounded grids, no server) | 📋 planned: quantized export + release-asset transport + preflop→tables hand-off, 4 phases | [10](10-pages-flop-lookup.md) |
 | Persistent session stats, leak trends | ✅ `stats` over `history.jsonl` | — |
 | Preflop charts + preflop drills | ✅ solved 6-max charts (`crates/preflop-gen` MCCFR: cash depth ladder 5–150bb, limps + BB option), EV-loss `drill preflop`, web tree browser | [07](07-preflop-solver.md) |
 | Formation breadth (positions, 3-bet pots, stack depths, rake) | ✅ config-side (5 formations, rake, manifests); breadth tiers solve locally | data-gen → [02](02-solution-library.md) |
@@ -90,6 +91,7 @@ P4–P10 are shipped**; the table is kept for the dependency map.
 | **P9** | `analyze`: hand-history import, EV-loss + leak report | L | P4, P6 | [05](05-analyze.md) |
 | **P10** | Nodelocking end-to-end (lock, re-solve, compare) + presets + saved-lock files — done | M | P4, P7 | [06](06-solver-capabilities.md) |
 | **P11** | Preflop MCCFR solver + solved chart library (6-max, size menus, antes, ICM) — done | L | — | [07](07-preflop-solver.md) |
+| **P12** | Public flop lookup on Pages: quantized table export, release-asset transport, preflop→tables hand-off — planned, 4 sessions | M | 08 store, 07 charts | [10](10-pages-flop-lookup.md) |
 | — | ICM postflop (solver fork), bunching, multiway postflop | research | — | [06](06-solver-capabilities.md) |
 | — | Turn/river value net → depth-limited flop solves (GPU R&D; would cut bulk-gen cost ~10×) — phases a+b shipped: `export-value-corpus` + `train/`; 200-epoch net 2.7–3.4% pot MAE; phase c works on srp-btn-bb: `train/dls.py` depth-limited flop solve with net leaves is 2.7% pot from the full solver on held-out flops after three rounds of off-equilibrium labels (`solve-gen turn-solve`, 490k labels, fleet); follow-up: one joint net (`value-net-offeq6.pt`) serves all five curated formations at 1.8–3.4% pot live; grounded tiers, exploitability and a permissive Rust solver deferred | parked 2026-09-28 | 08 store as corpus | [09](09-value-net.md) |
 
