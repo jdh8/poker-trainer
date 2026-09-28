@@ -1,7 +1,8 @@
 # 10 — End-to-end flop lookup on GitHub Pages
 
-Status: **planned** (2026-09-28), nothing shipped. Four session-sized
-phases below; each leaves `main` green and deployable on its own.
+Status: **phases 1 + 3 shipped** (2026-09-28, one commit); phases 2 and 4
+open. Four session-sized phases below; each leaves `main` green and
+deployable on its own.
 
 Goal: on the public site, walk a preflop chart to a heads-up flop, type the
 three flopped cards, and see the solved flop grids for that exact line and
@@ -69,6 +70,23 @@ rest consume; 4 is independent and can go first if a session is short.
   phases 1 and 3 in the same commit** if they split across sessions (keep 1
   on a branch).
 
+**Shipped as planned, except:**
+
+- **Per-flop hashes.** Grounded dirs hold two current config hashes (the
+  texture sizing map in `src/texture.rs`: rainbow → 75%-only) plus stale
+  solves under old hashes (cash89 dirs: 4 headers, up to 1,755 duplicate
+  stems). The old export took the first header and silently dropped every
+  rainbow flop. Now each flop's hash comes from the trainer's own path
+  (`ground`/`for_formation` + `texture::specialize` → `hash8`), stale files are
+  ignored, and `index.json` is `{formation: {flops: {stem: hash8}}}`.
+- **No `label` in the header** — the browser builds it from the formation
+  label + the relabeled board, so an isomorph shows the user's suits.
+- `--formation` takes a list and `--flops` filters stems (the committed tier's
+  regen recipe is in `data/tables-web/README.md`).
+- **Size re-measured on grounded lines:** ~30 KB/flop gzipped (cash-hu55
+  `r2.5-c`, cash89 `f-f-f-f-r3-c`), not 21 KB — **~52 MB per line**, so
+  ~17 lines fit in 900 MB, not 24. Phase 2's cut list shrinks accordingly.
+
 ### Phase 2 — data transport (script + workflow)
 
 - `scripts/publish-tables-web.sh`: export the shipped line dirs (a list in
@@ -102,6 +120,14 @@ rest consume; 4 is independent and can go first if a session is short.
 - `TB_FORMATION_LABELS` fallback for grounded dirs: `cash-hu55_r2.5-c` →
   "cash-hu55 · SB raises 2.5, BB calls" via the preflop verbs already in
   `pfVerb`.
+
+**Shipped as planned, except:** `pfTok` is now wasm `preflop_token` →
+`preflop.rs::label_token`, so there's no JS copy to test or drift. Verified
+headless (Playwright) on a scratch site: cash-hu55 → SB raise 2.5 → BB call →
+`Td9d6h` serves stored `6c9dtd` relabeled; root T♥9♥ reads 76/20/4 %, EV
+6.12/6.10/6.08 — identical to `Tc9c` in the source table JSONL. A rainbow
+flop serves its 75%-only hash. `tbLoad` drops stale in-flight loads (the
+hand-off fires two back to back).
 
 ### Phase 4 — verify and ship
 

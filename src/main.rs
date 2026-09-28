@@ -1,8 +1,10 @@
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use poker_trainer::ground::{self, derive_line_spot, LineSpot};
+use poker_trainer::iso::card_id;
 use poker_trainer::postflop_table::{PostflopTable, TableNode};
 use poker_trainer::preflop::{class_index, class_name, parse_cards, PreflopCharts};
 use poker_trainer::solution::{formation, SolveRequest, SpotConfig};
+use poker_trainer::tree::TreeNode;
 use poker_trainer::{analyze, report, stats, trainer};
 use serde::Serialize;
 use std::collections::BTreeMap;
@@ -134,9 +136,9 @@ enum Command {
         #[arg(long)]
         hand: Option<String>,
     },
-    /// Export the reach-pruned tables' flop decision nodes as browser-ready
-    /// JSONL for the web grid (data/tables-web/). Pure post-processing of local
-    /// data/tables/ — links no solver, runs no solve.
+    /// Export the reach-pruned tables' flop decision nodes as compact per-flop
+    /// `.bin` files for the web grid (data/tables-web/). Pure post-processing
+    /// of local data/tables/ — links no solver, runs no solve.
     ExportTablesWeb {
         /// Source tables root (formation dirs of `solve-gen tables` output).
         #[arg(long, default_value = "data/tables")]
@@ -144,9 +146,13 @@ enum Command {
         /// Output root — committed and staged into the site by pages.yml.
         #[arg(long, default_value = "data/tables-web")]
         out: PathBuf,
-        /// Only this formation (default: every formation dir present).
-        #[arg(long)]
-        formation: Option<String>,
+        /// Only these formation dirs, comma-separated (default: every one present).
+        #[arg(long, value_delimiter = ',')]
+        formation: Vec<String>,
+        /// Only these flop stems, comma-separated, e.g. `td9d6h,4s3s2d`
+        /// (default: every stored flop).
+        #[arg(long, value_delimiter = ',')]
+        flops: Vec<String>,
     },
 }
 
@@ -311,7 +317,8 @@ fn main() {
             tables,
             out,
             formation,
-        } => run_export_tables_web(&tables, &out, formation.as_deref()),
+            flops,
+        } => run_export_tables_web(&tables, &out, &formation, &flops),
     }
 }
 
@@ -479,76 +486,133 @@ fn report_hand(hand: &str, flop: Option<&str>, line: &str, reach: &[f32]) {
     }
 }
 
-/// One flop decision node, reshaped for the web grid. `actions` is hoisted to
-/// the node (it's the same for every combo — repeating it per combo doubled the
-/// file), and each combo carries only its per-action `freqs`/`evs`; the browser
-/// adapter re-nests these into the `data/solutions` shape `renderGrid()` reads.
-/// `line`/`hero_oop` drive the node picker.
+/// One flop decision node's metadata in a web `.bin` header line. The per-combo
+/// strategy lives in the binary body (see [`encode_node`]); `line`/`hero_oop`
+/// drive the node picker, `villain_action` the grid heading (the browser names
+/// the formation and flop itself — it may be serving a suit-relabeled isomorph).
 #[derive(Serialize)]
 struct WebNode {
     /// Action line from the flop root, e.g. `["Check","Bet 2.0bb"]` (`[]` = root).
     line: Vec<String>,
     /// True if the acting seat is out of position.
     hero_oop: bool,
-    label: String,
     villain_action: String,
     pot_bb: f32,
     board: Vec<String>,
-    /// The acting player's action labels (shared by every combo below).
+    /// The acting player's action labels, in body order.
     actions: Vec<String>,
-    strategies: Vec<WebCombo>,
 }
 
-/// One hero combo's strategy at a node: `freqs`/`evs` parallel to the node's
-/// `actions` (same names as [`poker_trainer::tree::TreeNode`]).
-#[derive(Serialize)]
-struct WebCombo {
-    hand: String,
-    freqs: Vec<f32>,
-    evs: Vec<f32>,
-}
-
-/// A flop entry in the web index: the filename `stem` plus a display flop.
-#[derive(Serialize)]
-struct WebFlop {
-    stem: String,
-    display: String,
-}
-
-/// One formation's web tables: its config hash (in every filename) + its flops.
+/// One formation's web tables: flop stem → the config hash in its filename.
+/// Grounded tiers hash per flop (the texture sizing map), so there is no single
+/// formation hash. The browser titlecases stems for display.
 #[derive(Serialize)]
 struct WebFormation {
-    hash: String,
-    flops: Vec<WebFlop>,
+    flops: BTreeMap<String, String>,
 }
 
-/// `export-tables-web`: reshape the flop decision nodes of every reach-pruned
-/// table under `tables` into browser-ready JSONL under `out`, plus an
-/// `index.json` catalog. Pure file post-processing — no solver, no solve.
-fn run_export_tables_web(tables: &Path, out: &Path, only: Option<&str>) {
+/// Combos in the canonical 1,326 order: `(lo, hi)` card ids ([`card_id`]),
+/// `lo < hi`, lexicographic — the solver's own hand order. `web/app.js`
+/// rebuilds hand names from the same order.
+const COMBOS: usize = 1326;
+const MASK_BYTES: usize = COMBOS.div_ceil(8);
+
+fn combo_index(lo: u8, hi: u8) -> usize {
+    let (lo, hi) = (lo as usize, hi as usize);
+    lo * (103 - lo) / 2 + hi - lo - 1
+}
+
+/// A stored hand (`"AsKs"`) → its canonical combo index.
+fn hand_combo(hand: &str) -> usize {
+    let id = |s: &str| card_id(s).unwrap_or_else(|| die(format!("bad hand {hand:?}")));
+    let (a, b) = (id(&hand[..2]), id(&hand[2..]));
+    combo_index(a.min(b), a.max(b))
+}
+
+/// Quantize a node's strategy into the web body: a 1,326-bit combo mask
+/// (bit `i` = byte `i/8`, LSB first), then `freqs` as u8 (×255) and `evs` as
+/// little-endian i16 centi-bb, each action-major over the present combos in
+/// mask order. Length is implied by the header's action count + popcount.
+/// ponytail: i16 centi-bb saturates at ±327 bb — fine to 144bb stacks; go
+/// deci-bb or f16 if deeper rulesets ship.
+fn encode_node(n: &TreeNode) -> Vec<u8> {
+    let mut slot = [None; COMBOS];
+    for (j, hand) in n.hands.iter().enumerate() {
+        slot[hand_combo(hand)] = Some(j);
+    }
+    let mut out = vec![0u8; MASK_BYTES];
+    for (i, s) in slot.iter().enumerate() {
+        if s.is_some() {
+            out[i / 8] |= 1 << (i % 8);
+        }
+    }
+    let present: Vec<usize> = slot.iter().flatten().copied().collect();
+    for per_action in &n.freqs {
+        out.extend(
+            present
+                .iter()
+                .map(|&j| (per_action[j] * 255.0).round() as u8),
+        );
+    }
+    for per_action in &n.evs {
+        for &j in &present {
+            out.extend(((per_action[j] * 100.0).round() as i16).to_le_bytes());
+        }
+    }
+    out
+}
+
+/// `export-tables-web`: write the flop decision nodes of every reach-pruned
+/// table under `tables` as one compact `<stem>-<hash>.bin` per flop under
+/// `out` (a JSON header line — one [`WebNode`] per node — then each node's
+/// [`encode_node`] body, same order), plus an `index.json` catalog. Each flop's
+/// hash is the one the trainer would look up (config + `texture::specialize`),
+/// so stale solves under old hashes are skipped. Pure file post-processing —
+/// no solver, no solve. Gzip happens outside (see `data/tables-web/README.md`).
+fn run_export_tables_web(tables: &Path, out: &Path, only: &[String], flops: &[String]) {
     let mut dirs: Vec<PathBuf> = fs::read_dir(tables)
         .unwrap_or_else(|e| die(format!("{}: {e}", tables.display())))
         .filter_map(|e| e.ok().map(|e| e.path()))
         .filter(|p| p.is_dir())
         .collect();
     dirs.sort();
+    let flops: Vec<String> = flops.iter().map(|f| f.to_lowercase()).collect();
 
     let mut index: BTreeMap<String, WebFormation> = BTreeMap::new();
     for dir in dirs {
         let formation = dir.file_name().unwrap().to_string_lossy().into_owned();
-        if only.is_some_and(|o| o != formation) {
+        if !only.is_empty() && !only.contains(&formation) {
             continue;
         }
-        let Some(hash) = header_hash(&dir) else {
-            eprintln!("skip {formation}: no header-<hash>.json");
-            continue;
+        // Dir names are `formation_dir(spec)`: grounded `<ruleset>:<line>` with `_`.
+        let spec = formation.replacen('_', ":", 1);
+        let base = if spec.contains(':') {
+            ground::ground(&spec, "data/preflop").map(|g| g.config)
+        } else {
+            SpotConfig::for_formation(&spec, "data/ranges").map_err(|e| e.to_string())
+        };
+        let base = match base {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("skip {formation}: {e}");
+                continue;
+            }
         };
         let out_dir = out.join(&formation);
         fs::create_dir_all(&out_dir).unwrap_or_else(|e| die(format!("{}: {e}", out_dir.display())));
 
-        let mut flops = Vec::new();
+        let mut stems = BTreeMap::new();
         let mut nodes_written = 0usize;
-        for stem in flop_stems(&dir, &hash) {
+        for stem in flop_stems(&dir) {
+            if !flops.is_empty() && !flops.contains(&stem) {
+                continue;
+            }
+            let mut config = base.clone();
+            poker_trainer::texture::specialize(&mut config, &titlecase_flop(&stem));
+            let hash = config.hash8();
+            if !dir.join(format!("{stem}-{hash}.jsonl")).exists() {
+                continue; // only stale solves of this flop (old config hashes)
+            }
             let table = match PostflopTable::load(&dir, &stem, &hash) {
                 Ok(t) => t,
                 Err(e) => {
@@ -557,34 +621,32 @@ fn run_export_tables_web(tables: &Path, out: &Path, only: Option<&str>) {
                 }
             };
             // Flop decision nodes only: 3-card board, a player (not chance/terminal).
-            let mut rows: Vec<WebNode> = table
+            let mut nodes: Vec<&TableNode> = table
                 .nodes()
                 .filter(|tn| {
                     tn.node.board.len() == 3 && matches!(tn.node.player.as_str(), "oop" | "ip")
                 })
-                .map(|tn| web_node(&formation, &stem, tn))
                 .collect();
             // Stable, logical order: root first, then by depth then label.
-            rows.sort_by(|a, b| (a.line.len(), &a.line).cmp(&(b.line.len(), &b.line)));
-            nodes_written += rows.len();
-            let body = rows
-                .iter()
-                .map(|r| serde_json::to_string(r).unwrap())
-                .collect::<Vec<_>>()
-                .join("\n");
-            let file = out_dir.join(format!("{stem}-{hash}.jsonl"));
-            fs::write(&file, body).unwrap_or_else(|e| die(format!("{}: {e}", file.display())));
-            flops.push(WebFlop {
-                display: titlecase_flop(&stem),
-                stem,
+            nodes.sort_by(|a, b| {
+                (a.node.line.len(), &a.node.line).cmp(&(b.node.line.len(), &b.node.line))
             });
+            nodes_written += nodes.len();
+            let heads: Vec<WebNode> = nodes.iter().map(|tn| web_node(&formation, tn)).collect();
+            let mut body = serde_json::to_vec(&heads).unwrap();
+            body.push(b'\n');
+            for tn in &nodes {
+                body.extend(encode_node(&tn.node));
+            }
+            let file = out_dir.join(format!("{stem}-{hash}.bin"));
+            fs::write(&file, body).unwrap_or_else(|e| die(format!("{}: {e}", file.display())));
+            stems.insert(stem, hash);
         }
-        flops.sort_by(|a, b| a.stem.cmp(&b.stem));
         eprintln!(
             "{formation}: {} flops, {nodes_written} flop nodes",
-            flops.len()
+            stems.len()
         );
-        index.insert(formation, WebFormation { hash, flops });
+        index.insert(formation, WebFormation { flops: stems });
     }
 
     if index.is_empty() {
@@ -592,53 +654,33 @@ fn run_export_tables_web(tables: &Path, out: &Path, only: Option<&str>) {
     }
     fs::create_dir_all(out).unwrap_or_else(|e| die(format!("{}: {e}", out.display())));
     let index_path = out.join("index.json");
-    fs::write(&index_path, serde_json::to_string_pretty(&index).unwrap())
+    fs::write(&index_path, serde_json::to_string(&index).unwrap())
         .unwrap_or_else(|e| die(format!("{}: {e}", index_path.display())));
     eprintln!("wrote {} formations to {}", index.len(), out.display());
 }
 
-/// The `<hash>` of `<dir>/header-<hash>.json` (first one, if several).
-fn header_hash(dir: &Path) -> Option<String> {
-    let mut hashes: Vec<String> = fs::read_dir(dir)
-        .ok()?
-        .filter_map(|e| e.ok())
-        .filter_map(|e| {
-            let name = e.file_name().into_string().ok()?;
-            name.strip_prefix("header-")?
-                .strip_suffix(".json")
-                .map(str::to_string)
-        })
-        .collect();
-    hashes.sort();
-    hashes.into_iter().next()
-}
-
-/// Flop filename stems in `dir` for config `hash`: `<stem>-<hash>.jsonl` → `<stem>`.
-fn flop_stems(dir: &Path, hash: &str) -> Vec<String> {
-    let suffix = format!("-{hash}.jsonl");
+/// Distinct flop stems in `dir` under any hash: `<stem>-<hash8>.jsonl` → `<stem>`.
+fn flop_stems(dir: &Path) -> Vec<String> {
     let mut stems: Vec<String> = fs::read_dir(dir)
         .into_iter()
         .flatten()
         .filter_map(|e| e.ok())
         .filter_map(|e| {
-            e.file_name()
-                .into_string()
-                .ok()?
-                .strip_suffix(&suffix)
-                .map(str::to_string)
+            let name = e.file_name().into_string().ok()?;
+            let (stem, _) = name.strip_suffix(".jsonl")?.rsplit_once('-')?;
+            Some(stem.to_string())
         })
         .collect();
     stems.sort();
+    stems.dedup();
     stems
 }
 
-/// Reshape one stored table node into a [`WebNode`] — the load-bearing bit is
-/// transposing `freqs`/`evs` from `[action][hand]` to per-hand strategies.
-fn web_node(formation_id: &str, stem: &str, tn: &TableNode) -> WebNode {
+/// One stored table node's [`WebNode`] header.
+fn web_node(formation_id: &str, tn: &TableNode) -> WebNode {
     let n = &tn.node;
     let hero_oop = n.player == "oop";
     let f = formation(formation_id);
-    let label_prefix = f.map_or(formation_id, |f| f.label);
     let seat = match f {
         Some(f) if hero_oop => f.oop_seat,
         Some(f) => f.ip_seat,
@@ -650,25 +692,13 @@ fn web_node(formation_id: &str, stem: &str, tn: &TableNode) -> WebNode {
     } else {
         format!("after {} — {seat} to act", n.line.join(", "))
     };
-    let strategies = n
-        .hands
-        .iter()
-        .enumerate()
-        .map(|(j, hand)| WebCombo {
-            hand: hand.clone(),
-            freqs: n.freqs.iter().map(|per_action| per_action[j]).collect(),
-            evs: n.evs.iter().map(|per_action| per_action[j]).collect(),
-        })
-        .collect();
     WebNode {
         line: n.line.clone(),
         hero_oop,
-        label: format!("{label_prefix}, {}", titlecase_flop(stem)),
         villain_action,
         pot_bb: n.pot_bb,
         board: n.board.clone(),
         actions: n.actions.clone(),
-        strategies,
     }
 }
 
@@ -689,11 +719,10 @@ fn titlecase_flop(stem: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use poker_trainer::tree::TreeNode;
+    use poker_trainer::iso::card_str;
 
-    #[test]
-    fn web_node_transposes_and_labels() {
-        let tn = TableNode {
+    fn node() -> TableNode {
+        TableNode {
             reach: 1.0,
             node: TreeNode {
                 player: "oop".into(),
@@ -702,25 +731,80 @@ mod tests {
                 line: vec![],
                 actions: vec!["Check".into(), "Bet 2.0bb".into()],
                 dealable: vec![],
-                hands: vec!["AsKs".into(), "QdQc".into()],
-                // [action][hand]: Check freqs per hand, then Bet freqs per hand.
-                freqs: vec![vec![0.6, 0.3], vec![0.4, 0.7]],
-                evs: vec![vec![1.0, 2.0], vec![1.5, 2.4]],
-                weights: vec![1.0, 1.0],
-                equity: vec![0.55, 0.6],
+                // Deliberately not in canonical order: the body re-sorts.
+                hands: vec!["AsKs".into(), "QdQc".into(), "3c2c".into()],
+                // [action][hand]
+                freqs: vec![vec![0.6, 0.3, 1.0], vec![0.4, 0.7, 0.0]],
+                evs: vec![vec![1.0, 2.0, -0.5], vec![1.5, 2.4, -3.21]],
+                weights: vec![1.0; 3],
+                equity: vec![0.55, 0.6, 0.1],
             },
-        };
-        let w = web_node("srp-btn-bb", "td9d6h", &tn);
+        }
+    }
 
-        // Per-hand transpose: hand j gets column j from each action row.
+    /// What web/app.js does: mask → hand names, then per-action u8/i16 runs.
+    fn decode(body: &[u8], actions: usize) -> BTreeMap<String, (Vec<f32>, Vec<f32>)> {
+        let mut names = Vec::new();
+        for lo in 0..52u8 {
+            for hi in lo + 1..52 {
+                names.push(format!("{}{}", card_str(hi), card_str(lo)));
+            }
+        }
+        let present: Vec<usize> = (0..COMBOS)
+            .filter(|&i| body[i / 8] >> (i % 8) & 1 == 1)
+            .collect();
+        let h = present.len();
+        let (freqs, evs) = body[MASK_BYTES..].split_at(actions * h);
+        assert_eq!(evs.len(), actions * h * 2);
+        present
+            .iter()
+            .enumerate()
+            .map(|(k, &i)| {
+                let f = (0..actions)
+                    .map(|a| freqs[a * h + k] as f32 / 255.0)
+                    .collect();
+                let e = (0..actions)
+                    .map(|a| {
+                        let at = 2 * (a * h + k);
+                        i16::from_le_bytes([evs[at], evs[at + 1]]) as f32 / 100.0
+                    })
+                    .collect();
+                (names[i].clone(), (f, e))
+            })
+            .collect()
+    }
+
+    #[test]
+    fn combo_index_is_dense_lexicographic() {
+        let mut i = 0;
+        for lo in 0..52 {
+            for hi in lo + 1..52 {
+                assert_eq!(combo_index(lo, hi), i);
+                i += 1;
+            }
+        }
+        assert_eq!(i, COMBOS);
+    }
+
+    #[test]
+    fn encode_node_round_trips_within_quantization() {
+        let tn = node();
+        let got = decode(&encode_node(&tn.node), 2);
+        assert_eq!(got.len(), 3);
+        for (j, hand) in tn.node.hands.iter().enumerate() {
+            let (f, e) = &got[hand];
+            for a in 0..2 {
+                assert!((f[a] - tn.node.freqs[a][j]).abs() <= 0.5 / 255.0 + 1e-6);
+                assert!((e[a] - tn.node.evs[a][j]).abs() <= 0.005 + 1e-4);
+            }
+        }
+    }
+
+    #[test]
+    fn web_node_labels() {
+        let w = web_node("srp-btn-bb", &node());
         assert_eq!(w.actions, vec!["Check", "Bet 2.0bb"]);
-        assert_eq!(w.strategies[0].freqs, vec![0.6, 0.4]);
-        assert_eq!(w.strategies[0].evs, vec![1.0, 1.5]);
-        assert_eq!(w.strategies[1].freqs, vec![0.3, 0.7]);
-        assert_eq!(w.strategies[1].evs, vec![2.0, 2.4]);
-
         assert!(w.hero_oop);
-        assert_eq!(w.label, "SRP BTN vs BB, Td9d6h");
         assert_eq!(w.villain_action, "BB to act (first decision)");
     }
 

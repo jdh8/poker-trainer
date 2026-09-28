@@ -1,7 +1,7 @@
 // Framework-free glue: wasm exports return JSON strings, we parse and render.
 // The GTO grid and preflop chart sections never touch wasm — they fetch the
 // committed JSON directly.
-import init, { equity_report, equity_vs_reach, made_hand, canonical_flop } from './pkg/poker_trainer_web.js';
+import init, { equity_report, equity_vs_reach, made_hand, canonical_flop, preflop_token } from './pkg/poker_trainer_web.js';
 
 const $ = id => document.getElementById(id);
 const SUITS = { s: ['♠', 'spade'], h: ['♥', 'heart'], d: ['♦', 'diamond'], c: ['♣', 'club'] };
@@ -346,10 +346,10 @@ async function feInit() {
 
 let pfNodes = null;   // path -> starter-tier node record
 let pfHeader = null;
+let pfId = null;      // loaded ruleset id
 let pfPath = [];      // action tokens from the root
 
-const pfTok = l => l === 'Fold' ? 'f' : l === 'Call' ? 'c' : l === 'All-in' ? 'ai'
-  : 'r' + l.replace('Raise to ', '').replace('bb', '');
+const pfTok = preflop_token; // preflop.rs::label_token — one mapping, no JS copy
 const pfVerb = l => l === 'Fold' ? 'folds' : l === 'Call' ? 'calls' : l === 'Check' ? 'checks'
   : l === 'All-in' ? 'jams' : l.toLowerCase().replace('raise', 'raises');
 
@@ -359,6 +359,7 @@ async function pfLoad(id) {
     fetch(`preflop/${id}/starter.jsonl`).then(r => r.text()),
   ]);
   pfHeader = header;
+  pfId = id;
   pfNodes = {};
   for (const l of lines.split('\n')) if (l.trim()) { const n = JSON.parse(l); pfNodes[n.path] = n; }
   pfPath = [];
@@ -399,9 +400,28 @@ function pfRender() {
     b.onclick = () => { pfPath = pfPath.slice(0, +b.dataset.i); pfRender(); });
 
   if (!node) {
-    $('pf-head').innerHTML = '<b>Line not stored</b><div class="sub">below the committed ' +
-      'starter reach — regenerate the full charts.jsonl locally for more depth (design 07)</div>';
     for (const id of ['pf-actions', 'pf-legend', 'pf-grid', 'pf-detail']) $(id).innerHTML = '';
+    // The table index is the authority on which lines reach a flop (design 10).
+    const dir = `${pfId}_${pfPath.join('-')}`;
+    if (tbIndex?.[dir]) {
+      $('pf-head').innerHTML = '<b>Flop</b><div class="sub">heads-up to the flop — ' +
+        'type the board for the solved flop grids</div>';
+      $('pf-actions').innerHTML = '<input id="pf-flop" size="9" placeholder="Td9d6h"> ' +
+        '<button class="answer" id="pf-go">Show tables</button>';
+      const go = () => {
+        $('tb-formation').value = dir;
+        tbFillFlops();
+        $('tb-board').value = $('pf-flop').value;
+        tbBoardEntered();
+        $('tables').scrollIntoView();
+      };
+      $('pf-go').onclick = go;
+      $('pf-flop').onkeydown = e => { if (e.key === 'Enter') go(); };
+      return;
+    }
+    $('pf-head').innerHTML = '<b>Line not stored</b><div class="sub">below the committed ' +
+      'starter reach (design 07) — or, if it reaches a flop, no postflop tables are ' +
+      'published for it; the equity explorer covers any board</div>';
     return;
   }
 
@@ -600,18 +620,65 @@ async function grInit() {
 }
 
 // ---- Reach-pruned tables (flop grids across all formations) -----------------
-// Same 13×13 grid as above, fed by the committed `data/tables-web/` export
-// (`poker-trainer export-tables-web`): every formation, 25 flops, each flop's
-// flop-decision nodes. The lean export hoists `actions` to the node and stores
-// per-combo `freqs`/`evs`; tbReshape re-nests them into renderGrid's shape.
+// Same 13×13 grid as above, fed by `poker-trainer export-tables-web`: one
+// gzipped `.bin` per flop holding its flop-decision nodes (a JSON header line,
+// then per node a 1,326-bit combo mask, u8 freqs, i16 centi-bb EVs — see
+// `encode_node` in src/main.rs); tbReshape re-nests them into renderGrid's shape.
 
 const TB_FORMATION_LABELS = {
   'srp-btn-bb': 'SRP BTN vs BB', 'srp-co-bb': 'SRP CO vs BB', 'srp-sb-bb': 'SRP SB vs BB',
   '3bp-bb-btn': '3-bet pot BB vs BTN', '3bp-btn-co': '3-bet pot BTN vs CO',
 };
-let tbIndex = null;   // formation -> {hash, flops:[{stem,display}]}
+let tbIndex = null;   // formation -> {flops: {stem: config hash8}}
 let tbNodes = [];     // current flop's reshaped node-spots
 let tbXlat = null;    // stored→user suit-char map when serving an isomorph
+let tbSeq = 0;        // latest tbLoad; older in-flight loads drop their result
+
+const tbTitle = stem => stem.replace(/[tjqka]/g, c => c.toUpperCase());
+
+// Grounded dir `<ruleset>_<line>` → "cash-hu55 · SB raises to 2.5bb, BB calls".
+// Preflop order just cycles the live seats; folds are implied by who's named.
+function tbGroundedLabel(dir) {
+  const [id, line] = dir.split('_');
+  if (!line) return dir;
+  const live = id.includes('-hu') ? ['SB', 'BB'] : ['UTG', 'HJ', 'CO', 'BTN', 'SB', 'BB'];
+  const verb = t => t === 'c' ? 'calls' : t === 'x' ? 'checks' : t === 'ai' ? 'jams' : `raises to ${t.slice(1)}bb`;
+  const words = [];
+  let at = 0;
+  for (const t of line.split('-')) {
+    if (t === 'f') { live.splice(at, 1); } else { words.push(`${live[at]} ${verb(t)}`); at++; }
+    at %= live.length;
+  }
+  return `${id} · ${words.join(', ')}`;
+}
+
+// Canonical combo order (src/main.rs `COMBOS`): (lo, hi) card ids, lo < hi,
+// lexicographic; card id = rank*4 + suit. Names read hi card first.
+const TB_CARDS = [...'23456789TJQKA'].flatMap(r => [...'cdhs'].map(x => r + x));
+const TB_COMBOS = TB_CARDS.flatMap((lo, i) => TB_CARDS.slice(i + 1).map(hi => hi + lo));
+
+async function tbFetchNodes(url) {
+  let buf = new Uint8Array(await (await fetch(url)).arrayBuffer());
+  if (buf[0] === 0x1f && buf[1] === 0x8b) // still gzipped (the server didn't decode it)
+    buf = new Uint8Array(await new Response(
+      new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
+  const nl = buf.indexOf(10);
+  const heads = JSON.parse(new TextDecoder().decode(buf.subarray(0, nl)));
+  const view = new DataView(buf.buffer, buf.byteOffset);
+  let at = nl + 1;
+  for (const n of heads) {
+    const hands = [];
+    for (let i = 0; i < 1326; i++) if (buf[at + (i >> 3)] >> (i & 7) & 1) hands.push(TB_COMBOS[i]);
+    const h = hands.length, a = n.actions.length, f0 = at + 166, e0 = f0 + a * h;
+    n.strategies = hands.map((hand, k) => ({
+      hand,
+      freqs: n.actions.map((_, j) => buf[f0 + j * h + k] / 255),
+      evs: n.actions.map((_, j) => view.getInt16(e0 + 2 * (j * h + k), true) / 100),
+    }));
+    at = e0 + 2 * a * h;
+  }
+  return heads;
+}
 
 // Suit-isomorphism glue (design doc 08): a typed flop maps onto its class
 // representative via wasm `canonical_flop`; any stored stem in the same class
@@ -635,6 +702,8 @@ function tbReshape(n) {
     n.board = n.board.map(tbXlatCards);
     n.strategies.forEach(s => { s.hand = tbXlatCards(s.hand); });
   }
+  const f = $('tb-formation').value;
+  n.label = `${TB_FORMATION_LABELS[f] || tbGroundedLabel(f)}, ${[...n.board].reverse().join('')}`;
   n.strategies = n.strategies.map(s =>
     ({ hand: s.hand, strategy: { actions: n.actions, frequencies: s.freqs, action_ev: s.evs } }));
   return n;
@@ -650,18 +719,18 @@ function tbBoardEntered() {
   try { user = tbCanon(raw); }
   catch (e) { hint.textContent = String(e.message || e); return; }
   const f = $('tb-formation').value;
-  for (const fl of tbIndex[f].flops) {
-    const stored = tbCanon(fl.stem);
+  for (const stem of Object.keys(tbIndex[f].flops)) {
+    const stored = tbCanon(stem);
     if (stored.canonical !== user.canonical) continue;
     const map = tbFromStored(user.map, stored.map);
     tbXlat = tbIdentity(map) ? null : map;
-    hint.textContent = tbXlat ? `serving ${fl.display} relabeled onto your suits (exact — suit-isomorphic)` : '';
-    $('tb-flop').value = fl.stem;
+    hint.textContent = tbXlat ? `serving ${tbTitle(stem)} relabeled onto your suits (exact — suit-isomorphic)` : '';
+    $('tb-flop').value = stem;
     tbLoad();
     return;
   }
   tbXlat = null;
-  hint.textContent = `no table in this flop's class for ${f} yet — generate the all-1755 tier`;
+  hint.textContent = `no stored table in this flop's class for ${f} — the equity explorer covers any board`;
 }
 
 function tbNodeLabel(n) {
@@ -669,9 +738,11 @@ function tbNodeLabel(n) {
 }
 
 async function tbLoad() {
-  const f = $('tb-formation').value, stem = $('tb-flop').value, hash = tbIndex[f].hash;
-  const text = await (await fetch(`tables/${f}/${stem}-${hash}.jsonl`)).text();
-  tbNodes = text.split('\n').filter(l => l.trim()).map(l => tbReshape(JSON.parse(l)));
+  const f = $('tb-formation').value, stem = $('tb-flop').value, hash = tbIndex[f].flops[stem];
+  const seq = ++tbSeq;
+  const nodes = await tbFetchNodes(`tables/${f}/${stem}-${hash}.bin.gz`);
+  if (seq !== tbSeq) return;
+  tbNodes = nodes.map(tbReshape);
   $('tb-node').innerHTML = tbNodes.map((n, i) => `<option value="${i}">${tbNodeLabel(n)}</option>`).join('');
   tbShow();
 }
@@ -681,8 +752,8 @@ function tbShow() {
 }
 
 function tbFillFlops() {
-  $('tb-flop').innerHTML = tbIndex[$('tb-formation').value].flops.map(fl =>
-    `<option value="${fl.stem}">${fl.display}</option>`).join('');
+  $('tb-flop').innerHTML = Object.keys(tbIndex[$('tb-formation').value].flops).map(stem =>
+    `<option value="${stem}">${tbTitle(stem)}</option>`).join('');
   tbLoad();
 }
 
@@ -690,7 +761,7 @@ async function tbInit() {
   try { tbIndex = await (await fetch('tables/index.json')).json(); }
   catch { $('tb-head').textContent = 'Table exports not staged — run `poker-trainer export-tables-web` (see web/README).'; return; }
   $('tb-formation').innerHTML = Object.keys(tbIndex).sort().map(f =>
-    `<option value="${f}">${TB_FORMATION_LABELS[f] || f}</option>`).join('');
+    `<option value="${f}">${TB_FORMATION_LABELS[f] || tbGroundedLabel(f)}</option>`).join('');
   $('tb-formation').onchange = () => { tbXlat = null; $('tb-hint').textContent = ''; tbFillFlops(); };
   $('tb-flop').onchange = () => { tbXlat = null; $('tb-hint').textContent = ''; $('tb-board').value = ''; tbLoad(); };
   $('tb-node').onchange = tbShow;

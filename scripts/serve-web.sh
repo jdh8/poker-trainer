@@ -18,7 +18,8 @@ EXPORT_DIR=/srv/var/poker/tables-web
 for arg in "$@"; do
   case "$arg" in
     --export)
-      cargo run -q --release -- export-tables-web --tables data/tables --out "$EXPORT_DIR"
+      cargo run -q --release --bin poker-trainer -- export-tables-web --tables data/tables --out "$EXPORT_DIR"
+      find "$EXPORT_DIR" -name '*.bin' -exec gzip -9f {} +
       ;;
     --build)
       (cd web && wasm-pack build --release --target web)

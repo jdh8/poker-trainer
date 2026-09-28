@@ -48,6 +48,14 @@ pub fn canonical_flop(flop: &str) -> Result<String, JsError> {
         .map_err(|e| JsError::new(&e))
 }
 
+/// A preflop action label → its path token (`"Check"` → `"x"`), the same
+/// mapping the generator, manifests and table dirs use — so the browser never
+/// keeps its own copy to drift.
+#[wasm_bindgen]
+pub fn preflop_token(label: &str) -> String {
+    poker_trainer::preflop::label_token(label)
+}
+
 // ---- equity calculator ------------------------------------------------------
 
 #[derive(Serialize)]
