@@ -1,6 +1,6 @@
 # 10 — End-to-end flop lookup on GitHub Pages
 
-Status: **phases 1 + 3 shipped** (2026-09-28, one commit); phases 2 and 4
+Status: **phases 1–3 shipped** (2026-09-28); phase 4 (publish + verify)
 open. Four session-sized phases below; each leaves `main` green and
 deployable on its own.
 
@@ -101,6 +101,23 @@ rest consume; 4 is independent and can go first if a session is short.
   release assets with `Range` (CORS-safelisted, S3 backend honours it) and
   an offsets index — removes the cap entirely, but needs a curl check that
   the github.com redirect carries `Access-Control-Allow-Origin`.
+
+**Shipped (script + workflow; no release uploaded yet — that's phase 4),
+except:**
+
+- **Greedy prefix, not a hand-cut list.** `LINES` holds all 27 grounded
+  lines in priority order (cash-hu55 ≥1% mass, then cash89/mtt89
+  interleaved by mass, then the thin hu55 3-bet lines); the script exports
+  one line at a time and stops at the first that would cross 900 MB. The
+  budget check is measured, so heavier limped lines just shorten the prefix.
+- **Deep-merged index, not "release wins".** `pages.yml` does
+  `jq -s '.[0] * .[1]'` over the committed and release `index.json`, so
+  the release carries grounded lines only and the curated texture-25 tier
+  stays listed from git.
+- **Missing release is a warning**, not a failed deploy: the site ships the
+  committed tier until phase 4 uploads the asset.
+- Measured: `cash-hu55_r2.5-c` exports in 12 min (HDD-bound: re-reads
+  96 GB of JSONL) to 52 MB gzipped. Expect ~17 lines, several hours.
 
 ### Phase 3 — browser decode + preflop hand-off (JS)
 

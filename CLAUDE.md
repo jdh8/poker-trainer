@@ -121,7 +121,9 @@ minutes cold): run `cargo test -- --ignored` only when touching `tree.rs`,
   (`~/.cache/poker-trainer/solves → /srv/var/poker/solves`).
 - `scripts/serve-web.sh` — local web viewer against the full table store
   (`/srv/var/poker/tables-web`; `--export` refreshes it, `--build` rebuilds
-  wasm). GitHub Pages keeps only the committed `data/tables-web` tier.
+  wasm). GitHub Pages serves the committed `data/tables-web` tier plus the
+  grounded lines that `scripts/publish-tables-web.sh` uploads as the
+  `tables-web` release asset (design 10; ~52 MB/line, 900 MB budget).
 
 ## Conventions
 
