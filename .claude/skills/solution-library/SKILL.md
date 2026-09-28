@@ -137,8 +137,11 @@ no solver link) solves the rulesets in `manifests/preflop/*.toml` into
 scripts/idle-run.sh cargo run -p preflop-gen --release -- gen
 ```
 
-`gen` is **sequential** (one core, one ruleset at a time). Because each solve
-is single-threaded, fan out across the nine cash rulesets to use spare cores
+`gen` is **sequential** (one ruleset at a time, `--threads 1` by default).
+Re-solving **one** ruleset fast: `solve --ruleset … --threads 8` (~5× on this
+box's 8 physical cores; output is bit-identical for any thread count). For the
+whole ladder threads buy no throughput, so keep each solve single-threaded and
+fan out across the nine cash rulesets to use spare cores
 — build once, then one polite `solve` per ruleset (the engine or a manifest
 change means all rungs re-solve; `solve` doesn't skip on a matching hash the
 way `gen` does):

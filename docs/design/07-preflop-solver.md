@@ -294,10 +294,16 @@ deliberately changed. Custom local rulesets are gitignored wholesale.
   push/fold at 2M hands; mtt-hu21 check-down at 20M): DCFR regret discounting
   (α = 0.5–1.5) is 30–70% *worse*, merging K independent seeds' averages is
   ~2× worse than one seed with K× the hands, and γ = 2 over linear averaging
-  gains ~5% (≈10% fewer hands for the same exploitability). Seeded and single-threaded per solve
-  (deterministic per seed+budget); parallelism is across rulesets — the
-  ladder's manifests solve as independent single-threaded processes (one core
-  each; fan out under `idle-run.sh` on a shared box). Per hand a real 52-card
+  gains ~5% (≈10% fewer hands for the same exploitability). Seeded and
+  deterministic per seed+budget **for any thread count**: hands run in
+  batches of 4096, each hand with its own RNG stream, reading the table as of
+  the batch start; the batch's logged deltas merge in hand order.
+  `--threads N` (default 1) buys wall-clock for one solve — 1M cash21/cash144
+  hands: 68 s at 1 thread, 20 s at 4, 13 s at 8 (8 physical cores; SMT adds
+  nothing; the serial merge is ~2.8 s of it) — batching cost no measurable
+  exploitability. It buys no throughput, so a full-ladder re-solve still fans
+  out single-threaded processes (one core each, under `idle-run.sh` on a
+  shared box); threads are for re-solving one ruleset fast. Per hand a real 52-card
   deck is dealt (exact card removal for free); per-action EV exports as
   average counterfactual value (`cfv_sum / weight`), a value vs the evolving
   average profile.

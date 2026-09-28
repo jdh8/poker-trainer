@@ -61,6 +61,10 @@ enum Cmd {
         /// Override the manifest's traversal budget (quick smoke solves).
         #[arg(long)]
         traversals: Option<u64>,
+        /// Worker threads for this one solve (output is identical for any
+        /// count; keep 1 when fanning rulesets out across cores).
+        #[arg(long, default_value_t = 1)]
+        threads: usize,
     },
     /// Solve every ruleset in the manifests dir whose committed header hash
     /// is stale, then refresh data/preflop/index.json. Resumable: unchanged
@@ -72,6 +76,9 @@ enum Cmd {
         /// Output data directory.
         #[arg(long, default_value = "data/preflop")]
         out: PathBuf,
+        /// Worker threads per solve (output is identical for any count).
+        #[arg(long, default_value_t = 1)]
+        threads: usize,
     },
     /// Refresh data/preflop/index.json from the solved ruleset dirs, without
     /// solving anything. Safe to run while other solves are in flight (e.g. to
@@ -109,11 +116,12 @@ fn solve_one(
     out_dir: &Path,
     check_down: bool,
     traversals_override: Option<u64>,
+    threads: usize,
 ) -> Result<(), String> {
     let rs = game::Ruleset::load(toml_path)?;
     let config = export::config_echo(toml_path).map_err(|e| e.to_string())?;
     let cache = equity::EquityCache::load(HU_TABLE).map_err(|e| e.to_string())?;
-    let mut solver = mccfr::Solver::new(&rs, cache);
+    let mut solver = mccfr::Solver::new(&rs, cache).threads(threads);
     if check_down {
         solver = solver.check_down();
     }
@@ -185,14 +193,19 @@ fn main() -> Result<(), String> {
             out,
             check_down,
             traversals,
+            threads,
         } => {
             let out = out.unwrap_or_else(|| {
                 let rs = game::Ruleset::load(&ruleset);
                 PathBuf::from("data/preflop").join(rs.map(|r| r.id).unwrap_or_default())
             });
-            solve_one(&ruleset, &out, check_down, traversals)
+            solve_one(&ruleset, &out, check_down, traversals, threads)
         }
-        Cmd::Gen { manifests, out } => {
+        Cmd::Gen {
+            manifests,
+            out,
+            threads,
+        } => {
             let mut tomls: Vec<PathBuf> = std::fs::read_dir(&manifests)
                 .map_err(|e| format!("{}: {e}", manifests.display()))?
                 .filter_map(|e| e.ok())
@@ -212,7 +225,7 @@ fn main() -> Result<(), String> {
                     eprintln!("{}: up to date, skipping", rs.id);
                     continue;
                 }
-                solve_one(toml_path, &dir, false, None)?;
+                solve_one(toml_path, &dir, false, None, threads)?;
             }
             export::write_index(&out).map_err(|e| e.to_string())?;
             println!("index refreshed: {}", out.join("index.json").display());

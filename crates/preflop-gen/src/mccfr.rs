@@ -1,7 +1,9 @@
 //! External-sampling MCCFR over the preflop game (design 07).
 //!
-//! Single-threaded and seeded: identical seed + budget ⇒ bit-identical
-//! output. Each hand deals real cards from a real deck (exact card removal
+//! Seeded and batch-parallel: identical seed + budget ⇒ bit-identical
+//! output for any thread count (each hand owns an RNG stream; a batch's
+//! hands read the table as of the batch start and merge in hand order). Each
+//! hand deals real cards from a real deck (exact card removal
 //! for free), maps every seat's holding to its 169-class, then runs one
 //! traversal per seat: the traverser explores all of its actions, everyone
 //! else samples from their current regret-matched strategy. Regret-matching+
@@ -11,10 +13,9 @@
 // push/fold at 2M hands, mtt-hu21 check-down at 20M): discounting regrets
 // DCFR-style (increments × k^α) is 30–70% *worse* for α = 0.5–1.5, and
 // merging K independent seeds' averages is ~2× worse than one seed; only
-// quadratic averaging (DCFR's γ = 2) paid, ~5%. Upgrades: batched
-// deterministic threads (wall-clock of one solve, not throughput — the
-// ruleset fan-out already fills the cores) or a vectorized CFR+ backend
-// for the 2-player subgame, behind the same NodeData layout.
+// quadratic averaging (DCFR's γ = 2) paid, ~5%. Threads (`threads`) buy
+// wall-clock for one solve, not throughput. Upgrade: a vectorized CFR+
+// backend for the 2-player subgame, behind the same NodeData layout.
 
 use crate::equity::{Deal, EquityCache};
 use crate::game::{Ruleset, State};
@@ -90,24 +91,60 @@ impl NodeData {
     }
 }
 
-/// The solver: lazy infoset table + terminal machinery + a dealt deck.
+/// Hands per batch. Every hand in a batch plays against the regrets as they
+/// stood at the batch's start; the deltas then merge in hand order. Fixed —
+/// not per-thread — so the output never depends on the thread count.
+// ponytail: fixed batch, sequential merge — the merge is the Amdahl ceiling;
+// shard it by key if many-core scaling ever matters.
+const BATCH: u64 = 4096;
+
+/// The solver: lazy infoset table + terminal machinery + batch workers.
 pub struct Solver<'a> {
     /// The game being solved.
     pub rs: &'a Ruleset,
-    /// Infosets keyed by [`State::key`], allocated on first traverser visit.
+    /// Infosets keyed by [`State::key`], allocated at the first merged
+    /// traverser or opponent visit.
     pub infosets: HashMap<u64, NodeData>,
     valuer: TerminalValuer,
     equity: EquityCache,
+    rng: SmallRng, // exact-BR only (HU terminals never sample)
+    hands_dealt: u64,
+    avg_warmup: u64,
+    workers: Vec<Worker>,
+}
+
+/// What a batch's workers share, read-only.
+struct Ctx<'s> {
+    rs: &'s Ruleset,
+    infosets: &'s HashMap<u64, NodeData>,
+    valuer: &'s TerminalValuer,
+    equity: &'s EquityCache,
+    seed: u64,
+    avg_warmup: u64,
+}
+
+/// One infoset visit to fold into the table at merge time; its payload sits
+/// in [`Worker::vals`]: traverser `[w, regret deltas.., w·cfv..]`, opponent
+/// `[w·σ..]`.
+struct Visit {
+    key: u64,
+    class: u8,
+    actions: u8,
+    traverser: bool,
+}
+
+/// Per-thread traversal state and delta log.
+struct Worker {
     rng: SmallRng,
     deck: Vec<Card>,
     deal: Deal,
-    hands_dealt: u64,
-    avg_warmup: u64,
     scratch: Vec<Vec<f32>>, // per-depth strategy buffers (avoid re-allocating)
+    log: Vec<Visit>,
+    vals: Vec<f32>,
 }
 
 impl<'a> Solver<'a> {
-    /// New solver seeded from the ruleset's `[solver]` params.
+    /// New single-threaded solver seeded from the ruleset's `[solver]` params.
     pub fn new(rs: &'a Ruleset, equity: EquityCache) -> Self {
         Solver {
             rs,
@@ -115,12 +152,27 @@ impl<'a> Solver<'a> {
             valuer: TerminalValuer::new(rs),
             equity,
             rng: SmallRng::seed_from_u64(rs.solver.seed),
-            deck: Deck::default().into_iter().collect(),
-            deal: Deal::class_level([0; 6]),
             hands_dealt: 0,
             avg_warmup: 0,
-            scratch: Vec::new(),
+            workers: Vec::new(),
         }
+        .threads(1)
+    }
+
+    /// Traverse each batch on `n` threads. Output is bit-identical for any
+    /// `n` (per-hand RNG streams, hand-ordered merge).
+    pub fn threads(mut self, n: usize) -> Self {
+        self.workers = (0..n.max(1))
+            .map(|_| Worker {
+                rng: SmallRng::seed_from_u64(0),
+                deck: Vec::new(),
+                deal: Deal::class_level([0; 6]),
+                scratch: Vec::new(),
+                log: Vec::new(),
+                vals: Vec::new(),
+            })
+            .collect();
+        self
     }
 
     /// Delayed averaging: strategy/EV sums stay zero-weighted for the first
@@ -145,95 +197,35 @@ impl<'a> Solver<'a> {
 
     /// Deal `hands` more hands, running one traversal per seat per hand.
     pub fn run(&mut self, hands: u64) {
-        let n = self.rs.n();
-        for _ in 0..hands {
-            self.hands_dealt += 1;
-            // Partial Fisher-Yates: the first 2n cards are this hand's deal.
-            for i in 0..2 * n {
-                let j = self.rng.random_range(i..52);
-                self.deck.swap(i, j);
+        let end = self.hands_dealt + hands;
+        while self.hands_dealt < end {
+            let (lo, hi) = (self.hands_dealt, end.min(self.hands_dealt + BATCH));
+            let ctx = Ctx {
+                rs: self.rs,
+                infosets: &self.infosets,
+                valuer: &self.valuer,
+                equity: &self.equity,
+                seed: self.rs.solver.seed,
+                avg_warmup: self.avg_warmup,
+            };
+            let per = (hi - lo).div_ceil(self.workers.len() as u64);
+            if let [w] = &mut self.workers[..] {
+                w.play(&ctx, lo, hi);
+            } else {
+                std::thread::scope(|s| {
+                    for (i, w) in self.workers.iter_mut().enumerate() {
+                        let a = (lo + i as u64 * per).min(hi);
+                        let b = (a + per).min(hi);
+                        let ctx = &ctx;
+                        s.spawn(move || w.play(ctx, a, b));
+                    }
+                });
             }
-            for s in 0..n {
-                let hole = [self.deck[2 * s], self.deck[2 * s + 1]];
-                self.deal.holes[s] = hole;
-                self.deal.classes[s] = class_index(hole) as u8;
+            for w in &mut self.workers {
+                w.merge_into(&mut self.infosets);
             }
-            self.deal.pool.clear();
-            self.deal.pool.extend_from_slice(&self.deck[2 * n..]);
-            // Quadratic averaging past the warm-up: this hand's updates weigh
-            // `(k − warmup)²` (zero during warm-up ⇒ sums untouched).
-            let w = self.hands_dealt.saturating_sub(self.avg_warmup) as f32;
-            let w = w * w;
-            for t in 0..n {
-                self.traverse(State::root(self.rs), t, w, 0);
-            }
+            self.hands_dealt = hi;
         }
-    }
-
-    /// External-sampling traversal returning the traverser's utility.
-    fn traverse(&mut self, st: State, t: usize, w: f32, depth: usize) -> f64 {
-        let Some(actor) = st.to_act() else {
-            return self
-                .valuer
-                .value(self.rs, &st, t, &self.deal, &self.equity, &mut self.rng);
-        };
-        let actor = actor as usize;
-        let class = self.deal.classes[actor] as usize;
-        let key = st.key();
-
-        let mut acts = Vec::new();
-        st.legal(self.rs, &mut acts);
-        debug_assert!(acts.len() <= 8);
-        if self.scratch.len() <= depth {
-            self.scratch.push(Vec::new());
-        }
-        let mut sigma = std::mem::take(&mut self.scratch[depth]);
-        {
-            let node = self
-                .infosets
-                .entry(key)
-                .or_insert_with(|| NodeData::new(acts.len()));
-            debug_assert_eq!(node.actions, acts.len());
-            node.strategy(class, &mut sigma);
-        }
-
-        let value = if actor == t {
-            // Explore every action; regret-update against the mixture value.
-            let mut vals = [0.0f64; 8];
-            let mut node_value = 0.0f64;
-            for (i, a) in acts.iter().enumerate() {
-                vals[i] = self.traverse(st.apply(self.rs, *a), t, w, depth + 1);
-                node_value += f64::from(sigma[i]) * vals[i];
-            }
-            let node = self.infosets.get_mut(&key).expect("visited above");
-            node.cfv_weight[class] += w;
-            let row = class * node.actions;
-            for (i, v) in vals.iter().enumerate().take(acts.len()) {
-                let r = &mut node.regret[row + i];
-                *r = (*r + (v - node_value) as f32).max(0.0); // RM+
-                node.cfv_sum[row + i] += w * *v as f32;
-            }
-            node_value
-        } else {
-            // Opponent: accumulate the average strategy, sample one action.
-            let node = self.infosets.get_mut(&key).expect("visited above");
-            let row = class * node.actions;
-            for (i, s) in sigma.iter().enumerate() {
-                node.strat_sum[row + i] += w * s;
-            }
-            let mut roll = self.rng.random_range(0.0..1.0f32);
-            let mut pick = acts.len() - 1;
-            for (i, s) in sigma.iter().enumerate() {
-                if roll < *s {
-                    pick = i;
-                    break;
-                }
-                roll -= s;
-            }
-            self.traverse(st.apply(self.rs, acts[pick]), t, w, depth + 1)
-        };
-        self.scratch[depth] = sigma;
-        value
     }
 
     /// Average strategy at a public state for one class, `None` if the state
@@ -368,6 +360,133 @@ impl<'a> Solver<'a> {
     }
 }
 
+impl Worker {
+    /// Play hands `lo..hi` (0-based indices) against the frozen table.
+    fn play(&mut self, ctx: &Ctx, lo: u64, hi: u64) {
+        let n = ctx.rs.n();
+        for k in lo..hi {
+            // Each hand owns its RNG stream and a fresh deck, so which thread
+            // plays it never matters.
+            self.rng = SmallRng::seed_from_u64(ctx.seed ^ k.wrapping_mul(0x9E37_79B9_7F4A_7C15));
+            self.deck.clear();
+            self.deck.extend(Deck::default());
+            // Partial Fisher-Yates: the first 2n cards are this hand's deal.
+            for i in 0..2 * n {
+                let j = self.rng.random_range(i..52);
+                self.deck.swap(i, j);
+            }
+            for s in 0..n {
+                let hole = [self.deck[2 * s], self.deck[2 * s + 1]];
+                self.deal.holes[s] = hole;
+                self.deal.classes[s] = class_index(hole) as u8;
+            }
+            self.deal.pool.clear();
+            self.deal.pool.extend_from_slice(&self.deck[2 * n..]);
+            // Quadratic averaging past the warm-up: hand k (1-based) weighs
+            // `(k − warmup)²` (zero during warm-up ⇒ sums untouched).
+            let w = (k + 1).saturating_sub(ctx.avg_warmup) as f32;
+            let w = w * w;
+            for t in 0..n {
+                self.traverse(ctx, State::root(ctx.rs), t, w, 0);
+            }
+        }
+    }
+
+    /// External-sampling traversal returning the traverser's utility.
+    fn traverse(&mut self, ctx: &Ctx, st: State, t: usize, w: f32, depth: usize) -> f64 {
+        let Some(actor) = st.to_act() else {
+            return ctx
+                .valuer
+                .value(ctx.rs, &st, t, &self.deal, ctx.equity, &mut self.rng);
+        };
+        let actor = actor as usize;
+        let class = self.deal.classes[actor] as usize;
+        let key = st.key();
+
+        let mut acts = Vec::new();
+        st.legal(ctx.rs, &mut acts);
+        debug_assert!(acts.len() <= 8);
+        if self.scratch.len() <= depth {
+            self.scratch.push(Vec::new());
+        }
+        let mut sigma = std::mem::take(&mut self.scratch[depth]);
+        match ctx.infosets.get(&key) {
+            Some(node) => {
+                debug_assert_eq!(node.actions, acts.len());
+                node.strategy(class, &mut sigma);
+            }
+            None => {
+                sigma.clear();
+                sigma.resize(acts.len(), 1.0 / acts.len() as f32);
+            }
+        }
+        let visit = Visit {
+            key,
+            class: class as u8,
+            actions: acts.len() as u8,
+            traverser: actor == t,
+        };
+
+        let value = if actor == t {
+            // Explore every action; regret-update against the mixture value.
+            let mut vals = [0.0f64; 8];
+            let mut node_value = 0.0f64;
+            for (i, a) in acts.iter().enumerate() {
+                vals[i] = self.traverse(ctx, st.apply(ctx.rs, *a), t, w, depth + 1);
+                node_value += f64::from(sigma[i]) * vals[i];
+            }
+            let vals = &vals[..acts.len()];
+            self.log.push(visit);
+            self.vals.push(w);
+            self.vals
+                .extend(vals.iter().map(|v| (v - node_value) as f32));
+            self.vals.extend(vals.iter().map(|v| w * *v as f32));
+            node_value
+        } else {
+            // Opponent: accumulate the average strategy, sample one action.
+            self.log.push(visit);
+            self.vals.extend(sigma.iter().map(|s| w * s));
+            let mut roll = self.rng.random_range(0.0..1.0f32);
+            let mut pick = acts.len() - 1;
+            for (i, s) in sigma.iter().enumerate() {
+                if roll < *s {
+                    pick = i;
+                    break;
+                }
+                roll -= s;
+            }
+            self.traverse(ctx, st.apply(ctx.rs, acts[pick]), t, w, depth + 1)
+        };
+        self.scratch[depth] = sigma;
+        value
+    }
+
+    /// Fold this worker's logged visits into the table, in log order.
+    fn merge_into(&mut self, infosets: &mut HashMap<u64, NodeData>) {
+        let mut vals = &self.vals[..];
+        for v in self.log.drain(..) {
+            let n = v.actions as usize;
+            let node = infosets.entry(v.key).or_insert_with(|| NodeData::new(n));
+            let row = v.class as usize * n;
+            if v.traverser {
+                node.cfv_weight[v.class as usize] += vals[0];
+                for i in 0..n {
+                    let r = &mut node.regret[row + i];
+                    *r = (*r + vals[1 + i]).max(0.0); // RM+
+                    node.cfv_sum[row + i] += vals[1 + n + i];
+                }
+                vals = &vals[1 + 2 * n..];
+            } else {
+                for (s, v) in node.strat_sum[row..row + n].iter_mut().zip(vals) {
+                    *s += v;
+                }
+                vals = &vals[n..];
+            }
+        }
+        self.vals.clear();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -427,6 +546,22 @@ mod tests {
         for class in [0, 84, 168] {
             assert_eq!(a.average_at(&root, class), b.average_at(&root, class));
         }
+    }
+
+    #[test]
+    fn thread_count_never_changes_the_output() {
+        let rs = hu_pushfold(10.0, 7);
+        let table = vec![0.5; CLASSES * CLASSES];
+        let mut a = Solver::new(&rs, EquityCache::new(table.clone()));
+        let mut b = Solver::new(&rs, EquityCache::new(table)).threads(3);
+        a.run(10_000); // > BATCH, with a ragged last batch
+        b.run(10_000);
+        for (k, n) in &a.infosets {
+            let m = &b.infosets[k];
+            assert_eq!((&n.regret, &n.strat_sum), (&m.regret, &m.strat_sum));
+            assert_eq!((&n.cfv_sum, &n.cfv_weight), (&m.cfv_sum, &m.cfv_weight));
+        }
+        assert_eq!(a.infosets.len(), b.infosets.len());
     }
 
     /// 5-second smoke: with real equities, the certainties show up fast.
