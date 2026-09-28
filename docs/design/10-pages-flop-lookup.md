@@ -1,7 +1,6 @@
 # 10 — End-to-end flop lookup on GitHub Pages
 
-Status: **phases 1–3 shipped** (2026-09-28); phase 4 (publish + verify)
-open. Four session-sized phases below; each leaves `main` green and
+Status: **shipped** (2026-09-29) — all four phases. Four session-sized phases below; each leaves `main` green and
 deployable on its own.
 
 Goal: on the public site, walk a preflop chart to a heads-up flop, type the
@@ -156,6 +155,26 @@ hand-off fires two back to back).
   the public site serves a grounded flop cold.
 - Update the parity matrix in [00](00-overview.md) and the "Local web"
   paragraph in [08](08-instant-flops.md).
+
+**Shipped, except:**
+
+- **CLI check without the TUI.** `table` needs a TTY, so the CLI side read
+  the root through the same `load_table` → `TableWalk` path in a throwaway
+  test, and a script decoded the `.bin` the way `tbFetchNodes` does: all 786
+  root combos of `cash-hu55:r2.5-c` on `Td9d6h` agree within half a
+  quantization step (max |Δfreq| 0.002, |ΔEV| 0.005 bb). The browser run
+  (phase 3's Playwright script against a `pages.yml`-identical `_site`) reads
+  T♥9♥ 76/20/4 %, EV 6.12/6.10/6.08.
+- **21 lines fit, not ~17** — limped and early-position lines export
+  smaller (16–58 MB/line). Stopped at `cash89_f-f-f-r3-c-f`; the release tar
+  is 880 MB, the deployed site ~950 MB (git-tracked data adds ~52 MB).
+- **Coverage gap, not a bug:** several cash89 lines ship ~877 of 1,755
+  flops (`cash89_r2.5-f-f-f-f-c`, `_r3-f-f-f-f-c`, `_f-f-f-f-c-x`) — the rest
+  are stored only under stale config hashes, which the export skips. A
+  missing flop says so on the site; re-solving those flops under the current
+  hash and rerunning the publish script fills them.
+- **Run the publish detached** (`systemd-run --user`): a child of an agent
+  session dies with it, and the script restarts from scratch.
 
 ## Not doing
 

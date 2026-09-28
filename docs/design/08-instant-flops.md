@@ -125,8 +125,10 @@ design; those cache entries were orphaned deliberately.)
 
 ## Local web
 
-Pages keeps the committed texture-25 `data/tables-web` tier; the full store
-is far too big to deploy, so breadth is local-only. `scripts/serve-web.sh`
+Pages serves the committed texture-25 `data/tables-web` tier plus the 21
+highest-mass grounded lines from the `tables-web` release asset
+([10](10-pages-flop-lookup.md)); the rest of the store (the other grounded
+lines, the all-1755 curated tier) is local-only. `scripts/serve-web.sh`
 stages `/srv/var/poker/tables-web` (`export-tables-web --out`, rerun with
 `--export` as generation lands) and serves on :8000. The tables browser's
 "Any flop" input canonicalizes via the wasm `canonical_flop` export, finds a
