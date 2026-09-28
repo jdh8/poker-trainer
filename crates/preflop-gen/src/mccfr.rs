@@ -5,10 +5,16 @@
 //! for free), maps every seat's holding to its 169-class, then runs one
 //! traversal per seat: the traverser explores all of its actions, everyone
 //! else samples from their current regret-matched strategy. Regret-matching+
-//! (negative regrets clamped) with linearly-weighted averaging.
-// ponytail: plain external sampling — the ceilings are convergence speed and
-// sample variance; DCFR discounting or a vectorized CFR+ backend for the
-// 2-player subgame are the upgrades, behind the same NodeData layout.
+//! (negative regrets clamped) with quadratically-weighted averaging.
+// ponytail: plain external sampling — the ceiling is sample variance, not
+// iteration count. Measured 2026-09-28 by exact HU exploitability (10bb
+// push/fold at 2M hands, mtt-hu21 check-down at 20M): discounting regrets
+// DCFR-style (increments × k^α) is 30–70% *worse* for α = 0.5–1.5, and
+// merging K independent seeds' averages is ~2× worse than one seed; only
+// quadratic averaging (DCFR's γ = 2) paid, ~5%. Upgrades: batched
+// deterministic threads (wall-clock of one solve, not throughput — the
+// ruleset fan-out already fills the cores) or a vectorized CFR+ backend
+// for the 2-player subgame, behind the same NodeData layout.
 
 use crate::equity::{Deal, EquityCache};
 use crate::game::{Ruleset, State};
@@ -26,9 +32,9 @@ use std::collections::HashMap;
 pub struct NodeData {
     /// Clamped (RM+) cumulative regrets.
     pub regret: Vec<f32>,
-    /// Linearly-weighted average-strategy numerator.
+    /// Quadratically-weighted average-strategy numerator.
     pub strat_sum: Vec<f32>,
-    /// Linearly-weighted per-action counterfactual value numerator — exports
+    /// Quadratically-weighted per-action counterfactual value numerator — exports
     /// as the per-action EV (value vs the evolving strategy profile; design
     /// 07 documents the caveat).
     pub cfv_sum: Vec<f32>,
@@ -154,9 +160,10 @@ impl<'a> Solver<'a> {
             }
             self.deal.pool.clear();
             self.deal.pool.extend_from_slice(&self.deck[2 * n..]);
-            // Linear averaging past the warm-up: this hand's updates weigh
-            // `k − warmup` (zero during warm-up ⇒ sums untouched).
+            // Quadratic averaging past the warm-up: this hand's updates weigh
+            // `(k − warmup)²` (zero during warm-up ⇒ sums untouched).
             let w = self.hands_dealt.saturating_sub(self.avg_warmup) as f32;
+            let w = w * w;
             for t in 0..n {
                 self.traverse(State::root(self.rs), t, w, 0);
             }

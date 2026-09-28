@@ -286,10 +286,15 @@ deliberately changed. Custom local rulesets are gitignored wholesale.
 
 ## Solver core (M2–M5)
 
-- **Algorithm**: external-sampling MCCFR, regret-matching+, linearly
-  weighted averaging with a **delayed-averaging warm-up** (first 20% of the
-  budget updates regrets only, so averages and EVs never carry the early
-  uniform-strategy noise). Seeded and single-threaded per solve
+- **Algorithm**: external-sampling MCCFR, regret-matching+, quadratically
+  weighted averaging (DCFR's γ = 2) with a **delayed-averaging warm-up**
+  (first 20% of the budget updates regrets only, so averages and EVs never
+  carry the early uniform-strategy noise). The solve is sample-variance-bound,
+  not iteration-bound — measured 2026-09-28 by exact HU exploitability (10bb
+  push/fold at 2M hands; mtt-hu21 check-down at 20M): DCFR regret discounting
+  (α = 0.5–1.5) is 30–70% *worse*, merging K independent seeds' averages is
+  ~2× worse than one seed with K× the hands, and γ = 2 over linear averaging
+  gains ~5% (≈10% fewer hands for the same exploitability). Seeded and single-threaded per solve
   (deterministic per seed+budget); parallelism is across rulesets — the
   ladder's manifests solve as independent single-threaded processes (one core
   each; fan out under `idle-run.sh` on a shared box). Per hand a real 52-card
