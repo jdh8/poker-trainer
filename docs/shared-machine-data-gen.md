@@ -159,6 +159,26 @@ around 12 GB compressed, but grounded limped lines go well past that — the
 budget check, not a fixed cap, is what keeps every box safe. Don't build a
 restart-supervisor unless a wedge actually recurs.
 
+### Known cost of fixed striding (and the one change that would fix it)
+
+A fixed `--stride` pays twice: a fast box finishes its residue and idles while
+the slow ones grind out the tail, and every flop a small box skips waits for
+the mop-up. Neither needs a scheduler. Today's answers are manual: when a box
+finishes, collect, then point it at the slow boxes' residues with a wider
+stride (the gate skips what is done); and the mop-up clears the skips.
+
+If this ever matters, the fix is a **claim-aware gate**, not a central queue:
+make the gate also skip a flop whose in-progress `<flop>-<hash>.jsonl.<pid>.tmp`
+is younger than a few hours. Workers that share one `--out` then need no
+stride at all — each takes the next unclaimed flop, fast boxes naturally do
+more, and a big-memory box naturally absorbs what a small one skipped (a skip
+leaves no claim). A stale `.tmp` from a dead worker ages out on its own. The
+prerequisite is topology, not code: every worker must write the same store
+(dl02 cannot write the NFS pool, the main box does not mount it), so until the
+fleet shares a volume this stays a note. Measured 2026-10-03 (mtt89 rebuild,
+4-way stride): two 45 GB boxes at `--max-mem 26` skip almost nothing; the tail,
+not the skips, is the waste.
+
 ## Surviving disconnect
 
 - Run inside `tmux`/`screen`, or detach with
