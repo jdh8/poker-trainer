@@ -36,7 +36,7 @@ done
 
 # Local stages (all gitignored), same pattern as web/README.
 ln -sfn "$EXPORT_DIR" web/tables
-[ -e web/preflop ] || ln -s ../data/preflop web/preflop
+ln -sfn ../data/preflop-web web/preflop
 if [ ! -d web/solutions ]; then
   mkdir -p web/solutions
   cp data/solutions/*.json web/solutions/

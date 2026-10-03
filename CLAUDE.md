@@ -97,6 +97,12 @@ minutes cold): run `cargo test -- --ignored` only when touching `tree.rs`,
   preflop charts (path-addressed nodes); `charts.jsonl` (full export) is
   gitignored and regenerates via `preflop-gen gen` (~15 min per ruleset,
   idle-run it).
+- `data/preflop-web/` — what the web UI serves (Pages + `serve-web.sh`): the
+  calibrated-R charts from parked branch `calibrated-charts` (7a94edf). Kept
+  apart from `data/preflop/` so the CLI's grounded table hashes don't move;
+  the web's preflop→flop hand-off therefore lands on tables grounded under
+  the old charts. Refresh: `git archive <rev> data/preflop | tar -x
+  --transform 's,^data/preflop,data/preflop-web,'`.
 - `data/tables/<formation_dir>/{header-<hash8>.json,<flop>-<hash8>.jsonl}` —
   reach-pruned postflop tables (never committed; `data/tables` is a
   **symlink to `/srv/var/poker/tables`** on the bulk HDD): flop+turn decision
