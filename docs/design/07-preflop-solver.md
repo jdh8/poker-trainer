@@ -342,12 +342,62 @@ deliberately changed. Custom local rulesets are gitignored wholesale.
     migration: commit that ruleset's calibrated chart to `data/preflop/`,
     rebuild its tables under the new hashes, leave the other rulesets' charts
     and tables untouched (and reachable). mtt89 is the first, 2026-10-03.
+    **Order: MTT before cash** — MTT is what gets played, so every MTT
+    ruleset migrates before any cash one, and cash inherits whatever R the
+    MTT migrations converged to.
   - The cheap half is the **convergence check**, not a step to repeat:
     after a rebuild, run `calibrate-r.py` over the new tables and diff
     `r_table.rs`. Barely moved → the charts are already a fixed point;
     stop. Moved → still do not re-solve that ruleset's charts (it would
     re-orphan the tables just built); carry the new R into the next
     ruleset's single migration.
+  - **Extrapolate the move instead of carrying it raw** (idea, not built).
+    Charts and tables are both functions of R, so the loop's real state is
+    the 2×169 R table: a fixed-point iteration `R ← G(R)` on 338 numbers. A
+    contraction converges geometrically, and three iterates are enough to
+    sum the series (Aitken Δ², the one-step case of Anderson acceleration):
+
+    ```text
+    ρ  = ⟨R₂−R₁, R₁−R₀⟩ / ‖R₁−R₀‖²
+    R∞ ≈ R₁ + (R₂−R₁) / (1−ρ)
+    ```
+
+    The check above already produces all three: R₀ is `r_heuristic` (what
+    the pre-calibration charts were solved under — *not* the `R ≡ 1.0`
+    check-down baseline), R₁ the first measured table, R₂ the recalibration
+    over the rebuilt tables. So it costs no solve; it only changes which R
+    the next migration starts from (R∞ instead of R₂), so that ruleset lands
+    nearer the fixed point and fewer, ideally none, ever need a second
+    rebuild. The ruleset just rebuilt gains nothing: its tables stay on the
+    R₁ charts. With MTT first, ρ is measured on mtt89 and spent on the next
+    MTT ruleset, which is where it is most valid. Conditions:
+    - **Like for like.** R₁ and R₂ must come from the same lines: the ten
+      mtt89 lines at their old hashes vs. their rebuilt hashes. Sources that
+      were not rebuilt say nothing about ρ (curated formations have fixed
+      ranges and never move; un-migrated cash lines still sit on R₀ charts).
+      Keep the old-hash mtt89 tables until this is measured. `pick_hash`
+      takes the fullest hash per directory, so running both needs a hash
+      pin or the other hash's files moved aside; use `--out` to keep
+      `r_table.rs` intact. The pooled table is a linear blend of sources,
+      so stretching the pooled move by `1/(1−ρ)` is the same as blending
+      the extrapolated lines (up to the shift in blend weights).
+    - **One pooled ρ** (at most one per position row), never one per cell:
+      extrapolation multiplies the noise in `R₂−R₁` by `1/(1−ρ)`, and single
+      cells carry MCCFR and solver-exploitability noise.
+    - **When it pays.** `‖R₂−R₁‖` at the noise floor → stop, as above.
+      ρ ≲ 0.2 → R₂ is already close enough. It earns its keep at ρ ≳ 0.5, or
+      at ρ < 0 (the loop oscillates and the formula damps it).
+    - **G is kinked** wherever a hand enters or leaves an arrival range, so
+      R∞ is a better guess, not a guarantee; the next rebuild's check still
+      decides.
+    - `r_table.rs` is generated, so the extrapolation belongs in
+      `calibrate-r.py` (two extra inputs: the R₀ and R₁ tables), never as a
+      hand edit.
+
+    If laps must get *cheaper* rather than *fewer*: R is a pooled average,
+    so a thin iso-weighted subsample of flops per line estimates it. Iterate
+    R to convergence on that tier (hours per lap), freeze it, then pay the
+    full rebuild once. Also not built; measure ρ on mtt89 first.
   - Until a ruleset migrates, the web (`data/preflop-web/`, calibrated for
     all rulesets) and the CLI (`data/preflop/`) disagree for it, and the
     web's chart→flop hand-off lands on tables solved for the old ranges. The
