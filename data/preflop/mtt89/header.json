@@ -49,6 +49,6 @@
     "version": "0.1.0",
     "traversals": 500000000,
     "seed": 1,
-    "strategy_drift": 0.07186526
+    "strategy_drift": 0.07372105
   }
 }
