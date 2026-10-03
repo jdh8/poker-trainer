@@ -328,6 +328,33 @@ deliberately changed. Custom local rulesets are gitignored wholesale.
   multiway keeps a flat 0.96 per extra player (nothing 3+-way to calibrate
   against). Postflop rake beyond the preflop pot's is absorbed into R. An
   `R ≡ 1.0` check-down baseline stays behind `solve --check-down` for A/B.
+
+  **The chart↔table loop and when it stops.** R is calibrated from the
+  postflop tables, and the tables are grounded on the charts (their arrival
+  ranges feed the config hash, [08](08-instant-flops.md)), so the two
+  artifacts form a loop: charts → tables → R → charts. One R table is pooled
+  across every source, so any recalibration moves all 32 rulesets' charts,
+  and any chart move orphans every grounded table under it (first
+  calibration, 2026-09-27: arrival ranges moved 12–55% of their mass per
+  line). The loop is lopsided: recalibrating and re-solving the charts costs
+  hours; rebuilding a ruleset's tables costs weeks of fleet. Policy:
+  - The expensive half is paid **once per ruleset**, as a per-ruleset
+    migration: commit that ruleset's calibrated chart to `data/preflop/`,
+    rebuild its tables under the new hashes, leave the other rulesets' charts
+    and tables untouched (and reachable). mtt89 is the first, 2026-10-03.
+  - The cheap half is the **convergence check**, not a step to repeat:
+    after a rebuild, run `calibrate-r.py` over the new tables and diff
+    `r_table.rs`. Barely moved → the charts are already a fixed point;
+    stop. Moved → still do not re-solve that ruleset's charts (it would
+    re-orphan the tables just built); carry the new R into the next
+    ruleset's single migration.
+  - Until a ruleset migrates, the web (`data/preflop-web/`, calibrated for
+    all rulesets) and the CLI (`data/preflop/`) disagree for it, and the
+    web's chart→flop hand-off lands on tables solved for the old ranges. The
+    parked branch `calibrated-charts` holds the full calibrated set.
+  - Never leave a `charts.jsonl` export beside `starter.jsonl` on a solver
+    box: it overrides the committed chart at load and grounds to different
+    hashes (the cause of cash89's half-stored lines).
 - **ICM**: Malmuth–Harville over the paid places, applied at terminals.
   Split pots fold into the share vector; SeeFlop under ICM commits the
   ICM(E[stack]) ≈ E[ICM(stack)] approximation. `stack_bb` is the post-ante
