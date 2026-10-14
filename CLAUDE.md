@@ -100,8 +100,9 @@ minutes cold): run `cargo test -- --ignored` only when touching `tree.rs`,
 - `data/preflop-web/` — what the web UI serves (Pages + `serve-web.sh`): the
   calibrated-R charts from parked branch `calibrated-charts` (7a94edf). Kept
   apart from `data/preflop/` so the CLI's grounded table hashes don't move:
-  `data/preflop/mtt89` already carries the calibrated chart (its tables are
-  being rebuilt, 2026-10), the cash rulesets still ground on the old charts,
+  `data/preflop/mtt89` already carries the calibrated chart (tables rebuilt
+  2026-10-14; R-loop laps now run off-main, design 07), the cash rulesets
+  still ground on the old charts,
   so the web's preflop→flop hand-off is exact for MTT and approximate for cash. Refresh: `git archive <rev> data/preflop | tar -x
   --transform 's,^data/preflop,data/preflop-web,'`.
 - `data/tables/<formation_dir>/{header-<hash8>.json,<flop>-<hash8>.jsonl}` —

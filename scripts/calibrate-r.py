@@ -11,7 +11,7 @@ share of the hero range in that source.
 Writes crates/preflop-gen/src/r_table.rs. Run with ionice/nice: it streams
 ~50 MB per flop off the bulk HDD.
 
-    scripts/calibrate-r.py [--min-files N] [--limit N] [DIR ...]
+    scripts/calibrate-r.py [--min-files N] [--limit N] [--hash H ...] [DIR ...]
 """
 import argparse
 import collections
@@ -19,6 +19,7 @@ import glob
 import itertools
 import json
 import os
+import random
 import sys
 
 import numpy as np
@@ -104,17 +105,19 @@ def flop_values(root, ip_nodes):
     return (hands_o, w_o, ev_o), (hands_i, w_i, ev_i)
 
 
-def pick_hash(d, min_files):
+def pick_hash(d, min_files, pins=()):
     best = None
     for h in glob.glob(os.path.join(d, "header-*.json")):
         hh = os.path.basename(h)[7:-5]
+        if pins and hh not in pins:
+            continue
         n = len(glob.glob(os.path.join(d, f"*-{hh}.jsonl")))
         if n >= min_files and (best is None or n > best[1]):
             best = (hh, n)
     return best
 
 
-def calibrate_source(d, hh, eq169, limit):
+def calibrate_source(d, hh, eq169, limit, sample=None, seed=0):
     header = json.load(open(os.path.join(d, f"header-{hh}.json")))
     cfg = header["config"]
     pot = cfg["pot_bb"]
@@ -123,6 +126,8 @@ def calibrate_source(d, hh, eq169, limit):
     acc_w = np.zeros((2, 169))
     seen = set()
     files = sorted(glob.glob(os.path.join(d, f"*-{hh}.jsonl")))[:limit]
+    if sample:  # uniform flop subsample; iso multiplicity still weights it
+        files = sorted(random.Random(f"{seed}:{os.path.basename(d)}").sample(files, sample))
     zs = []
     for path in files:
         board = os.path.basename(path).split("-")[0]
@@ -171,6 +176,9 @@ def main():
     ap.add_argument("dirs", nargs="*")
     ap.add_argument("--min-files", type=int, default=1469)
     ap.add_argument("--limit", type=int, default=None, help="flops per source (smoke test)")
+    ap.add_argument("--sample", type=int, default=None, help="random flops per source (lap-size study)")
+    ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--hash", action="append", default=[], help="only these config hashes (repeatable)")
     ap.add_argument("--out", default=os.path.join(ROOT, "crates/preflop-gen/src/r_table.rs"))
     args = ap.parse_args()
 
@@ -181,11 +189,11 @@ def main():
     sources = []
     for d in dirs:
         d = d.rstrip("/")
-        pick = pick_hash(d, args.min_files)
+        pick = pick_hash(d, args.min_files, args.hash)
         if pick is None:
             print(f"{os.path.basename(d)}: no hash with >= {args.min_files} flops, skipped")
             continue
-        r, frac = calibrate_source(d, pick[0], eq169, args.limit)
+        r, frac = calibrate_source(d, pick[0], eq169, args.limit, args.sample, args.seed)
         sources.append((os.path.basename(d), pick, r, frac))
 
     num = np.zeros((2, 169))
