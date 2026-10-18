@@ -345,7 +345,31 @@ deliberately changed. Custom local rulesets are gitignored wholesale.
     to it: ρ = ⟨R₂−R₁, R₁−R₀⟩ / ‖R₁−R₀‖² = −0.14 (≈ 0 unweighted). Aitken Δ²
     extrapolation, `R∞ = R₁ + (R₂−R₁)/(1−ρ)`, therefore buys nothing. The
     move is systematic, not noise: offsuit broadways drop 0.05–0.10 at both
-    positions.
+    positions. **Superseded 2026-10-18:** the "R₁" here is the mtt89-only
+    *measurement* of the old store, G(R₀), not df8e0ae (the pooled table the
+    next chart was actually solved under), so these are differences of G
+    outputs, not iteration steps. The `ok` mask also dropped the classes that
+    don't reach a flop, and those are the ones that turned out to oscillate.
+
+  **Lap 2 (2026-10-18): undamped, the loop does not converge.** With G =
+  mtt89-only calibration and inputs as actually solved (R₁ = df8e0ae, R₂ =
+  G(R₁)): residual ‖G(R)−R‖ = 0.128 at R₁, 0.126 at R₂; the gain along the
+  step is −0.87 (OOP −0.98, a 2-cycle; IP −0.14, contracting). 75% of the OOP
+  error is trash offsuits (43o, 53o, 63o, 52o, …). Under R₁ they never reach a
+  flop, so the tiny-reach measurement reads an off-range hand that the
+  villain doesn't expect, which realizes ≈ 1.3. The chart then defends them
+  (reach 0.23), they realize ≈ 0.65 in range, and the next chart folds them
+  again. Realization depends on the class's own frequency, and a chart
+  solved under a constant R best-responds all the way, so undamped
+  iteration flips. mtt55 lap 1 (under the same R₂) measures the same G to
+  0.031 rms (OOP residual 0.24).
+  - **Damping:** lap 3 runs under `(R₂ + G(R₂))/2`. A per-class secant
+    (two points, λ clipped to [−1.5, 0]) lands within 0.014 rms of the
+    midpoint, which is below the noise. Keep averaging while the residual's
+    sign keeps flipping (64% of the weight is bracketed after lap 2).
+  - **Stop rule on the residual** ‖G(R_k)−R_k‖ ≤ 0.02, measured at the R
+    the lap was solved under, not on the step ‖R_{k+1}−R_k‖, which damping
+    shrinks by construction.
   - Thin-sample laps don't pay. Re-estimating the move from N random flops
     per line (the same flops on both stores, `--sample N --seed S`) leaves
     an rms error of 0.069 / 0.046 / 0.030 / 0.022 at N = 25 / 50 / 100 /
@@ -360,8 +384,10 @@ deliberately changed. Custom local rulesets are gitignored wholesale.
   **Plan (agreed 2026-10-14).**
   1. **mtt89 first, the flagship.** Iterate full laps calibrated on mtt89's
      own ten lines only: re-solve the mtt89 chart under R_k, rebuild the
-     ten lines, run `calibrate-r.py` over them for R_{k+1}. Stop when a lap
-     moves R by ≲ 0.02 rms (about the noise of the check). Laps run on
+     ten lines, run `calibrate-r.py` over them for G(R_k), and step to
+     R_{k+1} damped (lap 2 above). Stop when the lap's residual is ≲ 0.02 rms
+     (about the noise of the check). Calibrate on the worker itself and
+     copy only the converged lap's tables home. Laps run on
      Compute-Node02 at 8 jobs × 64 threads (benchmarked at ≈ 400 flops/h,
      so ≈ 2 days per lap; 512 threads beat 256 by ~30%). The last lap's
      tables become the store, and its chart and R land on main.
