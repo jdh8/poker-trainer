@@ -1,7 +1,7 @@
-/* Subset of Source Han Sans JP for suits — served from the jdh8.github.io
+/* Subset of Libertinus Sans for suits — served from the jdh8.github.io
    origin (see /fonts/SUITS-README.md), shared by all card sites. */
 @font-face {
-  font-family: "Source Han Suits";
+  font-family: "Libertinus Suits";
   font-weight: 1 1000;
   font-style: oblique -90deg 90deg;
   src: url("https://jdh8.github.io/fonts/suits.woff2") format("woff2");
@@ -33,7 +33,7 @@
 * { box-sizing: border-box; }
 body {
   margin: 0;
-  font: 16px/1.5 "Source Han Suits", system-ui, sans-serif;
+  font: 16px/1.5 "Libertinus Suits", system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
 }
