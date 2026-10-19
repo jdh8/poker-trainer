@@ -363,10 +363,9 @@ deliberately changed. Custom local rulesets are gitignored wholesale.
   solved under a constant R best-responds all the way, so undamped
   iteration flips. mtt55 lap 1 (under the same R₂) measures the same G to
   0.031 rms (OOP residual 0.24).
-  - **Damping:** lap 3 runs under `(R₂ + G(R₂))/2`. A per-class secant
-    (two points, λ clipped to [−1.5, 0]) lands within 0.014 rms of the
-    midpoint, which is below the noise. Keep averaging while the residual's
-    sign keeps flipping (64% of the weight is bracketed after lap 2).
+  - **Damping (retracted after lap 3, below):** lap 3 ran under
+    `(R₂ + G(R₂))/2`. A per-class secant (two points, λ clipped to
+    [−1.5, 0]) landed within 0.014 rms of the midpoint.
   - **Stop rule on the residual** ‖G(R_k)−R_k‖ ≤ 0.02, measured at the R
     the lap was solved under, not on the step ‖R_{k+1}−R_k‖, which damping
     shrinks by construction.
@@ -381,11 +380,28 @@ deliberately changed. Custom local rulesets are gitignored wholesale.
     of the weight, frozen during MTT laps) halve the apparent move and pull
     the fixed point 0.054 rms away from mtt89's own.
 
+  **Lap 3 (2026-10-20): the 2-cycle was the estimator, not the game.**
+  Damping took the residual from 0.148 to 0.064 (same weights), and 87% of
+  what is left is OOP trash offsuits that R₃ ≈ 1.0 defends at ~1.5% of the
+  range and that realize ≈ 0.7. They got there because the blend
+  `Σ share·r / Σ share` has no notion of absolute evidence: R₂'s 43o = 1.33
+  came from a **total** share of 0.02% (a 0.021% leak in one raised line,
+  realizing 1.34 because the villain doesn't expect it). A sliver of a class
+  that "should have been folded" set its R outright. The fix is shrinkage
+  toward the R the lap was solved under, `G = (Σ share·r + κ·R)/(Σ share + κ)`
+  (`calibrate-r.py --kappa`, default 0.005 of summed share): a folded class
+  keeps its R, a defended one is measured. Re-scored on the existing dumps,
+  κ = 0.005 makes R₁'s trash self-consistent (43o 0.66 → 0.69, where κ = 0
+  read 1.33) and R₁'s residual 0.127 → 0.055. So no damping: **lap 4 runs
+  under G_κ(R₃), undamped**, and the stop rule is on G_κ. A second-order
+  leak stays open: one R per class pools the limped line (trash realizes
+  ≈ 1.0 at pot 3) with raised pots (≈ 0.67), worth ~0.04 on the pooled value.
+
   **Plan (agreed 2026-10-14).**
   1. **mtt89 first, the flagship.** Iterate full laps calibrated on mtt89's
      own ten lines only: re-solve the mtt89 chart under R_k, rebuild the
      ten lines, run `calibrate-r.py` over them for G(R_k), and step to
-     R_{k+1} damped (lap 2 above). Stop when the lap's residual is ≲ 0.02 rms
+     R_{k+1} = G_κ(R_k) (lap 3 above). Stop when the lap's residual is ≲ 0.02 rms
      (about the noise of the check). Calibrate on the worker itself and
      copy only the converged lap's tables home. Laps run on
      Compute-Node02 at 8 jobs × 64 threads (benchmarked at ≈ 400 flops/h,

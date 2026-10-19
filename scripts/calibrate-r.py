@@ -6,12 +6,16 @@ data/tables, average each hand's solver-exact postflop EV over all flops
 (iso-multiplicity weighted) and divide by what preflop-gen would value the
 same terminal at with R = 1: (pot - rake) x class equity vs the villain's
 range. The ratio is R(class, position). Sources are blended by each class's
-share of the hero range in that source.
+share of the hero range in that source, then shrunk toward the prior table
+(the R the measured charts were solved under) by --kappa: a class that barely
+reaches a flop measures off-range combos the villain doesn't expect, and must
+not set R on that sliver alone (design 07, lap 3).
 
 Writes crates/preflop-gen/src/r_table.rs. Run with ionice/nice: it streams
 ~50 MB per flop off the bulk HDD.
 
-    scripts/calibrate-r.py [--min-files N] [--limit N] [--hash H ...] [DIR ...]
+    scripts/calibrate-r.py [--min-files N] [--limit N] [--hash H ...]
+                           [--kappa K] [--prior R_TABLE_RS] [DIR ...]
 """
 import argparse
 import collections
@@ -20,6 +24,7 @@ import itertools
 import json
 import os
 import random
+import re
 import sys
 
 import numpy as np
@@ -160,6 +165,13 @@ def calibrate_source(d, hh, eq169, limit, sample=None, seed=0):
     return r, frac
 
 
+def read_table(path):
+    """[2, 169] R from a generated r_table.rs (NaN where the table has none)."""
+    body = open(path).read().split("= [", 1)[1]
+    v = [float("nan") if x == "f32::NAN" else float(x) for x in re.findall(r"f32::NAN|-?\d+\.\d+", body)]
+    return np.array(v[:338]).reshape(2, 169)
+
+
 def grid(vals):
     out = []
     for r in range(13):
@@ -180,7 +192,10 @@ def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--hash", action="append", default=[], help="only these config hashes (repeatable)")
     ap.add_argument("--out", default=os.path.join(ROOT, "crates/preflop-gen/src/r_table.rs"))
+    ap.add_argument("--kappa", type=float, default=0.005, help="prior strength, in summed range share")
+    ap.add_argument("--prior", default=None, help="r_table.rs the charts were solved under (default: --out)")
     args = ap.parse_args()
+    prior = read_table(args.prior or args.out)  # read before --out is overwritten
 
     eq169 = np.array(json.load(open(os.path.join(ROOT, "data/preflop/equity-hu-169.json")))["equity"])
     eq169 = eq169.reshape(169, 169)
@@ -204,6 +219,8 @@ def main():
         den[ok] += frac[ok]
     with np.errstate(invalid="ignore", divide="ignore"):
         table = num / den
+    ok = ~np.isnan(prior)  # no prior: plain blend
+    table[ok] = (num[ok] + args.kappa * prior[ok]) / (den[ok] + args.kappa)
     for side, name in enumerate(["OOP", "IP"]):
         print(f"\nR {name} (rows/cols A..2; upper = suited, lower = offsuit):\n{grid(table[side])}")
     json.dump(
@@ -212,6 +229,8 @@ def main():
                 {"dir": n, "hash": p[0], "flops": p[1], "r": r.tolist(), "frac": f.tolist()}
                 for n, p, r, f in sources
             ],
+            "kappa": args.kappa,
+            "prior": prior.tolist(),
             "table": table.tolist(),
         },
         open(os.path.join(os.environ.get("R_DUMP_DIR", "/tmp"), "r_calibration.json"), "w"),
@@ -234,7 +253,8 @@ def main():
 //!
 //! `R_TABLE[ip as usize][class]`: flop-averaged solver EV of the class over
 //! `(pot - rake) x class equity vs the villain range`, blended across sources
-//! by the class's share of the hero range. `NaN` = the class never sees a
+//! by the class's share of the hero range and shrunk toward the prior table
+//! with strength kappa = {args.kappa}. `NaN` = no prior and the class never sees a
 //! flop in any source; `r_factor` falls back to the hand-shape heuristic.
 
 /// `[oop, ip]` heads-up realization factor by 169-class (design 07).
