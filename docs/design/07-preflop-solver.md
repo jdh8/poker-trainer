@@ -397,11 +397,31 @@ deliberately changed. Custom local rulesets are gitignored wholesale.
   leak stays open: one R per class pools the limped line (trash realizes
   ≈ 1.0 at pot 3) with raised pots (≈ 0.67), worth ~0.04 on the pooled value.
 
+  **Lap 4 (2026-10-21): landed; κ damps the 2-cycle but does not kill it.**
+  Under G_κ(R₃), undamped, the residual rms|G_κ(R₄) − R₄| is **0.027**
+  (OOP 0.028, IP 0.027; the κ-residual at R₃ was 0.049, so it halved again;
+  the unshrunk residual is 0.032). Outside the offsuit ≤ 9-high classes
+  (7.8% of weight) it is 0.022, the noise of a lap; those classes alone are
+  0.063, and they still straddle the fixed point: OOP trash has R₄ ≈ 0.85
+  with G ≈ 0.70-0.78, IP trash R₄ ≈ 0.88 with G ≈ 1.06-1.16. The **gain along
+  the step is −0.86** (Σw·ΔG·ΔR / Σw·ΔR²), so a full step overshoots by nearly
+  its own length and the lap-to-lap bounce persists at κ = 0.005. The
+  linear fixed point along the step sits at R₄ + 0.54·(G_κ(R₄) − R₄).
+  Decision: **lap 4 is landed as-is** (chart, tables, R₄ on main: the
+  non-trash residual is at noise), and **lap 5 runs under the damped step
+  R₅ = R₄ + 0.54·(G_κ(R₄) − R₄)** to shrink the trash residual or show it
+  cannot shrink. In parallel a chart-space check: the mtt89 chart re-solved
+  under the full step G_κ(R₄) is diffed against the lap-4 chart in frequency
+  and EV; if only the marginal classes move, the R loop is done for mtt89
+  whatever the per-class residual says.
+
   **Plan (agreed 2026-10-14).**
   1. **mtt89 first, the flagship.** Iterate full laps calibrated on mtt89's
      own ten lines only: re-solve the mtt89 chart under R_k, rebuild the
      ten lines, run `calibrate-r.py` over them for G(R_k), and step to
-     R_{k+1} = G_κ(R_k) (lap 3 above). Stop when the lap's residual is ≲ 0.02 rms
+     R_{k+1} = R_k + α·(G_κ(R_k) − R_k), with α = 1 while the gain along the
+     previous step is ≥ 0 and α = 1/(1 − gain) once it goes negative (lap 4
+     above: gain −0.86 → α = 0.54). Stop when the lap's residual is ≲ 0.02 rms
      (about the noise of the check). Calibrate on the worker itself and
      copy only the converged lap's tables home. Laps run on
      Compute-Node02 at 8 jobs × 64 threads (benchmarked at ≈ 400 flops/h,
