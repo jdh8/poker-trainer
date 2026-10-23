@@ -415,6 +415,34 @@ deliberately changed. Custom local rulesets are gitignored wholesale.
   and EV; if only the marginal classes move, the R loop is done for mtt89
   whatever the per-class residual says.
 
+  **Lap 5 (2026-10-23): converged on the residual rule; landed.** Under the
+  damped step R₅ = R₄ + 0.54·(G_κ(R₄) − R₄) (rms step 0.014) the residual
+  rms|G_κ(R₅) − R₅| is **0.017** (OOP 0.014, IP 0.019; unshrunk 0.021),
+  under the 0.02 stop. The gain along the step is −0.35 (cos −0.55): the
+  bounce is still there but damped, and the trash classes have met in the
+  middle (OOP K2o/K5o/Q5o R₅ ≈ 0.75 vs G ≈ 0.70; IP 32o/62o/73o R₅ ≈ 1.0 vs
+  G ≈ 0.9). R₅, its chart and its tables are the mtt89 store. The
+  chart-space check came back with a caveat about the ruler rather than the
+  R: the mtt89 chart re-solved under the full step G_κ(R₄) differs from the
+  lap-4 chart by 0.13 rms total variation per class (fold/call/raise
+  collapsed, reach-weighted), but so does every pair of lap charts —
+  lap 3→4 0.12, lap 4→5 0.09, lap 5→G_κ(R₄) 0.08 — and the movers are
+  indifference flips (K7s UTG, 33 CO, A9o UTG, the BB's T4o/72o defends:
+  EV gaps ≤ 0.05 bb, frequencies 0↔1), not macro shape. Open percentages
+  move under a point from lap 3 on; the BB's defend-vs-open percentages
+  moved 6-8 points at lap 3→4 (OOP trash R falling) and 1-3 points since.
+  The per-action EVs in a chart are too noisy to score one chart's play
+  under another's values (a chart against itself scores the same as any
+  pair), so the frequency rms is the only chart-space ruler, and its noise
+  floor is a same-R re-solve with another seed: seed 2 under R₅ differs
+  from seed 1 by **0.033** rms (macro shapes identical to 0.1 point), so
+  the lap-to-lap chart moves are real at 3-4× noise, but they are the
+  marginal classes trading places at indifference while every open and
+  defend percentage holds. By the chart-space rule as stated — only the
+  marginal classes move — mtt89's R loop is done. Where the next rung's
+  lap reads its chart diff, 0.03 is the floor and the macro table
+  (`macro.py` on the calibration zoo) is the ruler.
+
   **Plan (agreed 2026-10-14).**
   1. **mtt89 first, the flagship.** Iterate full laps calibrated on mtt89's
      own ten lines only: re-solve the mtt89 chart under R_k, rebuild the
