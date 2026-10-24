@@ -70,7 +70,7 @@ pub enum Utility {
 /// Equity-realization factor for a see-a-flop terminal: how much of its raw
 /// pot share a hand actually banks across the postflop streets.
 ///
-/// Heads-up the factor is measured, not guessed: [`crate::r_table::R_TABLE`]
+/// Heads-up the factor is measured, not guessed: `table` (see [`r_table`])
 /// is the class's flop-averaged solver EV over its check-down value across
 /// the postflop table store (`scripts/calibrate-r.py`). A class no source
 /// ever takes to a flop falls back to the hand-shape heuristic.
@@ -78,14 +78,28 @@ pub enum Utility {
 // is 2-player, so there is nothing to calibrate against), and per-hero
 // factors still aren't jointly normalized, so see-a-flop terminals aren't
 // exactly zero-sum.
-pub fn r_factor(class: usize, last_to_act: bool, players: u32) -> f64 {
-    let measured = crate::r_table::R_TABLE[usize::from(last_to_act)][class];
+pub fn r_factor(table: &RTable, class: usize, last_to_act: bool, players: u32) -> f64 {
+    let measured = table[usize::from(last_to_act)][class];
     let hu = if measured.is_nan() {
         r_heuristic(class, last_to_act)
     } else {
         f64::from(measured)
     };
     hu * 0.96f64.powi(players.saturating_sub(2) as i32)
+}
+
+/// `[oop, ip]` realization factor by 169-class.
+pub type RTable = [[f32; 169]; 2];
+
+/// The ruleset's R: measured on its own lines, never pooled across formats
+/// (design 07). A ruleset without a table of its own uses mtt89's.
+// ponytail: flat fallback to mtt89's table; design 07's nearest-deeper-rung
+// fallback (mtt34 → mtt55, …) lands when the next rung starts lapping.
+pub fn r_table(ruleset: &str) -> &'static RTable {
+    match ruleset {
+        "mtt55" => &crate::r_table_mtt55::R_TABLE,
+        _ => &crate::r_table::R_TABLE,
+    }
 }
 
 /// Pre-calibration guess: playability × position, tuned until the chart-shape
@@ -129,6 +143,7 @@ pub struct TerminalValuer {
     utility: Utility,
     rake_rate: f64,
     rake_cap_bb: f64,
+    r_table: &'static RTable,
     realization: bool,
 }
 
@@ -144,6 +159,7 @@ impl TerminalValuer {
             },
             rake_rate: f64::from(rs.rake_rate),
             rake_cap_bb: f64::from(rs.rake_cap_bb),
+            r_table: r_table(&rs.id),
             realization: true,
         }
     }
@@ -184,7 +200,8 @@ impl TerminalValuer {
                     let last = last_to_act(rs, players);
                     let k = players.count_ones();
                     for (seat, share) in &mut outcomes {
-                        *share *= r_factor(deal.classes[*seat] as usize, *seat == last, k);
+                        *share *=
+                            r_factor(self.r_table, deal.classes[*seat] as usize, *seat == last, k);
                     }
                 }
                 self.settle(rs, st, hero, &outcomes, pot - self.rake(pot))
@@ -303,24 +320,38 @@ mod tests {
     fn realization_factors_bend_the_right_way() {
         let aa = 0;
         let so = poker_trainer::preflop::class_index_of("72o").unwrap();
-        // Position: in position realizes more than out of position on average
-        // (AA is the measured exception — the OOP trap-flat outruns it).
-        let mean = |ip| (0..CLASSES).map(|c| r_factor(c, ip, 2)).sum::<f64>() / CLASSES as f64;
-        // Not per class: 72o is folded at both seats (~2% summed share), so
-        // its R is a shrunk prior and lap 4 left it 0.897 OOP vs 0.889 IP.
-        assert!(mean(true) > mean(false));
-        // Playability: AA realizes more than 72o everywhere.
-        assert!(r_factor(aa, false, 2) > r_factor(so, false, 2));
-        // Multiway squeezes realization down.
-        assert!(r_factor(so, false, 4) < r_factor(so, false, 2));
-        // Sane band overall.
-        for class in 0..CLASSES {
-            for (ip, k) in [(true, 2), (false, 2), (true, 6), (false, 6)] {
-                let r = r_factor(class, ip, k);
-                // Upper end: AA OOP trap-flats to 1.66 (lap 4).
-                assert!((0.5..=1.75).contains(&r), "class {class}: {r}");
+        for id in ["mtt89", "mtt55"] {
+            let t = r_table(id);
+            let r = |c, ip, k| r_factor(t, c, ip, k);
+            // Position: in position realizes more than out of position on
+            // average (AA is the measured exception — the OOP trap-flat
+            // outruns it).
+            let mean = |ip| (0..CLASSES).map(|c| r(c, ip, 2)).sum::<f64>() / CLASSES as f64;
+            // Not per class: 72o is folded at both seats (~2% summed share), so
+            // its R is a shrunk prior and lap 4 left it 0.897 OOP vs 0.889 IP.
+            assert!(mean(true) > mean(false), "{id}");
+            // Playability: AA realizes more than 72o everywhere.
+            assert!(r(aa, false, 2) > r(so, false, 2), "{id}");
+            // Multiway squeezes realization down.
+            assert!(r(so, false, 4) < r(so, false, 2), "{id}");
+            // Sane band overall.
+            for class in 0..CLASSES {
+                for (ip, k) in [(true, 2), (false, 2), (true, 6), (false, 6)] {
+                    let x = r(class, ip, k);
+                    // Upper end: AA OOP trap-flats to 1.66 (lap 4).
+                    assert!((0.5..=1.75).contains(&x), "{id} class {class}: {x}");
+                }
             }
         }
+    }
+
+    #[test]
+    fn r_table_is_per_ruleset() {
+        // Neither table holds a NaN, so == is exact.
+        assert!(r_table("mtt55") == &crate::r_table_mtt55::R_TABLE);
+        assert!(r_table("mtt89") == &crate::r_table::R_TABLE);
+        assert!(r_table("cash89") == &crate::r_table::R_TABLE);
+        assert!(r_table("mtt55") != r_table("mtt89"));
     }
 
     #[test]

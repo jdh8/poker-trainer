@@ -11,7 +11,9 @@ share of the hero range in that source, then shrunk toward the prior table
 reaches a flop measures off-range combos the villain doesn't expect, and must
 not set R on that sliver alone (design 07, lap 3).
 
-Writes crates/preflop-gen/src/r_table.rs. Run with ionice/nice: it streams
+Writes crates/preflop-gen/src/r_table.rs (mtt89's; also every ruleset's
+without its own) unless --out names a per-ruleset table such as
+r_table_mtt55.rs (wired up in icm::r_table). Run with ionice/nice: it streams
 ~50 MB per flop off the bulk HDD.
 
     scripts/calibrate-r.py [--min-files N] [--limit N] [--hash H ...]

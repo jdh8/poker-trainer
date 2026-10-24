@@ -443,6 +443,22 @@ deliberately changed. Custom local rulesets are gitignored wholesale.
   lap reads its chart diff, 0.03 is the floor and the macro table
   (`macro.py` on the calibration zoo) is the ruler.
 
+  **mtt55 lap 2 (2026-10-24): mtt55 wants its own R.** The confirming lap
+  under mtt89's R₅ (17,550 flops, its own ten lines) gives
+  rms|G55_κ(R₅) − R₅| = **0.027** (OOP 0.029, IP 0.026), and G55 sits 0.030
+  from G89 at the same R₅. Lap 1 measured 0.031 under R₂, so the gap is the
+  format, not the lap. It is structural, not the trash boundary: OOP
+  offsuit aces and broadways realize ≈ 0.05 less at 55bb (ATo 0.80 → 0.73,
+  AJo, A8o, KTo) and IP offsuit connectors ≈ 0.08 more (65o, 76o, 63o).
+  In chart space the mtt55 chart re-solved under G55_κ(R₅) moves **0.134**
+  from the R₅ chart, which is 4× the seed noise and the size of mtt89's
+  lap 4 → G_κ(R₄) step (0.133). Opens hold within 1.6 points, but the BB
+  defends 3-4 points differently (more vs CO, less vs HJ/UTG) and the SB
+  raises half as often after a limp (9 → 4%). So R gained its ruleset
+  dimension (`icm::r_table`; mtt55's table is `r_table_mtt55.rs`, every
+  other ruleset keeps mtt89's), and **mtt55 lap 3 runs under the full step
+  G55_κ(R₅)**.
+
   **Plan (agreed 2026-10-14).**
   1. **mtt89 first, the flagship.** Iterate full laps calibrated on mtt89's
      own ten lines only: re-solve the mtt89 chart under R_k, rebuild the
@@ -461,12 +477,12 @@ deliberately changed. Custom local rulesets are gitignored wholesale.
      barely enters their charts; one lap that doesn't move them ends them.
   3. **Cash after MTT**, the same way, on its own R.
 
-  This needs R keyed by ruleset (today one `R_TABLE` serves all 32): a
-  ruleset dimension in `r_table.rs`, `calibrate-r.py` grouping sources by
-  ruleset, and rungs without lines of their own falling back to the nearest
-  deeper rung's R. It lands with step 1's first commit. Until then a lap
-  runs in a side clone whose `r_table.rs` carries the lap's R, so main stays
-  on df8e0ae's pooled table and its grounded hashes stay reachable.
+  R is keyed by ruleset (since mtt55 lap 2): `icm::r_table` maps a ruleset
+  id to its generated table, `calibrate-r.py --out` writes one ruleset's
+  table from that ruleset's lines, and rulesets without a table of their
+  own use mtt89's (the nearest-deeper-rung fallback is still to come). A lap
+  still runs in a side clone whose table carries the lap's R, so main's
+  grounded hashes stay reachable until the lap lands.
   - Until a ruleset migrates, the web (`data/preflop-web/`, calibrated for
     all rulesets) and the CLI (`data/preflop/`) disagree for it, and the
     web's chart→flop hand-off lands on tables solved for the old ranges. The
