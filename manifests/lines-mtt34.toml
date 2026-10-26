@@ -1,0 +1,56 @@
+# Grounded-line tier (design doc 08): the ten most-travelled mtt34 flop
+# lines (1 BB ante), each solved across all 1,755 canonical flops. Ordered by
+# arrival mass (`export-range --ruleset mtt34` reprints the ranking) — trim
+# or extend freely; each run is ~1,755 solves ≈ 3-4 idle days and ~20-70 GB.
+# At 34bb the 2.5x opens vs BB (≈1.1% each) outrank mtt55's SB cold-calls
+# (≈0.5-0.6% here); the CO 2.5x open (1.05%) is the first line cut.
+# Queue AFTER manifests/all-1755.toml:
+#
+#   scripts/idle-run.sh cargo run -p solve-gen --release -- tables \
+#     --manifest manifests/lines-mtt34.toml --no-save-bins
+#
+# Fannable across the box fleet (--stride/--offset, local --out, then
+# collect-shards + mop-up): see the fleet section of
+# docs/shared-machine-data-gen.md.
+#
+# Seat order per line token: UTG-HJ-CO-BTN-SB-BB.
+
+[[runs]]
+from = "mtt34:f-f-f-f-c-x"    # SB limps, BB checks (mass 14.6%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt34:f-f-f-r3-f-c"   # BTN opens 3x, BB defends (7.1%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt34:f-f-r3-f-f-c"   # CO opens 3x, BB defends (6.3%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt34:r3-f-f-f-f-c"   # UTG opens 3x, BB defends (6.2%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt34:f-r3-f-f-f-c"   # HJ opens 3x, BB defends (6.1%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt34:f-f-f-f-c-r3-c" # SB limps, BB raises, SB calls (5.1%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt34:f-f-f-f-r3-c"   # SB opens, BB defends (3.8%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt34:f-r2.5-f-f-f-c" # HJ opens 2.5x, BB defends (1.15%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt34:f-f-f-r2.5-f-c" # BTN opens 2.5x, BB defends (1.12%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt34:r2.5-f-f-f-f-c" # UTG opens 2.5x, BB defends (1.07%)
+flops = "all-iso-flops"
