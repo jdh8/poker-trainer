@@ -459,6 +459,21 @@ deliberately changed. Custom local rulesets are gitignored wholesale.
   other ruleset keeps mtt89's), and **mtt55 lap 3 runs under the full step
   G55_κ(R₅)**.
 
+  **mtt55 laps 3-4 (2026-10-25..27): converged on R55₄.** Lap 3 under the
+  full step G55_κ(R₅) left rms|G − R| = 0.024 with gain −0.45 along the
+  step: the IP offsuit connectors fell straight back to R₅ and the OOP
+  trash offsuits overshot, the same oscillation as mtt89 lap 4. Lap 4 took
+  the damped step R55₄ = R₅ + 0.54·(R55₃ − R₅) (linear prediction 0.013)
+  and measured **0.016** (OOP 0.018, IP 0.015; unshrunk 0.019): converged.
+  What's left is the OOP offsuit Ax (ATo, AJo, A7o) still ≈ 0.03 high and
+  the IP offsuit queens/low offsuits ≈ 0.05 low, both under the bar. The
+  linear model is about 30% optimistic (cos of successive residuals 0.31,
+  so the residual rotates rather than just flipping), but one damped step
+  was enough. R55₄ is `r_table_mtt55.rs`, and its chart is
+  `data/preflop/mtt55`. Lessons for the next rung (mtt34): calibrate
+  with κ from the first lap, warm-start from R55₄ rather than mtt89's R,
+  and if that lap misses, take α ≈ 0.55 directly rather than a full step.
+
   **Plan (agreed 2026-10-14).**
   1. **mtt89 first, the flagship.** Iterate full laps calibrated on mtt89's
      own ten lines only: re-solve the mtt89 chart under R_k, rebuild the
