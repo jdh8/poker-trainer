@@ -16,6 +16,7 @@ mod game;
 mod icm;
 mod mccfr;
 mod r_table;
+mod r_table_mtt34;
 mod r_table_mtt55;
 
 use clap::{Parser, Subcommand};

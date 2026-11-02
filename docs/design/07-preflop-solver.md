@@ -474,6 +474,20 @@ deliberately changed. Custom local rulesets are gitignored wholesale.
   with κ from the first lap, warm-start from R55₄ rather than mtt89's R,
   and if that lap misses, take α ≈ 0.55 directly rather than a full step.
 
+  **mtt34 laps 1-3 (2026-10-27..11-02): converged on R34₃.** The lines
+  are `manifests/lines-mtt34.toml`: mtt55's top seven plus the HJ, BTN
+  and UTG 2.5x opens vs the BB. Lap 1 warm-started from R55₄ and measured
+  rms|G − R| = 0.041, with G34 sitting 0.043 from G55 at the same R, so
+  mtt34 wants its own R even more than mtt55 did. Lap 2 took the damped
+  step α = 0.55 straight away, as planned, and measured 0.023, with gain
+  −0.54 along the step: the same overshoot as before (IP KQo, OOP AKo).
+  Lap 3 stepped R34₃ = R34₂ + 0.65·(G34₂ − R34₂), with α = 1/(1 − gain),
+  and measured **0.015** (OOP 0.014, IP 0.017; unshrunk 0.018):
+  converged. The cosine between successive residuals is 0.03, so what's
+  left is noise rather than a direction. The largest cells left are OOP
+  AQo (≈ 0.08 high) and the light OOP AKo cell (≈ 0.13 low). R34₃ is
+  `r_table_mtt34.rs`, and its chart is `data/preflop/mtt34`.
+
   **Plan (agreed 2026-10-14).**
   1. **mtt89 first, the flagship.** Iterate full laps calibrated on mtt89's
      own ten lines only: re-solve the mtt89 chart under R_k, rebuild the

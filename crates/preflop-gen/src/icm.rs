@@ -94,9 +94,10 @@ pub type RTable = [[f32; 169]; 2];
 /// The ruleset's R: measured on its own lines, never pooled across formats
 /// (design 07). A ruleset without a table of its own uses mtt89's.
 // ponytail: flat fallback to mtt89's table; design 07's nearest-deeper-rung
-// fallback (mtt34 → mtt55, …) lands when the next rung starts lapping.
+// fallback (mtt21 → mtt34, …) lands when the next rung starts lapping.
 pub fn r_table(ruleset: &str) -> &'static RTable {
     match ruleset {
+        "mtt34" => &crate::r_table_mtt34::R_TABLE,
         "mtt55" => &crate::r_table_mtt55::R_TABLE,
         _ => &crate::r_table::R_TABLE,
     }
@@ -347,11 +348,13 @@ mod tests {
 
     #[test]
     fn r_table_is_per_ruleset() {
-        // Neither table holds a NaN, so == is exact.
+        // No table holds a NaN, so == is exact.
+        assert!(r_table("mtt34") == &crate::r_table_mtt34::R_TABLE);
         assert!(r_table("mtt55") == &crate::r_table_mtt55::R_TABLE);
         assert!(r_table("mtt89") == &crate::r_table::R_TABLE);
         assert!(r_table("cash89") == &crate::r_table::R_TABLE);
         assert!(r_table("mtt55") != r_table("mtt89"));
+        assert!(r_table("mtt34") != r_table("mtt55"));
     }
 
     #[test]
