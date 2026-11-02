@@ -1,0 +1,57 @@
+# Grounded-line tier (design doc 08): the ten most-travelled mtt21 flop
+# lines (1 BB ante), each solved across all 1,755 canonical flops. Ordered by
+# arrival mass (`export-range --ruleset mtt21` reprints the ranking) — trim
+# or extend freely; each run is ~1,755 solves ≈ 3-4 idle days and ~20-70 GB.
+# At 21bb the SB no longer opens to flop (the SB open-call line of mtt34
+# drops out) and the 2.5x opens take up four slots; the ten end on a clean
+# break (1.46% → 0.32% for the first cold-call line).
+# Queue AFTER manifests/all-1755.toml:
+#
+#   scripts/idle-run.sh cargo run -p solve-gen --release -- tables \
+#     --manifest manifests/lines-mtt21.toml --no-save-bins
+#
+# Fannable across the box fleet (--stride/--offset, local --out, then
+# collect-shards + mop-up): see the fleet section of
+# docs/shared-machine-data-gen.md.
+#
+# Seat order per line token: UTG-HJ-CO-BTN-SB-BB.
+
+[[runs]]
+from = "mtt21:f-f-f-f-c-x"      # SB limps, BB checks (mass 11.2%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt21:f-f-r3-f-f-c"     # CO opens 3x, BB defends (4.2%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt21:f-r3-f-f-f-c"     # HJ opens 3x, BB defends (4.1%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt21:r3-f-f-f-f-c"     # UTG opens 3x, BB defends (4.1%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt21:f-f-f-r3-f-c"     # BTN opens 3x, BB defends (2.7%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt21:r2.5-f-f-f-f-c"   # UTG opens 2.5x, BB defends (2.2%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt21:f-r2.5-f-f-f-c"   # HJ opens 2.5x, BB defends (2.0%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt21:f-f-f-r2.5-f-c"   # BTN opens 2.5x, BB defends (1.9%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt21:f-f-f-f-c-r3-c"   # SB limps, BB raises, SB calls (1.8%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt21:f-f-r2.5-f-f-c"   # CO opens 2.5x, BB defends (1.5%)
+flops = "all-iso-flops"
