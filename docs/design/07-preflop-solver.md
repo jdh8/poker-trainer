@@ -488,6 +488,21 @@ deliberately changed. Custom local rulesets are gitignored wholesale.
   AQo (≈ 0.08 high) and the light OOP AKo cell (≈ 0.13 low). R34₃ is
   `r_table_mtt34.rs`, and its chart is `data/preflop/mtt34`.
 
+  **mtt21 laps 1-4 (2026-11-02..11-06): converged on R21₄.** The lines
+  are `manifests/lines-mtt21.toml`, the ten most-travelled. Lap 1
+  warm-started from R34₃ and measured 0.030, with G21 sitting 0.031 from
+  G34, so mtt21 gets its own key as well. Lap 2 took α = 0.55 and
+  measured 0.021, just over the bar, with gain +0.10 along the step, so by
+  the α rule lap 3 took the full step R21₃ = G21₂. That overshot: 0.026,
+  gain −0.46. Part of the rise was the reach weights moving 21%; under
+  lap 2's weights it was flat (0.0207). Lap 4 took the line-model minimum
+  between the two, R21₄ = R21₂ + 0.476·(R21₃ − R21₂), predicted 0.013,
+  and measured **0.015** (OOP 0.015, IP 0.015; unshrunk 0.018; 0.016
+  under lap 3's weights): converged. The largest cells left are the OOP
+  trash offsuits (94o, T5o: R ≈ 0.75–0.80, G ≈ 0.70). Lesson: once two
+  laps bracket the fixed point, interpolating between them beats another
+  α step. R21₄ is `r_table_mtt21.rs`, and its chart is `data/preflop/mtt21`.
+
   **Plan (agreed 2026-10-14).**
   1. **mtt89 first, the flagship.** Iterate full laps calibrated on mtt89's
      own ten lines only: re-solve the mtt89 chart under R_k, rebuild the
