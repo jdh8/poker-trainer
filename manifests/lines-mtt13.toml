@@ -1,0 +1,58 @@
+# Grounded-line tier (design doc 08): the ten most-travelled mtt13 flop
+# lines (1 BB ante), each solved across all 1,755 canonical flops. Ordered by
+# arrival mass (`export-range --ruleset mtt13` reprints the ranking) — trim
+# or extend freely; each run is ~1,755 solves ≈ 3-4 idle days and ~20-70 GB.
+# At 13bb most hands end preflop (jam/fold): the ten lines together carry
+# only 11% of hands to a flop (mtt21: 33%), the 2.5x opens outrank the 3x
+# opens, and the same ten lines as mtt21 make the cut, ending on a clean
+# break (0.30% → 0.12% for the first 3-bet-jam-called line).
+# Queue AFTER manifests/all-1755.toml:
+#
+#   scripts/idle-run.sh cargo run -p solve-gen --release -- tables \
+#     --manifest manifests/lines-mtt13.toml --no-save-bins
+#
+# Fannable across the box fleet (--stride/--offset, local --out, then
+# collect-shards + mop-up): see the fleet section of
+# docs/shared-machine-data-gen.md.
+#
+# Seat order per line token: UTG-HJ-CO-BTN-SB-BB.
+
+[[runs]]
+from = "mtt13:f-f-f-f-c-x"      # SB limps, BB checks (mass 3.7%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt13:r2.5-f-f-f-f-c"   # UTG opens 2.5x, BB defends (2.5%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt13:f-r2.5-f-f-f-c"   # HJ opens 2.5x, BB defends (1.6%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt13:f-f-f-r2.5-f-c"   # BTN opens 2.5x, BB defends (0.69%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt13:f-f-r2.5-f-f-c"   # CO opens 2.5x, BB defends (0.54%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt13:f-f-f-f-c-r3-c"   # SB limps, BB raises, SB calls (0.47%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt13:f-r3-f-f-f-c"     # HJ opens 3x, BB defends (0.43%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt13:r3-f-f-f-f-c"     # UTG opens 3x, BB defends (0.42%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt13:f-f-f-r3-f-c"     # BTN opens 3x, BB defends (0.33%)
+flops = "all-iso-flops"
+
+[[runs]]
+from = "mtt13:f-f-r3-f-f-c"     # CO opens 3x, BB defends (0.30%)
+flops = "all-iso-flops"
